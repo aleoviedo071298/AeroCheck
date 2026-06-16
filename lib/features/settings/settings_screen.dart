@@ -83,7 +83,6 @@ class _FavoriteLocationsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final addableLocations = session.addableLocations;
     final canRemove = session.availableLocations.length > 1;
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -125,8 +124,8 @@ class _FavoriteLocationsCard extends StatelessWidget {
             const SizedBox(height: 4),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _AddFavoriteControl(
-                addableLocations: addableLocations,
+              child: _LocationSearchControl(
+                addableLocations: session.addableLocations,
                 onAdd: session.addFavoriteLocation,
               ),
             ),
@@ -137,8 +136,8 @@ class _FavoriteLocationsCard extends StatelessWidget {
   }
 }
 
-class _AddFavoriteControl extends StatefulWidget {
-  const _AddFavoriteControl({
+class _LocationSearchControl extends StatefulWidget {
+  const _LocationSearchControl({
     required this.addableLocations,
     required this.onAdd,
   });
@@ -147,20 +146,23 @@ class _AddFavoriteControl extends StatefulWidget {
   final ValueChanged<FlightLocation> onAdd;
 
   @override
-  State<_AddFavoriteControl> createState() => _AddFavoriteControlState();
+  State<_LocationSearchControl> createState() => _LocationSearchControlState();
 }
 
-class _AddFavoriteControlState extends State<_AddFavoriteControl> {
-  FlightLocation? _selectedLocation;
+class _LocationSearchControlState extends State<_LocationSearchControl> {
+  final _controller = TextEditingController();
 
   @override
-  void didUpdateWidget(_AddFavoriteControl oldWidget) {
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(_LocationSearchControl oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (_selectedLocation != null &&
-        !widget.addableLocations.any(
-          (location) => location.id == _selectedLocation!.id,
-        )) {
-      _selectedLocation = null;
+    if (widget.addableLocations.isEmpty && _controller.text.isNotEmpty) {
+      _controller.clear();
     }
   }
 
@@ -173,41 +175,87 @@ class _AddFavoriteControlState extends State<_AddFavoriteControl> {
       );
     }
 
-    final selectedLocation = _selectedLocation ?? widget.addableLocations.first;
+    final query = _controller.text.trim().toLowerCase();
+    final matches = query.isEmpty
+        ? widget.addableLocations
+        : widget.addableLocations.where((location) {
+            return location.label.toLowerCase().contains(query) ||
+                location.name.toLowerCase().contains(query) ||
+                location.region.toLowerCase().contains(query) ||
+                location.country.toLowerCase().contains(query);
+          }).toList();
 
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<FlightLocation>(
-              key: const ValueKey('add-favorite-dropdown'),
-              value: selectedLocation,
-              isExpanded: true,
-              items: widget.addableLocations
-                  .map(
-                    (location) => DropdownMenuItem(
-                      value: location,
-                      child: Text(location.label),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (location) {
-                setState(() => _selectedLocation = location);
-              },
-            ),
+        TextField(
+          key: const ValueKey('location-search-field'),
+          controller: _controller,
+          textInputAction: TextInputAction.search,
+          decoration: InputDecoration(
+            prefixIcon: const Icon(Icons.search_rounded),
+            suffixIcon: query.isEmpty
+                ? null
+                : IconButton(
+                    tooltip: 'Limpiar busqueda',
+                    onPressed: () {
+                      _controller.clear();
+                      setState(() {});
+                    },
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+            hintText: 'Buscar ciudad o provincia',
+            border: const OutlineInputBorder(),
+            isDense: true,
           ),
+          onChanged: (_) => setState(() {}),
         ),
-        const SizedBox(width: 8),
-        FilledButton.icon(
-          key: const ValueKey('add-favorite-button'),
-          onPressed: () {
-            widget.onAdd(selectedLocation);
-            setState(() => _selectedLocation = null);
-          },
-          icon: const Icon(Icons.add_location_alt_rounded),
-          label: const Text('Agregar'),
-        ),
+        const SizedBox(height: 8),
+        if (matches.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text('Sin resultados en el catalogo local.'),
+          )
+        else
+          ...matches
+              .take(4)
+              .map(
+                (location) => _SearchResultTile(
+                  location: location,
+                  onAdd: () {
+                    widget.onAdd(location);
+                    _controller.clear();
+                    setState(() {});
+                  },
+                ),
+              ),
       ],
+    );
+  }
+}
+
+class _SearchResultTile extends StatelessWidget {
+  const _SearchResultTile({required this.location, required this.onAdd});
+
+  final FlightLocation location;
+  final VoidCallback onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      dense: true,
+      contentPadding: EdgeInsets.zero,
+      title: Text(
+        location.label,
+        style: const TextStyle(fontWeight: FontWeight.w800),
+      ),
+      subtitle: Text(location.country),
+      trailing: IconButton.filledTonal(
+        key: ValueKey('add-favorite-${location.id}'),
+        tooltip: 'Agregar favorito',
+        onPressed: onAdd,
+        icon: const Icon(Icons.add_location_alt_rounded),
+      ),
     );
   }
 }
