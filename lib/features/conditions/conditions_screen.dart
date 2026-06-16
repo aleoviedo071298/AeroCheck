@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app/weather_session.dart';
+import '../../data/location/flight_location.dart';
 import '../../data/mock/mock_flight_data.dart';
 import '../../data/weather/weather_bundle.dart';
 import '../../domain/entities/flight_readiness_report.dart';
@@ -33,6 +34,8 @@ class ConditionsScreen extends StatelessWidget {
                 )
               else
                 const _LoadingHeader(),
+              const SizedBox(height: 12),
+              _LocationSelector(session: session),
               const SizedBox(height: 12),
               _DataSourceSelector(
                 selected: session.dataSource,
@@ -119,6 +122,52 @@ class ConditionsScreen extends StatelessWidget {
       return 'Open-Meteo - $time';
     }
     return 'Mock operativo - $time';
+  }
+}
+
+class _LocationSelector extends StatelessWidget {
+  const _LocationSelector({required this.session});
+
+  final WeatherSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 8, 10, 8),
+        child: Row(
+          children: [
+            Icon(
+              Icons.location_on_rounded,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<FlightLocation>(
+                  key: const ValueKey('location-selector-dropdown'),
+                  value: session.selectedLocation,
+                  isExpanded: true,
+                  items: session.availableLocations
+                      .map(
+                        (location) => DropdownMenuItem(
+                          value: location,
+                          child: Text(location.label),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (location) {
+                    if (location != null) {
+                      session.setLocation(location);
+                    }
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

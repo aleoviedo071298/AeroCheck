@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import '../data/location/default_flight_locations.dart';
+import '../data/location/flight_location.dart';
 import '../data/mock/mock_flight_data.dart';
 import '../data/weather/open_meteo_weather_repository.dart';
 import '../data/weather/weather_bundle.dart';
@@ -16,19 +18,18 @@ class WeatherSession extends ChangeNotifier {
   WeatherSession({WeatherRepository? weatherRepository})
     : _weatherRepository = weatherRepository;
 
-  static const realLatitude = -45.8641;
-  static const realLongitude = -67.4966;
-  static const realLocationLabel = 'Comodoro Rivadavia, Chubut';
-
   WeatherRepository? _weatherRepository;
   final _evaluator = const FlightReadinessEvaluator();
 
+  FlightLocation _selectedLocation = DefaultFlightLocations.comodoroRivadavia;
   WeatherDataSource _dataSource = WeatherDataSource.mock;
   MockFlightScenario _mockScenario = MockFlightScenario.cautionWind;
   WeatherBundle? _realBundle;
   Object? _realError;
   var _isLoadingReal = false;
 
+  FlightLocation get selectedLocation => _selectedLocation;
+  List<FlightLocation> get availableLocations => DefaultFlightLocations.all;
   WeatherDataSource get dataSource => _dataSource;
   MockFlightScenario get mockScenario => _mockScenario;
   WeatherBundle? get realBundle => _realBundle;
@@ -77,6 +78,21 @@ class WeatherSession extends ChangeNotifier {
     return 'Datos mock';
   }
 
+  void setLocation(FlightLocation location) {
+    if (_selectedLocation.id == location.id) {
+      return;
+    }
+
+    _selectedLocation = location;
+    _realBundle = null;
+    _realError = null;
+    notifyListeners();
+
+    if (_dataSource == WeatherDataSource.real) {
+      loadRealWeather();
+    }
+  }
+
   void setDataSource(WeatherDataSource source) {
     if (_dataSource == source) {
       return;
@@ -108,9 +124,9 @@ class WeatherSession extends ChangeNotifier {
     try {
       final repository = _weatherRepository ??= OpenMeteoWeatherRepository();
       final bundle = await repository.fetchWeather(
-        latitude: realLatitude,
-        longitude: realLongitude,
-        locationLabel: realLocationLabel,
+        latitude: _selectedLocation.latitude,
+        longitude: _selectedLocation.longitude,
+        locationLabel: _selectedLocation.label,
       );
       _realBundle = bundle;
       _isLoadingReal = false;

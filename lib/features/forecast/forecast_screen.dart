@@ -38,12 +38,12 @@ class ForecastScreen extends StatelessWidget {
   String _descriptionFor(WeatherSession session) {
     if (session.dataSource == WeatherDataSource.real &&
         session.realBundle != null) {
-      return 'Clima real de Open-Meteo evaluado con las reglas de AeroCheck.';
+      return '${session.selectedLocation.label} - clima real de Open-Meteo evaluado con AeroCheck.';
     }
     if (session.dataSource == WeatherDataSource.real && session.isLoadingReal) {
       return 'Cargando clima real para el forecast.';
     }
-    return 'Datos mock para validar la lectura del MVP antes de conectar proveedores.';
+    return '${session.selectedLocation.label} - datos mock para validar la lectura del MVP.';
   }
 }
 

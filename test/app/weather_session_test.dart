@@ -1,4 +1,5 @@
 import 'package:aerocheck/app/weather_session.dart';
+import 'package:aerocheck/data/location/default_flight_locations.dart';
 import 'package:aerocheck/data/mock/mock_flight_data.dart';
 import 'package:aerocheck/data/weather/weather_bundle.dart';
 import 'package:aerocheck/data/weather/weather_repository.dart';
@@ -27,15 +28,37 @@ void main() {
       expect(session.currentReport, isNotNull);
     },
   );
+
+  test('reloads real weather with selected location coordinates', () async {
+    final repository = _FakeWeatherRepository();
+    final session = WeatherSession(weatherRepository: repository);
+
+    session.setLocation(DefaultFlightLocations.mendoza);
+    session.setDataSource(WeatherDataSource.real);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(session.selectedLocation, DefaultFlightLocations.mendoza);
+    expect(repository.lastLatitude, DefaultFlightLocations.mendoza.latitude);
+    expect(repository.lastLongitude, DefaultFlightLocations.mendoza.longitude);
+    expect(repository.lastLocationLabel, DefaultFlightLocations.mendoza.label);
+  });
 }
 
 class _FakeWeatherRepository implements WeatherRepository {
+  double? lastLatitude;
+  double? lastLongitude;
+  String? lastLocationLabel;
+
   @override
   Future<WeatherBundle> fetchWeather({
     required double latitude,
     required double longitude,
     required String locationLabel,
   }) async {
+    lastLatitude = latitude;
+    lastLongitude = longitude;
+    lastLocationLabel = locationLabel;
+
     return WeatherBundle(
       providerName: 'Open-Meteo',
       locationLabel: locationLabel,

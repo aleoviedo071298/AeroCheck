@@ -17,7 +17,7 @@ void main() {
     expect(find.text('AeroCheck'), findsOneWidget);
     expect(find.text('PRECAUCION'), findsWidgets);
     expect(find.text('Mejor ventana'), findsOneWidget);
-    expect(find.textContaining('Comodoro Rivadavia'), findsOneWidget);
+    expect(find.textContaining('Comodoro Rivadavia'), findsWidgets);
 
     await tester.scrollUntilVisible(find.text('Motivos'), 300);
     expect(find.text('Motivos'), findsOneWidget);
@@ -42,6 +42,19 @@ void main() {
       300,
     );
     expect(find.textContaining('Dentro de zona restringida'), findsOneWidget);
+  });
+
+  testWidgets('conditions screen can change selected location', (tester) async {
+    await tester.pumpWidget(const AeroCheckApp());
+
+    expect(find.text('Comodoro Rivadavia, Chubut'), findsWidgets);
+
+    await tester.tap(find.byKey(const ValueKey('location-selector-dropdown')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mendoza, Mendoza').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Mendoza, Mendoza'), findsWidgets);
   });
 
   testWidgets('conditions screen renders real weather from repository', (

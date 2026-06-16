@@ -49,12 +49,12 @@ class WindScreen extends StatelessWidget {
   String _descriptionFor(WeatherSession session) {
     if (session.dataSource == WeatherDataSource.real &&
         session.realBundle != null) {
-      return 'Perfil real aproximado con niveles 10, 80, 120 y 180 m de Open-Meteo.';
+      return '${session.selectedLocation.label} - perfil real aproximado con niveles 10, 80, 120 y 180 m.';
     }
     if (session.dataSource == WeatherDataSource.real && session.isLoadingReal) {
       return 'Cargando perfil vertical real.';
     }
-    return 'Viento y rafagas por altura AGL para el perfil seleccionado.';
+    return '${session.selectedLocation.label} - viento y rafagas por altura AGL para el perfil seleccionado.';
   }
 }
 
