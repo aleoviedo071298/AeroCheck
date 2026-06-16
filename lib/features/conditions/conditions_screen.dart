@@ -6,19 +6,31 @@ import '../../domain/entities/flight_rule_result.dart';
 import '../../domain/rules/flight_readiness_status.dart';
 import '../../domain/rules/rule_severity.dart';
 
-class ConditionsScreen extends StatelessWidget {
+class ConditionsScreen extends StatefulWidget {
   const ConditionsScreen({super.key});
 
   @override
+  State<ConditionsScreen> createState() => _ConditionsScreenState();
+}
+
+class _ConditionsScreenState extends State<ConditionsScreen> {
+  var _scenario = MockFlightScenario.cautionWind;
+
+  @override
   Widget build(BuildContext context) {
-    final report = MockFlightData.currentReport();
+    final report = MockFlightData.reportFor(_scenario);
     final weather = report.weather;
 
     return SafeArea(
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
         children: [
           _LocationHeader(report: report),
+          const SizedBox(height: 12),
+          _ScenarioSelector(
+            selected: _scenario,
+            onChanged: (scenario) => setState(() => _scenario = scenario),
+          ),
           const SizedBox(height: 12),
           _StatusPanel(report: report),
           const SizedBox(height: 12),
@@ -69,6 +81,39 @@ class ConditionsScreen extends StatelessWidget {
           const SizedBox(height: 12),
           _ProfileStrip(report: report),
         ],
+      ),
+    );
+  }
+}
+
+class _ScenarioSelector extends StatelessWidget {
+  const _ScenarioSelector({required this.selected, required this.onChanged});
+
+  final MockFlightScenario selected;
+  final ValueChanged<MockFlightScenario> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: SegmentedButton<MockFlightScenario>(
+          showSelectedIcon: false,
+          selected: {selected},
+          onSelectionChanged: (selection) => onChanged(selection.first),
+          style: ButtonStyle(
+            visualDensity: VisualDensity.compact,
+            textStyle: WidgetStateProperty.all(
+              const TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
+            ),
+          ),
+          segments: MockFlightScenario.values
+              .map(
+                (scenario) =>
+                    ButtonSegment(value: scenario, label: Text(scenario.label)),
+              )
+              .toList(),
+        ),
       ),
     );
   }

@@ -6,6 +6,22 @@ import '../../domain/entities/weather_snapshot.dart';
 import '../../domain/rules/flight_readiness_evaluator.dart';
 import '../../domain/rules/flight_readiness_status.dart';
 
+enum MockFlightScenario { goodToFly, cautionWind, notReadyRainAndRestriction }
+
+extension MockFlightScenarioLabel on MockFlightScenario {
+  String get label => switch (this) {
+    MockFlightScenario.goodToFly => 'APTO',
+    MockFlightScenario.cautionWind => 'PRECAUCION',
+    MockFlightScenario.notReadyRainAndRestriction => 'NO APTO',
+  };
+
+  String get description => switch (this) {
+    MockFlightScenario.goodToFly => 'Bajo riesgo',
+    MockFlightScenario.cautionWind => 'Rafagas y zona cercana',
+    MockFlightScenario.notReadyRainAndRestriction => 'Lluvia y restriccion',
+  };
+}
+
 class MockFlightData {
   static const evaluator = FlightReadinessEvaluator();
   static const droneProfile = DroneProfile.standard;
@@ -76,13 +92,26 @@ class MockFlightData {
     isNearRestrictedArea: true,
   );
 
-  static FlightReadinessReport currentReport() {
+  static WeatherSnapshot snapshotFor(MockFlightScenario scenario) {
+    return switch (scenario) {
+      MockFlightScenario.goodToFly => goodToFly,
+      MockFlightScenario.cautionWind => cautionWind,
+      MockFlightScenario.notReadyRainAndRestriction =>
+        notReadyRainAndRestriction,
+    };
+  }
+
+  static FlightReadinessReport reportFor(MockFlightScenario scenario) {
     return evaluator.evaluate(
-      weather: cautionWind,
+      weather: snapshotFor(scenario),
       droneProfile: droneProfile,
       missionProfile: missionProfile,
       bestWindow: bestWindow,
     );
+  }
+
+  static FlightReadinessReport currentReport() {
+    return reportFor(MockFlightScenario.cautionWind);
   }
 
   static List<ForecastRow> forecastRows() {
