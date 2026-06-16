@@ -15,3 +15,14 @@ AeroCheck is a planned cross-platform mobile app for drone pilots. The goal is t
 - Flutter for Android and iOS.
 - Shared flight-readiness logic across platforms.
 - Backend API for weather aggregation, alerts, geospatial layers, users, and subscriptions.
+
+## Development
+
+```powershell
+flutter pub get
+flutter test
+flutter analyze
+flutter run
+```
+
+The current app is a mock-data Flutter MVP with five tabs: `Estado`, `Forecast`, `Viento`, `Mapa`, and `Ajustes`.
