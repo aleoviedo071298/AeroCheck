@@ -39,7 +39,7 @@ class _AppShellState extends State<AppShell> {
       ConditionsScreen(session: _weatherSession),
       ForecastScreen(session: _weatherSession),
       WindScreen(session: _weatherSession),
-      const MapScreen(),
+      MapScreen(session: _weatherSession),
       SettingsScreen(session: _weatherSession),
     ];
 
