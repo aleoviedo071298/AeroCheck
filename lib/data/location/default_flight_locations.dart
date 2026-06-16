@@ -54,6 +54,8 @@ class DefaultFlightLocations {
     bariloche,
   ];
 
+  static const seedFavorites = [comodoroRivadavia];
+
   static FlightLocation? byId(String? id) {
     if (id == null) {
       return null;

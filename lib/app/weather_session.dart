@@ -32,6 +32,8 @@ class WeatherSession extends ChangeNotifier {
   final _evaluator = const FlightReadinessEvaluator();
 
   FlightLocation _selectedLocation = DefaultFlightLocations.comodoroRivadavia;
+  List<FlightLocation> _favoriteLocations =
+      DefaultFlightLocations.seedFavorites;
   WeatherDataSource _dataSource = WeatherDataSource.mock;
   MockFlightScenario _mockScenario = MockFlightScenario.cautionWind;
   WeatherBundle? _realBundle;
@@ -39,7 +41,11 @@ class WeatherSession extends ChangeNotifier {
   var _isLoadingReal = false;
 
   FlightLocation get selectedLocation => _selectedLocation;
-  List<FlightLocation> get availableLocations => DefaultFlightLocations.all;
+  List<FlightLocation> get availableLocations => _favoriteLocations;
+  List<FlightLocation> get locationCatalog => DefaultFlightLocations.all;
+  List<FlightLocation> get addableLocations => locationCatalog
+      .where((location) => !_isFavoriteLocation(location.id))
+      .toList();
   WeatherDataSource get dataSource => _dataSource;
   MockFlightScenario get mockScenario => _mockScenario;
   WeatherBundle? get realBundle => _realBundle;
@@ -91,13 +97,17 @@ class WeatherSession extends ChangeNotifier {
   Future<void> restorePreferences() async {
     try {
       final preferences = await _preferencesStore.load();
-      final location = DefaultFlightLocations.byId(preferences.locationId);
+      final savedLocation = DefaultFlightLocations.byId(preferences.locationId);
+      final favorites = _favoriteLocationsFrom(
+        preferences.favoriteLocationIds,
+        savedLocation,
+      );
       final dataSource = _dataSourceFromName(preferences.dataSourceName);
       final scenario = _mockScenarioFromName(preferences.mockScenarioName);
 
-      if (location != null) {
-        _selectedLocation = location;
-      }
+      _favoriteLocations = favorites;
+      _selectedLocation = savedLocation ?? favorites.first;
+      _favoriteLocations = _withFavorite(_favoriteLocations, _selectedLocation);
       if (scenario != null) {
         _mockScenario = scenario;
       }
@@ -115,8 +125,42 @@ class WeatherSession extends ChangeNotifier {
     }
   }
 
+  void addFavoriteLocation(FlightLocation location) {
+    if (_isFavoriteLocation(location.id)) {
+      return;
+    }
+
+    _favoriteLocations = [..._favoriteLocations, location];
+    notifyListeners();
+    _persistPreferences();
+  }
+
+  void removeFavoriteLocation(FlightLocation location) {
+    if (_favoriteLocations.length == 1 || !_isFavoriteLocation(location.id)) {
+      return;
+    }
+
+    _favoriteLocations = _favoriteLocations
+        .where((favorite) => favorite.id != location.id)
+        .toList();
+    final removedSelected = _selectedLocation.id == location.id;
+    if (removedSelected) {
+      _selectedLocation = _favoriteLocations.first;
+      _realBundle = null;
+      _realError = null;
+    }
+
+    notifyListeners();
+    _persistPreferences();
+
+    if (removedSelected && _dataSource == WeatherDataSource.real) {
+      loadRealWeather();
+    }
+  }
+
   void setLocation(FlightLocation location) {
-    if (_selectedLocation.id == location.id) {
+    if (_selectedLocation.id == location.id ||
+        !_isFavoriteLocation(location.id)) {
       return;
     }
 
@@ -234,6 +278,9 @@ class WeatherSession extends ChangeNotifier {
           .save(
             UserPreferences(
               locationId: _selectedLocation.id,
+              favoriteLocationIds: _favoriteLocations
+                  .map((location) => location.id)
+                  .toList(),
               dataSourceName: _dataSource.name,
               mockScenarioName: _mockScenario.name,
             ),
@@ -268,5 +315,45 @@ class WeatherSession extends ChangeNotifier {
     }
 
     return null;
+  }
+
+  List<FlightLocation> _favoriteLocationsFrom(
+    List<String> ids,
+    FlightLocation? savedLocation,
+  ) {
+    final favorites = <FlightLocation>[];
+    if (ids.isEmpty) {
+      favorites.addAll(DefaultFlightLocations.seedFavorites);
+    } else {
+      for (final id in ids) {
+        final location = DefaultFlightLocations.byId(id);
+        if (location != null && !favorites.any((item) => item.id == id)) {
+          favorites.add(location);
+        }
+      }
+    }
+
+    if (savedLocation != null &&
+        !favorites.any((location) => location.id == savedLocation.id)) {
+      favorites.add(savedLocation);
+    }
+
+    return favorites.isEmpty
+        ? DefaultFlightLocations.seedFavorites
+        : List.unmodifiable(favorites);
+  }
+
+  List<FlightLocation> _withFavorite(
+    List<FlightLocation> favorites,
+    FlightLocation location,
+  ) {
+    if (favorites.any((favorite) => favorite.id == location.id)) {
+      return favorites;
+    }
+    return List.unmodifiable([...favorites, location]);
+  }
+
+  bool _isFavoriteLocation(String id) {
+    return _favoriteLocations.any((location) => location.id == id);
   }
 }

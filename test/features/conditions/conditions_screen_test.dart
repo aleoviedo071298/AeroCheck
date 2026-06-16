@@ -52,7 +52,12 @@ void main() {
   });
 
   testWidgets('conditions screen can change selected location', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'aerocheck.favorite_location_ids': ['comodoro-rivadavia', 'mendoza'],
+    });
+
     await tester.pumpWidget(const AeroCheckApp());
+    await tester.pumpAndSettle();
 
     expect(find.text('Comodoro Rivadavia, Chubut'), findsWidgets);
 

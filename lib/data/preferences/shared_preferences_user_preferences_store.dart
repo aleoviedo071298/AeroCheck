@@ -5,6 +5,7 @@ import 'user_preferences_store.dart';
 
 class SharedPreferencesUserPreferencesStore implements UserPreferencesStore {
   static const _locationIdKey = 'aerocheck.location_id';
+  static const _favoriteLocationIdsKey = 'aerocheck.favorite_location_ids';
   static const _dataSourceKey = 'aerocheck.data_source';
   static const _mockScenarioKey = 'aerocheck.mock_scenario';
 
@@ -13,6 +14,8 @@ class SharedPreferencesUserPreferencesStore implements UserPreferencesStore {
     final preferences = await SharedPreferences.getInstance();
     return UserPreferences(
       locationId: preferences.getString(_locationIdKey),
+      favoriteLocationIds:
+          preferences.getStringList(_favoriteLocationIdsKey) ?? const [],
       dataSourceName: preferences.getString(_dataSourceKey),
       mockScenarioName: preferences.getString(_mockScenarioKey),
     );
@@ -23,6 +26,10 @@ class SharedPreferencesUserPreferencesStore implements UserPreferencesStore {
     final store = await SharedPreferences.getInstance();
     await Future.wait([
       _setOrRemove(store, _locationIdKey, preferences.locationId),
+      store.setStringList(
+        _favoriteLocationIdsKey,
+        preferences.favoriteLocationIds,
+      ),
       _setOrRemove(store, _dataSourceKey, preferences.dataSourceName),
       _setOrRemove(store, _mockScenarioKey, preferences.mockScenarioName),
     ]);

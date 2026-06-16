@@ -39,6 +39,7 @@ void main() {
       preferencesStore: _FakePreferencesStore(),
     );
 
+    session.addFavoriteLocation(DefaultFlightLocations.mendoza);
     session.setLocation(DefaultFlightLocations.mendoza);
     session.setDataSource(WeatherDataSource.real);
     await Future<void>.delayed(Duration.zero);
@@ -54,6 +55,7 @@ void main() {
     final store = _FakePreferencesStore(
       const UserPreferences(
         locationId: 'bariloche',
+        favoriteLocationIds: ['comodoro-rivadavia', 'bariloche'],
         dataSourceName: 'real',
         mockScenarioName: 'goodToFly',
       ),
@@ -66,6 +68,10 @@ void main() {
     await session.restorePreferences();
 
     expect(session.selectedLocation, DefaultFlightLocations.bariloche);
+    expect(
+      session.availableLocations,
+      contains(DefaultFlightLocations.bariloche),
+    );
     expect(session.dataSource, WeatherDataSource.real);
     expect(session.mockScenario, MockFlightScenario.goodToFly);
     expect(repository.lastLatitude, DefaultFlightLocations.bariloche.latitude);
@@ -86,17 +92,41 @@ void main() {
       preferencesStore: store,
     );
 
+    session.addFavoriteLocation(DefaultFlightLocations.mendoza);
     session.setLocation(DefaultFlightLocations.mendoza);
     session.setMockScenario(MockFlightScenario.notReadyRainAndRestriction);
     session.setDataSource(WeatherDataSource.real);
     await Future<void>.delayed(Duration.zero);
 
     expect(store.savedPreferences?.locationId, 'mendoza');
+    expect(store.savedPreferences?.favoriteLocationIds, [
+      'comodoro-rivadavia',
+      'mendoza',
+    ]);
     expect(
       store.savedPreferences?.mockScenarioName,
       'notReadyRainAndRestriction',
     );
     expect(store.savedPreferences?.dataSourceName, 'real');
+  });
+
+  test('removes selected favorite and falls back to remaining location', () {
+    final store = _FakePreferencesStore();
+    final session = WeatherSession(
+      weatherRepository: _FakeWeatherRepository(),
+      preferencesStore: store,
+    );
+
+    session.addFavoriteLocation(DefaultFlightLocations.mendoza);
+    session.setLocation(DefaultFlightLocations.mendoza);
+    session.removeFavoriteLocation(DefaultFlightLocations.mendoza);
+
+    expect(session.selectedLocation, DefaultFlightLocations.comodoroRivadavia);
+    expect(session.availableLocations, [
+      DefaultFlightLocations.comodoroRivadavia,
+    ]);
+    expect(store.savedPreferences?.locationId, 'comodoro-rivadavia');
+    expect(store.savedPreferences?.favoriteLocationIds, ['comodoro-rivadavia']);
   });
 }
 
