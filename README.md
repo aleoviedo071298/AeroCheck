@@ -1,0 +1,14 @@
+# AeroCheck
+
+AeroCheck is a planned cross-platform mobile app for drone pilots. The goal is to help users decide when and where it is safe or convenient to fly by combining weather, wind-by-altitude, operational maps, alerts, and pre-flight checks.
+
+## Planning
+
+- [Multiplatform launch plan](./plan_app_dron_multiplataforma.md)
+- Competitive reference screenshots are stored in `competencia/`.
+
+## Proposed Stack
+
+- Flutter for Android and iOS.
+- Shared flight-readiness logic across platforms.
+- Backend API for weather aggregation, alerts, geospatial layers, users, and subscriptions.
