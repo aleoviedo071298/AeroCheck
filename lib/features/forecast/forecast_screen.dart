@@ -1,32 +1,49 @@
 import 'package:flutter/material.dart';
 
+import '../../app/weather_session.dart';
 import '../../data/mock/mock_flight_data.dart';
 
 class ForecastScreen extends StatelessWidget {
-  const ForecastScreen({super.key});
+  const ForecastScreen({super.key, required this.session});
+
+  final WeatherSession session;
 
   @override
   Widget build(BuildContext context) {
-    final rows = MockFlightData.forecastRows();
-    return SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text(
-            'Forecast horario',
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
+    return AnimatedBuilder(
+      animation: session,
+      builder: (context, _) {
+        final rows = session.forecastRows;
+        return SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Text(
+                'Forecast horario',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(_descriptionFor(session)),
+              const SizedBox(height: 16),
+              ...rows.map((row) => _ForecastRowCard(row: row)),
+            ],
           ),
-          const SizedBox(height: 6),
-          const Text(
-            'Datos mock para validar la lectura del MVP antes de conectar proveedores.',
-          ),
-          const SizedBox(height: 16),
-          ...rows.map((row) => _ForecastRowCard(row: row)),
-        ],
-      ),
+        );
+      },
     );
+  }
+
+  String _descriptionFor(WeatherSession session) {
+    if (session.dataSource == WeatherDataSource.real &&
+        session.realBundle != null) {
+      return 'Clima real de Open-Meteo evaluado con las reglas de AeroCheck.';
+    }
+    if (session.dataSource == WeatherDataSource.real && session.isLoadingReal) {
+      return 'Cargando clima real para el forecast.';
+    }
+    return 'Datos mock para validar la lectura del MVP antes de conectar proveedores.';
   }
 }
 

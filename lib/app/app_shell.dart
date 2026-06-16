@@ -5,6 +5,7 @@ import '../features/forecast/forecast_screen.dart';
 import '../features/map/map_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/wind/wind_screen.dart';
+import 'weather_session.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -14,18 +15,31 @@ class AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<AppShell> {
+  late final WeatherSession _weatherSession;
   var _index = 0;
 
-  static const _screens = [
-    ConditionsScreen(),
-    ForecastScreen(),
-    WindScreen(),
-    MapScreen(),
-    SettingsScreen(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _weatherSession = WeatherSession();
+  }
+
+  @override
+  void dispose() {
+    _weatherSession.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final screens = [
+      ConditionsScreen(session: _weatherSession),
+      ForecastScreen(session: _weatherSession),
+      WindScreen(session: _weatherSession),
+      const MapScreen(),
+      const SettingsScreen(),
+    ];
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -40,7 +54,7 @@ class _AppShellState extends State<AppShell> {
           ),
         ],
       ),
-      body: IndexedStack(index: _index, children: _screens),
+      body: IndexedStack(index: _index, children: screens),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (value) => setState(() => _index = value),

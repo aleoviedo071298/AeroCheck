@@ -1,112 +1,76 @@
 import 'package:flutter/material.dart';
 
+import '../../app/weather_session.dart';
 import '../../data/mock/mock_flight_data.dart';
-import '../../data/weather/open_meteo_weather_repository.dart';
 import '../../data/weather/weather_bundle.dart';
-import '../../data/weather/weather_repository.dart';
 import '../../domain/entities/flight_readiness_report.dart';
 import '../../domain/entities/flight_rule_result.dart';
-import '../../domain/entities/flight_window_recommendation.dart';
 import '../../domain/entities/weather_snapshot.dart';
-import '../../domain/rules/flight_readiness_evaluator.dart';
 import '../../domain/rules/flight_readiness_status.dart';
 import '../../domain/rules/rule_severity.dart';
 
-enum _ConditionsDataSource { mock, real }
+class ConditionsScreen extends StatelessWidget {
+  const ConditionsScreen({super.key, required this.session});
 
-class ConditionsScreen extends StatefulWidget {
-  const ConditionsScreen({super.key, WeatherRepository? weatherRepository})
-    : _weatherRepository = weatherRepository;
-
-  final WeatherRepository? _weatherRepository;
-
-  @override
-  State<ConditionsScreen> createState() => _ConditionsScreenState();
-}
-
-class _ConditionsScreenState extends State<ConditionsScreen> {
-  static const _realLatitude = -45.8641;
-  static const _realLongitude = -67.4966;
-  static const _realLocationLabel = 'Comodoro Rivadavia, Chubut';
-
-  WeatherRepository? _weatherRepository;
-  final _evaluator = const FlightReadinessEvaluator();
-
-  var _dataSource = _ConditionsDataSource.mock;
-  var _scenario = MockFlightScenario.cautionWind;
-  WeatherBundle? _realBundle;
-  Object? _realError;
-  var _isLoadingReal = false;
+  final WeatherSession session;
 
   @override
   Widget build(BuildContext context) {
-    final report = _reportForCurrentSource();
-    final weather = report?.weather;
+    return AnimatedBuilder(
+      animation: session,
+      builder: (context, _) {
+        final report = session.currentReport;
+        final weather = report?.weather;
 
-    return SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
-        children: [
-          if (report != null)
-            _LocationHeader(
-              report: report,
-              subtitle: _subtitleFor(report.weather),
-            )
-          else
-            const _LoadingHeader(),
-          const SizedBox(height: 12),
-          _DataSourceSelector(
-            selected: _dataSource,
-            onChanged: _onDataSourceChanged,
-          ),
-          const SizedBox(height: 12),
-          if (_dataSource == _ConditionsDataSource.mock) ...[
-            _ScenarioSelector(
-              selected: _scenario,
-              onChanged: (scenario) => setState(() => _scenario = scenario),
-            ),
-            const SizedBox(height: 12),
-          ],
-          if (_dataSource == _ConditionsDataSource.real && _isLoadingReal)
-            const _RealWeatherLoadingCard()
-          else if (_dataSource == _ConditionsDataSource.real &&
-              _realError != null)
-            _RealWeatherErrorCard(onRetry: _loadRealWeather)
-          else if (report != null && weather != null) ...[
-            if (_dataSource == _ConditionsDataSource.real) ...[
-              _ProviderCard(bundle: _realBundle!),
+        return SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
+            children: [
+              if (report != null)
+                _LocationHeader(
+                  report: report,
+                  subtitle: _subtitleFor(report.weather),
+                )
+              else
+                const _LoadingHeader(),
               const SizedBox(height: 12),
+              _DataSourceSelector(
+                selected: session.dataSource,
+                onChanged: session.setDataSource,
+              ),
+              const SizedBox(height: 12),
+              if (session.dataSource == WeatherDataSource.mock) ...[
+                _ScenarioSelector(
+                  selected: session.mockScenario,
+                  onChanged: session.setMockScenario,
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (session.dataSource == WeatherDataSource.real &&
+                  session.isLoadingReal)
+                const _RealWeatherLoadingCard()
+              else if (session.dataSource == WeatherDataSource.real &&
+                  session.realError != null)
+                _RealWeatherErrorCard(onRetry: session.loadRealWeather)
+              else if (report != null && weather != null) ...[
+                if (session.dataSource == WeatherDataSource.real) ...[
+                  _ProviderCard(bundle: session.realBundle!),
+                  const SizedBox(height: 12),
+                ],
+                _StatusPanel(report: report),
+                const SizedBox(height: 12),
+                _BestWindowCard(report: report),
+                const SizedBox(height: 12),
+                _ReasonList(rules: report.rules),
+                const SizedBox(height: 12),
+                _MetricGrid(metrics: _metricsFor(weather)),
+                const SizedBox(height: 12),
+                _ProfileStrip(report: report),
+              ],
             ],
-            _StatusPanel(report: report),
-            const SizedBox(height: 12),
-            _BestWindowCard(report: report),
-            const SizedBox(height: 12),
-            _ReasonList(rules: report.rules),
-            const SizedBox(height: 12),
-            _MetricGrid(metrics: _metricsFor(weather)),
-            const SizedBox(height: 12),
-            _ProfileStrip(report: report),
-          ],
-        ],
-      ),
-    );
-  }
-
-  FlightReadinessReport? _reportForCurrentSource() {
-    if (_dataSource == _ConditionsDataSource.mock) {
-      return MockFlightData.reportFor(_scenario);
-    }
-
-    final bundle = _realBundle;
-    if (bundle == null) {
-      return null;
-    }
-
-    return _evaluator.evaluate(
-      weather: bundle.current,
-      droneProfile: MockFlightData.droneProfile,
-      missionProfile: MockFlightData.missionProfile,
-      bestWindow: _bestWindowFor(bundle.hourlySnapshots),
+          ),
+        );
+      },
     );
   }
 
@@ -151,90 +115,25 @@ class _ConditionsScreenState extends State<ConditionsScreen> {
 
   String _subtitleFor(WeatherSnapshot weather) {
     final time = _time(weather.time);
-    if (_dataSource == _ConditionsDataSource.real) {
+    if (session.dataSource == WeatherDataSource.real) {
       return 'Open-Meteo - $time';
     }
     return 'Mock operativo - $time';
-  }
-
-  void _onDataSourceChanged(_ConditionsDataSource source) {
-    setState(() => _dataSource = source);
-    if (source == _ConditionsDataSource.real &&
-        _realBundle == null &&
-        !_isLoadingReal) {
-      _loadRealWeather();
-    }
-  }
-
-  Future<void> _loadRealWeather() async {
-    setState(() {
-      _isLoadingReal = true;
-      _realError = null;
-    });
-
-    try {
-      final repository = _weatherRepository ??=
-          widget._weatherRepository ?? OpenMeteoWeatherRepository();
-      final bundle = await repository.fetchWeather(
-        latitude: _realLatitude,
-        longitude: _realLongitude,
-        locationLabel: _realLocationLabel,
-      );
-      if (!mounted) return;
-      setState(() {
-        _realBundle = bundle;
-        _isLoadingReal = false;
-      });
-    } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _realError = error;
-        _isLoadingReal = false;
-      });
-    }
-  }
-
-  FlightWindowRecommendation _bestWindowFor(List<WeatherSnapshot> hourly) {
-    if (hourly.isEmpty) {
-      return MockFlightData.bestWindow;
-    }
-
-    FlightReadinessReport? bestReport;
-    for (final snapshot in hourly.take(24)) {
-      final report = _evaluator.evaluate(
-        weather: snapshot,
-        droneProfile: MockFlightData.droneProfile,
-        missionProfile: MockFlightData.missionProfile,
-        bestWindow: MockFlightData.bestWindow,
-      );
-      if (bestReport == null || report.score > bestReport.score) {
-        bestReport = report;
-      }
-    }
-
-    final bestWeather = bestReport?.weather ?? hourly.first;
-    return FlightWindowRecommendation(
-      start: bestWeather.time,
-      end: bestWeather.time.add(const Duration(hours: 1)),
-      score: bestReport?.score ?? 0,
-      status: bestReport?.status ?? FlightReadinessStatus.caution,
-      summary: 'Mejor hora real estimada por clima disponible.',
-    );
   }
 }
 
 class _DataSourceSelector extends StatelessWidget {
   const _DataSourceSelector({required this.selected, required this.onChanged});
 
-  final _ConditionsDataSource selected;
-  final ValueChanged<_ConditionsDataSource> onChanged;
+  final WeatherDataSource selected;
+  final ValueChanged<WeatherDataSource> onChanged;
 
   @override
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(8),
-        child: SegmentedButton<_ConditionsDataSource>(
+        child: SegmentedButton<WeatherDataSource>(
           showSelectedIcon: false,
           selected: {selected},
           onSelectionChanged: (selection) => onChanged(selection.first),
@@ -245,12 +144,9 @@ class _DataSourceSelector extends StatelessWidget {
             ),
           ),
           segments: const [
+            ButtonSegment(value: WeatherDataSource.mock, label: Text('Mock')),
             ButtonSegment(
-              value: _ConditionsDataSource.mock,
-              label: Text('Mock'),
-            ),
-            ButtonSegment(
-              value: _ConditionsDataSource.real,
+              value: WeatherDataSource.real,
               label: Text('Clima real'),
             ),
           ],

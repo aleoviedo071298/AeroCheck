@@ -1,43 +1,60 @@
 import 'package:flutter/material.dart';
 
+import '../../app/weather_session.dart';
 import '../../data/mock/mock_flight_data.dart';
 
 class WindScreen extends StatelessWidget {
-  const WindScreen({super.key});
+  const WindScreen({super.key, required this.session});
+
+  final WeatherSession session;
 
   @override
   Widget build(BuildContext context) {
-    final rows = MockFlightData.windProfileRows();
-    return SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text(
-            'Perfil vertical',
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Viento y rafagas por altura AGL para el perfil seleccionado.',
-          ),
-          const SizedBox(height: 16),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                children: [
-                  const _WindHeader(),
-                  const Divider(),
-                  ...rows.map((row) => _WindRow(row: row)),
-                ],
+    return AnimatedBuilder(
+      animation: session,
+      builder: (context, _) {
+        final rows = session.windProfileRows;
+        return SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Text(
+                'Perfil vertical',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
+                ),
               ),
-            ),
+              const SizedBox(height: 6),
+              Text(_descriptionFor(session)),
+              const SizedBox(height: 16),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    children: [
+                      const _WindHeader(),
+                      const Divider(),
+                      ...rows.map((row) => _WindRow(row: row)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
+  }
+
+  String _descriptionFor(WeatherSession session) {
+    if (session.dataSource == WeatherDataSource.real &&
+        session.realBundle != null) {
+      return 'Perfil real aproximado con niveles 10, 80, 120 y 180 m de Open-Meteo.';
+    }
+    if (session.dataSource == WeatherDataSource.real && session.isLoadingReal) {
+      return 'Cargando perfil vertical real.';
+    }
+    return 'Viento y rafagas por altura AGL para el perfil seleccionado.';
   }
 }
 

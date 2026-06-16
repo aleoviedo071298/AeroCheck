@@ -1,4 +1,5 @@
 import 'package:aerocheck/app/aerocheck_app.dart';
+import 'package:aerocheck/app/weather_session.dart';
 import 'package:aerocheck/data/mock/mock_flight_data.dart';
 import 'package:aerocheck/data/weather/weather_bundle.dart';
 import 'package:aerocheck/data/weather/weather_repository.dart';
@@ -50,7 +51,9 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: ConditionsScreen(
-            weatherRepository: _FakeWeatherRepository.success(),
+            session: WeatherSession(
+              weatherRepository: _FakeWeatherRepository.success(),
+            ),
           ),
         ),
       ),
@@ -73,7 +76,11 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(body: ConditionsScreen(weatherRepository: repository)),
+        home: Scaffold(
+          body: ConditionsScreen(
+            session: WeatherSession(weatherRepository: repository),
+          ),
+        ),
       ),
     );
 
