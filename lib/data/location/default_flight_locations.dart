@@ -53,4 +53,18 @@ class DefaultFlightLocations {
     mendoza,
     bariloche,
   ];
+
+  static FlightLocation? byId(String? id) {
+    if (id == null) {
+      return null;
+    }
+
+    for (final location in all) {
+      if (location.id == id) {
+        return location;
+      }
+    }
+
+    return null;
+  }
 }

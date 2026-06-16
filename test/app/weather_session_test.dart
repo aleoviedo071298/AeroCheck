@@ -1,6 +1,8 @@
 import 'package:aerocheck/app/weather_session.dart';
 import 'package:aerocheck/data/location/default_flight_locations.dart';
 import 'package:aerocheck/data/mock/mock_flight_data.dart';
+import 'package:aerocheck/data/preferences/user_preferences.dart';
+import 'package:aerocheck/data/preferences/user_preferences_store.dart';
 import 'package:aerocheck/data/weather/weather_bundle.dart';
 import 'package:aerocheck/data/weather/weather_repository.dart';
 import 'package:aerocheck/domain/entities/weather_snapshot.dart';
@@ -12,6 +14,7 @@ void main() {
     () async {
       final session = WeatherSession(
         weatherRepository: _FakeWeatherRepository(),
+        preferencesStore: _FakePreferencesStore(),
       );
 
       expect(session.dataSource, WeatherDataSource.mock);
@@ -31,7 +34,10 @@ void main() {
 
   test('reloads real weather with selected location coordinates', () async {
     final repository = _FakeWeatherRepository();
-    final session = WeatherSession(weatherRepository: repository);
+    final session = WeatherSession(
+      weatherRepository: repository,
+      preferencesStore: _FakePreferencesStore(),
+    );
 
     session.setLocation(DefaultFlightLocations.mendoza);
     session.setDataSource(WeatherDataSource.real);
@@ -42,6 +48,72 @@ void main() {
     expect(repository.lastLongitude, DefaultFlightLocations.mendoza.longitude);
     expect(repository.lastLocationLabel, DefaultFlightLocations.mendoza.label);
   });
+
+  test('restores saved preferences and reloads real weather', () async {
+    final repository = _FakeWeatherRepository();
+    final store = _FakePreferencesStore(
+      const UserPreferences(
+        locationId: 'bariloche',
+        dataSourceName: 'real',
+        mockScenarioName: 'goodToFly',
+      ),
+    );
+    final session = WeatherSession(
+      weatherRepository: repository,
+      preferencesStore: store,
+    );
+
+    await session.restorePreferences();
+
+    expect(session.selectedLocation, DefaultFlightLocations.bariloche);
+    expect(session.dataSource, WeatherDataSource.real);
+    expect(session.mockScenario, MockFlightScenario.goodToFly);
+    expect(repository.lastLatitude, DefaultFlightLocations.bariloche.latitude);
+    expect(
+      repository.lastLongitude,
+      DefaultFlightLocations.bariloche.longitude,
+    );
+    expect(
+      repository.lastLocationLabel,
+      DefaultFlightLocations.bariloche.label,
+    );
+  });
+
+  test('saves changed location, data source, and mock scenario', () async {
+    final store = _FakePreferencesStore();
+    final session = WeatherSession(
+      weatherRepository: _FakeWeatherRepository(),
+      preferencesStore: store,
+    );
+
+    session.setLocation(DefaultFlightLocations.mendoza);
+    session.setMockScenario(MockFlightScenario.notReadyRainAndRestriction);
+    session.setDataSource(WeatherDataSource.real);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(store.savedPreferences?.locationId, 'mendoza');
+    expect(
+      store.savedPreferences?.mockScenarioName,
+      'notReadyRainAndRestriction',
+    );
+    expect(store.savedPreferences?.dataSourceName, 'real');
+  });
+}
+
+class _FakePreferencesStore implements UserPreferencesStore {
+  _FakePreferencesStore([this._preferences = const UserPreferences()]);
+
+  UserPreferences _preferences;
+  UserPreferences? savedPreferences;
+
+  @override
+  Future<UserPreferences> load() async => _preferences;
+
+  @override
+  Future<void> save(UserPreferences preferences) async {
+    _preferences = preferences;
+    savedPreferences = preferences;
+  }
 }
 
 class _FakeWeatherRepository implements WeatherRepository {

@@ -1,14 +1,21 @@
 import 'package:aerocheck/app/aerocheck_app.dart';
 import 'package:aerocheck/app/weather_session.dart';
 import 'package:aerocheck/data/mock/mock_flight_data.dart';
+import 'package:aerocheck/data/preferences/user_preferences.dart';
+import 'package:aerocheck/data/preferences/user_preferences_store.dart';
 import 'package:aerocheck/data/weather/weather_bundle.dart';
 import 'package:aerocheck/data/weather/weather_repository.dart';
 import 'package:aerocheck/domain/entities/weather_snapshot.dart';
 import 'package:aerocheck/features/conditions/conditions_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   testWidgets('conditions screen renders status, reasons, and best window', (
     tester,
   ) async {
@@ -66,6 +73,7 @@ void main() {
           body: ConditionsScreen(
             session: WeatherSession(
               weatherRepository: _FakeWeatherRepository.success(),
+              preferencesStore: _FakePreferencesStore(),
             ),
           ),
         ),
@@ -77,6 +85,7 @@ void main() {
 
     expect(find.textContaining('Clima real | Open-Meteo'), findsOneWidget);
     expect(find.textContaining('Open-Meteo -'), findsOneWidget);
+    expect(find.textContaining('Catamarca'), findsNothing);
     await tester.drag(find.byType(ListView), const Offset(0, -500));
     await tester.pumpAndSettle();
     expect(find.text('No disp.'), findsWidgets);
@@ -91,7 +100,10 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: ConditionsScreen(
-            session: WeatherSession(weatherRepository: repository),
+            session: WeatherSession(
+              weatherRepository: repository,
+              preferencesStore: _FakePreferencesStore(),
+            ),
           ),
         ),
       ),
@@ -107,6 +119,14 @@ void main() {
 
     expect(find.textContaining('Clima real | Open-Meteo'), findsOneWidget);
   });
+}
+
+class _FakePreferencesStore implements UserPreferencesStore {
+  @override
+  Future<UserPreferences> load() async => const UserPreferences();
+
+  @override
+  Future<void> save(UserPreferences preferences) async {}
 }
 
 class _FakeWeatherRepository implements WeatherRepository {

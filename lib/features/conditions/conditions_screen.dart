@@ -381,22 +381,17 @@ class _ProviderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          children: [
-            Icon(
-              Icons.cloud_sync_rounded,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Clima real | ${bundle.providerName} | ${bundle.timezone}',
-                style: const TextStyle(fontWeight: FontWeight.w800),
-              ),
-            ),
-          ],
+      child: ListTile(
+        leading: Icon(
+          Icons.cloud_sync_rounded,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        title: Text(
+          'Clima real | ${bundle.providerName}',
+          style: const TextStyle(fontWeight: FontWeight.w900),
+        ),
+        subtitle: Text(
+          '${bundle.locationLabel} | Actualizado ${_time(bundle.current.time)}',
         ),
       ),
     );

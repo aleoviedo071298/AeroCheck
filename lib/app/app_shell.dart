@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../features/conditions/conditions_screen.dart';
@@ -22,6 +24,7 @@ class _AppShellState extends State<AppShell> {
   void initState() {
     super.initState();
     _weatherSession = WeatherSession();
+    unawaited(_weatherSession.restorePreferences());
   }
 
   @override
@@ -37,7 +40,7 @@ class _AppShellState extends State<AppShell> {
       ForecastScreen(session: _weatherSession),
       WindScreen(session: _weatherSession),
       const MapScreen(),
-      const SettingsScreen(),
+      SettingsScreen(session: _weatherSession),
     ];
 
     return Scaffold(

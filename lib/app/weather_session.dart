@@ -1,8 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../data/location/default_flight_locations.dart';
 import '../data/location/flight_location.dart';
 import '../data/mock/mock_flight_data.dart';
+import '../data/preferences/shared_preferences_user_preferences_store.dart';
+import '../data/preferences/user_preferences.dart';
+import '../data/preferences/user_preferences_store.dart';
 import '../data/weather/open_meteo_weather_repository.dart';
 import '../data/weather/weather_bundle.dart';
 import '../data/weather/weather_repository.dart';
@@ -15,10 +20,15 @@ import '../domain/rules/flight_readiness_status.dart';
 enum WeatherDataSource { mock, real }
 
 class WeatherSession extends ChangeNotifier {
-  WeatherSession({WeatherRepository? weatherRepository})
-    : _weatherRepository = weatherRepository;
+  WeatherSession({
+    WeatherRepository? weatherRepository,
+    UserPreferencesStore? preferencesStore,
+  }) : _weatherRepository = weatherRepository,
+       _preferencesStore =
+           preferencesStore ?? SharedPreferencesUserPreferencesStore();
 
   WeatherRepository? _weatherRepository;
+  final UserPreferencesStore _preferencesStore;
   final _evaluator = const FlightReadinessEvaluator();
 
   FlightLocation _selectedLocation = DefaultFlightLocations.comodoroRivadavia;
@@ -78,6 +88,33 @@ class WeatherSession extends ChangeNotifier {
     return 'Datos mock';
   }
 
+  Future<void> restorePreferences() async {
+    try {
+      final preferences = await _preferencesStore.load();
+      final location = DefaultFlightLocations.byId(preferences.locationId);
+      final dataSource = _dataSourceFromName(preferences.dataSourceName);
+      final scenario = _mockScenarioFromName(preferences.mockScenarioName);
+
+      if (location != null) {
+        _selectedLocation = location;
+      }
+      if (scenario != null) {
+        _mockScenario = scenario;
+      }
+      if (dataSource != null) {
+        _dataSource = dataSource;
+      }
+
+      notifyListeners();
+
+      if (_dataSource == WeatherDataSource.real) {
+        await loadRealWeather();
+      }
+    } catch (_) {
+      // Preferences should never block the operational screen.
+    }
+  }
+
   void setLocation(FlightLocation location) {
     if (_selectedLocation.id == location.id) {
       return;
@@ -87,6 +124,7 @@ class WeatherSession extends ChangeNotifier {
     _realBundle = null;
     _realError = null;
     notifyListeners();
+    _persistPreferences();
 
     if (_dataSource == WeatherDataSource.real) {
       loadRealWeather();
@@ -100,6 +138,7 @@ class WeatherSession extends ChangeNotifier {
 
     _dataSource = source;
     notifyListeners();
+    _persistPreferences();
 
     if (source == WeatherDataSource.real &&
         _realBundle == null &&
@@ -114,6 +153,7 @@ class WeatherSession extends ChangeNotifier {
     }
     _mockScenario = scenario;
     notifyListeners();
+    _persistPreferences();
   }
 
   Future<void> loadRealWeather() async {
@@ -186,5 +226,47 @@ class WeatherSession extends ChangeNotifier {
 
   String _time(DateTime value) {
     return '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
+  }
+
+  void _persistPreferences() {
+    unawaited(
+      _preferencesStore
+          .save(
+            UserPreferences(
+              locationId: _selectedLocation.id,
+              dataSourceName: _dataSource.name,
+              mockScenarioName: _mockScenario.name,
+            ),
+          )
+          .catchError((_) {}),
+    );
+  }
+
+  WeatherDataSource? _dataSourceFromName(String? name) {
+    if (name == null) {
+      return null;
+    }
+
+    for (final source in WeatherDataSource.values) {
+      if (source.name == name) {
+        return source;
+      }
+    }
+
+    return null;
+  }
+
+  MockFlightScenario? _mockScenarioFromName(String? name) {
+    if (name == null) {
+      return null;
+    }
+
+    for (final scenario in MockFlightScenario.values) {
+      if (scenario.name == name) {
+        return scenario;
+      }
+    }
+
+    return null;
   }
 }
