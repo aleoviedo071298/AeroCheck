@@ -94,7 +94,7 @@ class WeatherSession extends ChangeNotifier {
           .map(_forecastRowFor)
           .toList();
     }
-    return MockFlightData.forecastRows();
+    return MockFlightData.forecastSnapshots().map(_forecastRowFor).toList();
   }
 
   List<WindProfileRow> get windProfileRows {
@@ -260,8 +260,9 @@ class WeatherSession extends ChangeNotifier {
 
     FlightReadinessReport? bestReport;
     for (final snapshot in hourly.take(24)) {
+      final weather = _withOperationalContext(snapshot);
       final report = _evaluator.evaluate(
-        weather: snapshot,
+        weather: weather,
         droneProfile: MockFlightData.droneProfile,
         missionProfile: MockFlightData.missionProfile,
         bestWindow: MockFlightData.bestWindow,
@@ -304,20 +305,21 @@ class WeatherSession extends ChangeNotifier {
   }
 
   ForecastRow _forecastRowFor(WeatherSnapshot snapshot) {
+    final weather = _withOperationalContext(snapshot);
     final report = _evaluator.evaluate(
-      weather: snapshot,
+      weather: weather,
       droneProfile: MockFlightData.droneProfile,
       missionProfile: MockFlightData.missionProfile,
       bestWindow: MockFlightData.bestWindow,
     );
 
     return ForecastRow(
-      hour: _time(snapshot.time),
+      hour: _time(weather.time),
       status: report.status.label,
-      windKmh: snapshot.windKmh ?? 0,
-      gustKmh: snapshot.gustKmh ?? 0,
-      rainPercent: snapshot.precipitationProbability ?? 0,
-      visibilityKm: snapshot.visibilityKm ?? 0,
+      windKmh: weather.windKmh ?? 0,
+      gustKmh: weather.gustKmh ?? 0,
+      rainPercent: weather.precipitationProbability ?? 0,
+      visibilityKm: weather.visibilityKm ?? 0,
     );
   }
 

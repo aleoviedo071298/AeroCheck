@@ -167,6 +167,33 @@ void main() {
     );
   });
 
+  test('guide radius can turn ready forecast hours into caution', () {
+    final session = WeatherSession(
+      weatherRepository: _FakeWeatherRepository(),
+      preferencesStore: _FakePreferencesStore(),
+    );
+
+    session.setGuideRadiusKm(1);
+    expect(session.forecastRows.first.status, 'APTO');
+
+    session.setGuideRadiusKm(7);
+
+    expect(session.forecastRows.first.status, 'PRECAUCION');
+  });
+
+  test('real forecast rows use the active operational context', () async {
+    final session = WeatherSession(
+      weatherRepository: _FakeWeatherRepository(),
+      preferencesStore: _FakePreferencesStore(),
+    );
+
+    session.setGuideRadiusKm(7);
+    await session.loadRealWeather();
+    session.setDataSource(WeatherDataSource.real);
+
+    expect(session.forecastRows.first.status, 'PRECAUCION');
+  });
+
   test('exposes detected mock sensitive zones with distance', () {
     final session = WeatherSession(
       weatherRepository: _FakeWeatherRepository(),

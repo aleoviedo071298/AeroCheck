@@ -114,48 +114,31 @@ class MockFlightData {
     return reportFor(MockFlightScenario.cautionWind);
   }
 
-  static List<ForecastRow> forecastRows() {
+  static List<WeatherSnapshot> forecastSnapshots() {
     return [
-      ForecastRow(
-        hour: '08:00',
-        status: 'APTO',
+      goodToFly.copyWith(
+        time: DateTime(2026, 6, 16, 8),
         windKmh: 11,
         gustKmh: 17,
-        rainPercent: 0,
+        precipitationProbability: 0,
         visibilityKm: 16,
       ),
-      ForecastRow(
-        hour: '09:00',
-        status: 'APTO',
+      goodToFly.copyWith(
+        time: DateTime(2026, 6, 16, 9),
         windKmh: 12,
         gustKmh: 18,
-        rainPercent: 0,
+        precipitationProbability: 0,
         visibilityKm: 16,
       ),
-      ForecastRow(
-        hour: '10:00',
-        status: 'APTO',
+      goodToFly.copyWith(
+        time: DateTime(2026, 6, 16, 10),
         windKmh: 14,
         gustKmh: 20,
-        rainPercent: 4,
+        precipitationProbability: 4,
         visibilityKm: 15,
       ),
-      ForecastRow(
-        hour: '13:00',
-        status: 'PRECAUCION',
-        windKmh: 19,
-        gustKmh: 31,
-        rainPercent: 18,
-        visibilityKm: 14,
-      ),
-      ForecastRow(
-        hour: '17:00',
-        status: 'NO APTO',
-        windKmh: 24,
-        gustKmh: 43,
-        rainPercent: 72,
-        visibilityKm: 2.2,
-      ),
+      cautionWind,
+      notReadyRainAndRestriction,
     ];
   }
 
