@@ -334,6 +334,65 @@ void main() {
     // Just verify that airspace is detected and included in the rules
     expect(report.rules.map((r) => r.code), contains('RESTRICTED_AREA'));
   });
+
+  test('searchLocations returns matches by city name', () {
+    final session = WeatherSession(
+      weatherRepository: _FakeWeatherRepository(),
+      preferencesStore: _FakePreferencesStore(),
+    );
+
+    final results = session.searchLocations('mendoza');
+
+    expect(results.length, 1);
+    expect(results.first.id, 'mendoza');
+  });
+
+  test('searchLocations returns matches by region', () {
+    final session = WeatherSession(
+      weatherRepository: _FakeWeatherRepository(),
+      preferencesStore: _FakePreferencesStore(),
+    );
+
+    final results = session.searchLocations('Santa Fe');
+
+    expect(results.length, 1);
+    expect(results.first.id, 'rosario');
+  });
+
+  test('searchLocations returns matches by country', () {
+    final session = WeatherSession(
+      weatherRepository: _FakeWeatherRepository(),
+      preferencesStore: _FakePreferencesStore(),
+    );
+
+    final results = session.searchLocations('argentina');
+
+    expect(results.length, greaterThan(1));
+  });
+
+  test('searchLocations excludes already-favorited locations', () {
+    final session = WeatherSession(
+      weatherRepository: _FakeWeatherRepository(),
+      preferencesStore: _FakePreferencesStore(),
+    );
+
+    session.addFavoriteLocation(DefaultFlightLocations.mendoza);
+
+    final results = session.searchLocations('mendoza');
+
+    expect(results.where((loc) => loc.id == 'mendoza'), isEmpty);
+  });
+
+  test('searchLocations returns all addable locations on empty query', () {
+    final session = WeatherSession(
+      weatherRepository: _FakeWeatherRepository(),
+      preferencesStore: _FakePreferencesStore(),
+    );
+
+    final results = session.searchLocations('');
+
+    expect(results.length, equals(session.addableLocations.length));
+  });
 }
 
 class _FakePreferencesStore implements UserPreferencesStore {

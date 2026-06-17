@@ -108,6 +108,22 @@ class WeatherSession extends ChangeNotifier {
     return 'Cargando clima real...';
   }
 
+  List<FlightLocation> searchLocations(String query) {
+    if (query.trim().isEmpty) {
+      return addableLocations;
+    }
+
+    final lowerQuery = query.toLowerCase();
+    return addableLocations
+        .where(
+          (location) =>
+              location.name.toLowerCase().contains(lowerQuery) ||
+              location.region.toLowerCase().contains(lowerQuery) ||
+              location.country.toLowerCase().contains(lowerQuery),
+        )
+        .toList();
+  }
+
   Future<void> restorePreferences() async {
     try {
       final preferences = await _preferencesStore.load();

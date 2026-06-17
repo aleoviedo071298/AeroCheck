@@ -46,12 +46,42 @@ class DefaultFlightLocations {
     longitude: -71.3103,
   );
 
+  static const rosario = FlightLocation(
+    id: 'rosario',
+    name: 'Rosario',
+    region: 'Santa Fe',
+    country: 'Argentina',
+    latitude: -32.9387,
+    longitude: -60.6611,
+  );
+
+  static const salta = FlightLocation(
+    id: 'salta',
+    name: 'Salta',
+    region: 'Salta',
+    country: 'Argentina',
+    latitude: -24.7821,
+    longitude: -65.4232,
+  );
+
+  static const tucuman = FlightLocation(
+    id: 'tucuman',
+    name: 'San Miguel de Tucumán',
+    region: 'Tucumán',
+    country: 'Argentina',
+    latitude: -26.8241,
+    longitude: -65.2226,
+  );
+
   static const all = [
     comodoroRivadavia,
     buenosAires,
     cordoba,
     mendoza,
     bariloche,
+    rosario,
+    salta,
+    tucuman,
   ];
 
   static const seedFavorites = [comodoroRivadavia];

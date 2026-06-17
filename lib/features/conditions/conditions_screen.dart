@@ -136,18 +136,7 @@ class _LocationSelectorState extends State<_LocationSelector> {
 
   void _filterLocations(String query) {
     setState(() {
-      if (query.isEmpty) {
-        _filteredLocations = widget.session.addableLocations;
-      } else {
-        final lowerQuery = query.toLowerCase();
-        _filteredLocations = widget.session.addableLocations
-            .where(
-              (loc) =>
-                  loc.name.toLowerCase().contains(lowerQuery) ||
-                  loc.region.toLowerCase().contains(lowerQuery),
-            )
-            .toList();
-      }
+      _filteredLocations = widget.session.searchLocations(query);
     });
   }
 
