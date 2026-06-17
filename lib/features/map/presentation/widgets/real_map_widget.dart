@@ -84,7 +84,7 @@ class _RealMapWidgetState extends State<RealMapWidget> {
         circles: [
           CircleMarker(
             point: location,
-            radius: widget.guideRadiusKm * 111,
+            radius: widget.guideRadiusKm * 1000,
             useRadiusInMeter: true,
             color: Colors.blue.withValues(alpha: 0.1),
             borderColor: Colors.blue.withValues(alpha: 0.5),
@@ -93,12 +93,37 @@ class _RealMapWidgetState extends State<RealMapWidget> {
         ],
       ),
 
-      // OpenAIP airspaces
+      // OpenAIP airspaces & airports
       if (widget.airspaceState is AirspaceLoadedState) ...[
-        _buildAirspaceDebugLayer(),
+        // 1. Draw Special Use Airspace polygons (Restricted, Danger, Prohibited: types 1, 2, 3)
         PolygonLayer(
           polygons: (widget.airspaceState as AirspaceLoadedState).airspaces
+              .where(
+                (a) => a.typeCode == 1 || a.typeCode == 2 || a.typeCode == 3,
+              )
               .map((airspace) => _buildAirspacePolygon(airspace))
+              .toList(),
+        ),
+        // 2. Draw 5 km Drone Restricted Area circles around airports (types 1, 2, 3, 4)
+        CircleLayer(
+          circles: (widget.airspaceState as AirspaceLoadedState).airports
+              .where(
+                (ap) =>
+                    ap.typeCode == 1 ||
+                    ap.typeCode == 2 ||
+                    ap.typeCode == 3 ||
+                    ap.typeCode == 4,
+              )
+              .map(
+                (airport) => CircleMarker(
+                  point: LatLng(airport.latitude, airport.longitude),
+                  radius: 5000, // 5 km
+                  useRadiusInMeter: true,
+                  color: Colors.red.withValues(alpha: 0.1),
+                  borderColor: Colors.red.withValues(alpha: 0.6),
+                  borderStrokeWidth: 2,
+                ),
+              )
               .toList(),
         ),
       ],
@@ -155,80 +180,14 @@ class _RealMapWidgetState extends State<RealMapWidget> {
 
     if (controlled.contains(airspace.icaoClassCode)) {
       return (
-        Colors.red.withValues(alpha: 0.4),
-        Colors.red.withValues(alpha: 0.9),
+        Colors.red.withValues(alpha: 0.08),
+        Colors.red.withValues(alpha: 0.6),
       );
     } else {
       return (
-        Colors.yellow.withValues(alpha: 0.35),
-        Colors.orange.withValues(alpha: 0.85),
+        Colors.yellow.withValues(alpha: 0.05),
+        Colors.orange.withValues(alpha: 0.5),
       );
     }
-  }
-
-  Widget _buildAirspaceDebugLayer() {
-    final state = widget.airspaceState;
-    if (state is! AirspaceLoadedState) {
-      return const SizedBox();
-    }
-
-    final airspaces = state.airspaces;
-    developer.log(
-      'OpenAIP: Loaded ${airspaces.length} airspaces',
-      name: 'AeroCheck.Map',
-    );
-
-    for (final airspace in airspaces) {
-      developer.log(
-        '${airspace.name}: ${airspace.coordinates.length} coords, Class ${airspace.icaoClassLabel}',
-        name: 'AeroCheck.Map',
-      );
-      if (airspace.coordinates.isNotEmpty) {
-        final first = airspace.coordinates.first;
-        developer.log(
-          'First coord: ${first.latitude}, ${first.longitude}',
-          name: 'AeroCheck.Map',
-        );
-      }
-    }
-
-    final markers = airspaces
-        .map((airspace) {
-          if (airspace.coordinates.isEmpty) return null;
-          final centerLat =
-              airspace.coordinates
-                  .map((c) => c.latitude)
-                  .reduce((a, b) => a + b) /
-              airspace.coordinates.length;
-          final centerLng =
-              airspace.coordinates
-                  .map((c) => c.longitude)
-                  .reduce((a, b) => a + b) /
-              airspace.coordinates.length;
-
-          return Marker(
-            point: LatLng(centerLat, centerLng),
-            width: 30,
-            height: 30,
-            alignment: Alignment.center,
-            child: Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.green,
-                border: Border.all(color: Colors.green.shade900, width: 2),
-              ),
-              child: const Center(
-                child: Text(
-                  'A',
-                  style: TextStyle(color: Colors.white, fontSize: 10),
-                ),
-              ),
-            ),
-          );
-        })
-        .whereType<Marker>()
-        .toList();
-
-    return MarkerLayer(markers: markers);
   }
 }

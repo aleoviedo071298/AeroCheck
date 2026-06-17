@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:aerocheck/data/kp_index/noaa_kp_index_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 
 void main() {
   group('NoaaKpIndexService.interpretKp', () {
@@ -28,4 +30,72 @@ void main() {
       expect(NoaaKpIndexService.interpretKp(9.5), 'Tormenta Severa');
     });
   });
+
+  group('NoaaKpIndexService.fetchCurrentKpIndex', () {
+    test('successfully parses Kp from a valid JSON array', () async {
+      final jsonResponse = jsonEncode([
+        {"time_tag": "2026-06-17T09:00:00", "Kp": 1.67},
+        {"time_tag": "2026-06-17T12:00:00", "Kp": 2.33},
+      ]);
+
+      final client = _FakeHttpClient((request) {
+        return http.Response(jsonResponse, 200);
+      });
+
+      final service = NoaaKpIndexService(client: client);
+      final kp = await service.fetchCurrentKpIndex();
+
+      expect(kp, equals(2.33));
+    });
+
+    test('returns null if response is not 200 OK', () async {
+      final client = _FakeHttpClient((request) {
+        return http.Response('Error', 500);
+      });
+
+      final service = NoaaKpIndexService(client: client);
+      final kp = await service.fetchCurrentKpIndex();
+
+      expect(kp, isNull);
+    });
+
+    test('returns null if JSON is empty array', () async {
+      final client = _FakeHttpClient((request) {
+        return http.Response('[]', 200);
+      });
+
+      final service = NoaaKpIndexService(client: client);
+      final kp = await service.fetchCurrentKpIndex();
+
+      expect(kp, isNull);
+    });
+
+    test('returns null if JSON is not array', () async {
+      final client = _FakeHttpClient((request) {
+        return http.Response('{"Kp": 2.33}', 200);
+      });
+
+      final service = NoaaKpIndexService(client: client);
+      final kp = await service.fetchCurrentKpIndex();
+
+      expect(kp, isNull);
+    });
+  });
+}
+
+class _FakeHttpClient extends http.BaseClient {
+  _FakeHttpClient(this.responseBuilder);
+
+  final http.Response Function(http.BaseRequest request) responseBuilder;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    final response = responseBuilder(request);
+    return http.StreamedResponse(
+      Stream.value(response.bodyBytes),
+      response.statusCode,
+      headers: response.headers,
+      request: request,
+    );
+  }
 }

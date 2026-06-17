@@ -57,7 +57,7 @@ class OpenMeteoWeatherRepository implements WeatherRepository {
           'wind_gusts_10m',
           'is_day',
         ].join(','),
-        'wind_speed_unit': 'kmh',
+        'windspeed_unit': 'kmh',
         'temperature_unit': 'celsius',
         'precipitation_unit': 'mm',
       },

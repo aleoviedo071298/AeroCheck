@@ -33,7 +33,7 @@ void main() {
     );
 
     // Verify initial state
-    expect(find.text('1 guardadas'), findsOneWidget);
+    expect(find.text('1 guardada'), findsOneWidget);
 
     // Search for Mendoza
     await tester.enterText(

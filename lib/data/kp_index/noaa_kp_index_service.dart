@@ -3,12 +3,16 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class NoaaKpIndexService {
+  NoaaKpIndexService({http.Client? client}) : _client = client ?? http.Client();
+
+  final http.Client _client;
+
   static const _baseUrl =
       'https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json';
 
   Future<double?> fetchCurrentKpIndex() async {
     try {
-      final response = await http
+      final response = await _client
           .get(Uri.parse(_baseUrl))
           .timeout(const Duration(seconds: 5));
 
@@ -17,13 +21,14 @@ class NoaaKpIndexService {
       }
 
       final data = jsonDecode(response.body);
-      if (data is! Map<String, Object?>) {
-        return null;
-      }
-
-      final kp = data['Kp'];
-      if (kp is num) {
-        return kp.toDouble();
+      if (data is List && data.isNotEmpty) {
+        final lastEntry = data.last;
+        if (lastEntry is Map<String, Object?>) {
+          final kp = lastEntry['Kp'];
+          if (kp is num) {
+            return kp.toDouble();
+          }
+        }
       }
 
       return null;

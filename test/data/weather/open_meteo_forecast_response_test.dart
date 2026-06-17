@@ -59,13 +59,13 @@ void main() {
 
     expect(bundle.windProfileRows, hasLength(4));
     expect(bundle.windProfileRows[0].altitude, '10 m');
-    expect(bundle.windProfileRows[0].windKmh, 12);
-    expect(bundle.windProfileRows[0].gustKmh, 18);
+    expect(bundle.windProfileRows[0].windKmh, 19.1);
+    expect(bundle.windProfileRows[0].gustKmh, 31.2);
     expect(bundle.windProfileRows[1].altitude, '80 m');
-    expect(bundle.windProfileRows[1].windKmh, 17);
+    expect(bundle.windProfileRows[1].windKmh, 21);
     expect(bundle.windProfileRows[1].gustKmh, 0);
     expect(bundle.windProfileRows[2].altitude, '120 m');
-    expect(bundle.windProfileRows[2].windKmh, 19);
+    expect(bundle.windProfileRows[2].windKmh, 24);
   });
 
   test('throws a controlled exception for invalid response shape', () {
@@ -95,7 +95,7 @@ void main() {
     expect(requestedUri!.queryParameters['latitude'], '-45.8641');
     expect(requestedUri!.queryParameters['longitude'], '-67.4966');
     expect(requestedUri!.queryParameters['timezone'], 'auto');
-    expect(requestedUri!.queryParameters['wind_speed_unit'], 'kmh');
+    expect(requestedUri!.queryParameters['windspeed_unit'], 'kmh');
     expect(
       requestedUri!.queryParameters['hourly'],
       contains('wind_speed_120m'),

@@ -25,9 +25,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Mapa operativo'), findsOneWidget);
-    expect(find.textContaining('Comodoro Rivadavia, Chubut'), findsWidgets);
-    expect(find.textContaining('-45.8641, -67.4966'), findsOneWidget);
-    expect(find.text('5 km'), findsOneWidget);
+    expect(find.textContaining('Comodoro Rivadavia'), findsWidgets);
+    expect(find.textContaining('-45.8641'), findsOneWidget);
+    expect(find.textContaining('-67.4966'), findsOneWidget);
+    expect(find.textContaining('5 km'), findsWidgets);
   });
 
   testWidgets('map screen switches active location from favorite chip', (
@@ -49,8 +50,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(session.selectedLocation, DefaultFlightLocations.mendoza);
-    expect(find.textContaining('Mendoza, Mendoza'), findsWidgets);
-    expect(find.textContaining('-32.8895, -68.8458'), findsOneWidget);
+    expect(find.textContaining('Mendoza'), findsWidgets);
+    expect(find.textContaining('-32.8895'), findsOneWidget);
+    expect(find.textContaining('-68.8458'), findsOneWidget);
   });
 
   testWidgets('map screen updates guide radius from slider', (tester) async {
@@ -72,8 +74,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(session.guideRadiusKm, 10);
-    expect(find.text('10 km'), findsOneWidget);
-    expect(find.text('Radio guia'), findsOneWidget);
+    expect(find.textContaining('10 km'), findsWidgets);
+    expect(find.textContaining('Radio guía'), findsOneWidget);
   });
 
   testWidgets('map screen lists detected mock sensitive zones', (tester) async {

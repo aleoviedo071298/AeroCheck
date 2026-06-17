@@ -1,3 +1,4 @@
+import '../data/regulatory/airport.dart';
 import '../data/regulatory/airspace.dart';
 
 sealed class AirspaceState {
@@ -9,9 +10,10 @@ class AirspaceLoadingState extends AirspaceState {
 }
 
 class AirspaceLoadedState extends AirspaceState {
-  const AirspaceLoadedState(this.airspaces);
+  const AirspaceLoadedState({required this.airspaces, required this.airports});
 
   final List<Airspace> airspaces;
+  final List<Airport> airports;
 }
 
 class AirspaceEmptyState extends AirspaceState {

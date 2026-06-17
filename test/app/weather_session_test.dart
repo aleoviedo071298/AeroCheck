@@ -5,6 +5,8 @@ import 'package:aerocheck/data/location/geocoding_service.dart';
 import 'package:aerocheck/data/mock/mock_flight_data.dart';
 import 'package:aerocheck/data/preferences/user_preferences.dart';
 import 'package:aerocheck/data/preferences/user_preferences_store.dart';
+import 'package:aerocheck/data/regulatory/airport.dart';
+import 'package:aerocheck/data/regulatory/airport_repository.dart';
 import 'package:aerocheck/data/regulatory/airspace.dart';
 import 'package:aerocheck/data/regulatory/airspace_repository.dart';
 import 'package:aerocheck/data/weather/weather_bundle.dart';
@@ -184,7 +186,7 @@ void main() {
         repository.lastLongitude,
         -67.4966, // Comodoro Rivadavia default
       );
-      expect(repository.lastRadiusKm, 7);
+      expect(repository.lastRadiusKm, 30.0);
     },
   );
 
@@ -267,7 +269,7 @@ void main() {
     session.setGuideRadiusKm(8);
     await Future<void>.delayed(const Duration(milliseconds: 10));
     expect(repository.callCount, 2);
-    expect(repository.lastRadiusKm, 8);
+    expect(repository.lastRadiusKm, 30.0);
   });
 
   test('OpenAIP inside airspace changes flight readiness to NO_APTO', () async {
@@ -311,8 +313,8 @@ void main() {
     final airspace = Airspace(
       id: 'controlled',
       name: 'Controlled Airspace',
-      typeCode: 4,
-      typeLabel: 'CTR',
+      typeCode: 3, // Prohibited
+      typeLabel: 'Prohibited',
       icaoClassCode: 1,
       icaoClassLabel: 'B',
       country: 'AR',
@@ -340,6 +342,62 @@ void main() {
 
     final report = session.currentReport!;
     // Just verify that airspace is detected and included in the rules
+    expect(report.rules.map((r) => r.code), contains('RESTRICTED_AREA'));
+  });
+
+  test(
+    'OpenAIP airport proximity changes flight readiness to NO_APTO',
+    () async {
+      final airport = Airport(
+        id: 'test-airport-1',
+        name: 'Test Airport',
+        icaoCode: 'SAVC',
+        latitude: -45.86, // ~0.7 km away from Comodoro (-45.8641, -67.4966)
+        longitude: -67.49,
+        typeCode: 3, // Civil / Military Airport
+      );
+
+      final airportRepo = _FakeAirportRepository(airports: [airport]);
+      final session = WeatherSession(
+        weatherRepository: _FakeWeatherRepository(),
+        preferencesStore: _FakePreferencesStore(),
+        airportRepository: airportRepo,
+      );
+
+      await session.loadRealWeather();
+      session.setGuideRadiusKm(7);
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+
+      final report = session.currentReport!;
+      expect(report.status, FlightReadinessStatus.notReady);
+      expect(report.rules.map((r) => r.code), contains('RESTRICTED_AREA'));
+    },
+  );
+
+  test('OpenAIP near airport is detected as warning', () async {
+    final airport = Airport(
+      id: 'test-airport-2',
+      name: 'Test Airport 2',
+      icaoCode: 'SAVB',
+      latitude:
+          -45.8641 + 0.047, // ~5.2 km away from Comodoro (-45.8641, -67.4966)
+      longitude: -67.4966,
+      typeCode: 3,
+    );
+
+    final airportRepo = _FakeAirportRepository(airports: [airport]);
+    final session = WeatherSession(
+      weatherRepository: _FakeWeatherRepository(),
+      preferencesStore: _FakePreferencesStore(),
+      airportRepository: airportRepo,
+    );
+
+    await session.loadRealWeather();
+    session.setGuideRadiusKm(7);
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+
+    final report = session.currentReport!;
+    expect(report.status, FlightReadinessStatus.caution);
     expect(report.rules.map((r) => r.code), contains('RESTRICTED_AREA'));
   });
 
@@ -507,4 +565,21 @@ Airspace _createTestAirspace() {
       AirspaceCoordinate(latitude: -45.8, longitude: -67.4),
     ],
   );
+}
+
+class _FakeAirportRepository implements AirportRepository {
+  _FakeAirportRepository({this.airports = const []});
+
+  final List<Airport> airports;
+  int callCount = 0;
+
+  @override
+  Future<List<Airport>> fetchNearbyAirports({
+    required double latitude,
+    required double longitude,
+    required double radiusKm,
+  }) async {
+    callCount++;
+    return airports;
+  }
 }

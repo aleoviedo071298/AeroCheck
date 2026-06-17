@@ -12,9 +12,13 @@ import '../data/mock/mock_flight_data.dart';
 import '../data/preferences/shared_preferences_user_preferences_store.dart';
 import '../data/preferences/user_preferences.dart';
 import '../data/preferences/user_preferences_store.dart';
+import '../data/regulatory/airport.dart';
+import '../data/regulatory/airport_repository.dart';
 import '../data/regulatory/airspace.dart';
 import '../data/regulatory/airspace_repository.dart';
+import '../data/regulatory/openaip_airport_repository.dart';
 import '../data/regulatory/openaip_airspace_repository.dart';
+import '../data/regulatory/openaip_config.dart';
 import '../data/weather/open_meteo_weather_repository.dart';
 import '../data/weather/weather_bundle.dart';
 import '../data/weather/weather_repository.dart';
@@ -33,6 +37,7 @@ class WeatherSession extends ChangeNotifier {
   static const defaultGuideRadiusKm = 5.0;
   static const minGuideRadiusKm = 1.0;
   static const maxGuideRadiusKm = 15.0;
+  static const regulatoryFetchRadiusKm = 30.0;
 
   // Default initial location: Comodoro Rivadavia, Argentina
   static const _defaultLocation = FlightLocation(
@@ -48,16 +53,27 @@ class WeatherSession extends ChangeNotifier {
     WeatherRepository? weatherRepository,
     UserPreferencesStore? preferencesStore,
     AirspaceRepository? airspaceRepository,
+    AirportRepository? airportRepository,
     GeocodingService? geocodingService,
   }) : _weatherRepository = weatherRepository,
        _preferencesStore =
            preferencesStore ?? SharedPreferencesUserPreferencesStore(),
-       _airspaceRepository = airspaceRepository ?? OpenAipAirspaceRepository(),
+       _airspaceRepository =
+           airspaceRepository ??
+           (OpenAipConfig.apiKey.trim().isEmpty
+               ? null
+               : OpenAipAirspaceRepository()),
+       _airportRepository =
+           airportRepository ??
+           (OpenAipConfig.apiKey.trim().isEmpty
+               ? null
+               : OpenAipAirportRepository()),
        _geocodingService = geocodingService ?? GeocodingRepository();
 
   WeatherRepository? _weatherRepository;
   final UserPreferencesStore _preferencesStore;
   final AirspaceRepository? _airspaceRepository;
+  final AirportRepository? _airportRepository;
   final GeocodingService _geocodingService;
   final _evaluator = const FlightReadinessEvaluator();
 
@@ -70,6 +86,7 @@ class WeatherSession extends ChangeNotifier {
   var _guideRadiusKm = defaultGuideRadiusKm;
   AirspaceState _airspaceState = const AirspaceLoadingState();
   List<Airspace> _loadedAirspaces = [];
+  List<Airport> _loadedAirports = [];
 
   FlightLocation get selectedLocation => _selectedLocation;
   List<FlightLocation> get availableLocations => _favoriteLocations;
@@ -88,15 +105,22 @@ class WeatherSession extends ChangeNotifier {
 
     return _evaluateWeather(
       _withOperationalContext(bundle.current),
-      bestWindowFor(bundle.hourlySnapshots),
+      bestWindowFor(bundle.hourlySnapshots, referenceTime: bundle.current.time),
     );
   }
 
   List<ForecastRow> get forecastRows {
     final bundle = _realBundle;
     if (bundle != null) {
-      final bestWindow = bestWindowFor(bundle.hourlySnapshots);
+      final bestWindow = bestWindowFor(
+        bundle.hourlySnapshots,
+        referenceTime: bundle.current.time,
+      );
+      final now = bundle.current.time;
+      final currentHour = DateTime(now.year, now.month, now.day, now.hour);
+
       return bundle.hourlySnapshots
+          .where((snapshot) => !snapshot.time.isBefore(currentHour))
           .take(12)
           .map((snapshot) => _forecastRowFor(snapshot, bestWindow))
           .toList();
@@ -157,20 +181,17 @@ class WeatherSession extends ChangeNotifier {
         _guideRadiusKm = _clampGuideRadius(preferences.guideRadiusKm!);
       }
 
-      final dataSource = _dataSourceFromName(preferences.dataSourceName);
-      if (dataSource != null) {
-        _dataSource = dataSource;
-      }
+      _dataSource = WeatherDataSource.real;
 
       notifyListeners();
       _loadNearbyAirspaces();
 
-      if (_dataSource == WeatherDataSource.real) {
-        await loadRealWeather();
-      }
+      await loadRealWeather();
     } catch (_) {
       // Preferences should never block the operational screen.
+      _dataSource = WeatherDataSource.real;
       _loadNearbyAirspaces();
+      await loadRealWeather();
     }
   }
 
@@ -238,17 +259,15 @@ class WeatherSession extends ChangeNotifier {
   }
 
   void setDataSource(WeatherDataSource source) {
-    if (_dataSource == source) {
+    if (_dataSource == WeatherDataSource.real) {
       return;
     }
 
-    _dataSource = source;
+    _dataSource = WeatherDataSource.real;
     notifyListeners();
     _persistPreferences();
 
-    if (source == WeatherDataSource.real &&
-        _realBundle == null &&
-        !_isLoadingReal) {
+    if (_realBundle == null && !_isLoadingReal) {
       loadRealWeather();
     }
   }
@@ -283,9 +302,12 @@ class WeatherSession extends ChangeNotifier {
     }
   }
 
-  FlightWindowRecommendation bestWindowFor(List<WeatherSnapshot> hourly) {
+  FlightWindowRecommendation bestWindowFor(
+    List<WeatherSnapshot> hourly, {
+    DateTime? referenceTime,
+  }) {
     if (hourly.isEmpty) {
-      final now = DateTime.now();
+      final now = referenceTime ?? DateTime.now();
       return FlightWindowRecommendation(
         start: now,
         end: now.add(const Duration(hours: 1)),
@@ -295,16 +317,23 @@ class WeatherSession extends ChangeNotifier {
       );
     }
 
+    final ref = referenceTime ?? DateTime.now();
+    final currentHour = DateTime(ref.year, ref.month, ref.day, ref.hour);
+    final futureHourly = hourly
+        .where((s) => !s.time.isBefore(currentHour))
+        .toList();
+    final searchList = futureHourly.isNotEmpty ? futureHourly : hourly;
+
     final defaultWindow = FlightWindowRecommendation(
-      start: hourly.first.time,
-      end: hourly.first.time.add(const Duration(hours: 1)),
+      start: searchList.first.time,
+      end: searchList.first.time.add(const Duration(hours: 1)),
       score: 0,
       status: FlightReadinessStatus.caution,
       summary: 'Hora por defecto (esperando datos)',
     );
 
     FlightReadinessReport? bestReport;
-    for (final snapshot in hourly.take(24)) {
+    for (final snapshot in searchList.take(24)) {
       final weather = _withOperationalContext(snapshot);
       final report = _evaluator.evaluate(
         weather: weather,
@@ -317,7 +346,7 @@ class WeatherSession extends ChangeNotifier {
       }
     }
 
-    final bestWeather = bestReport?.weather ?? hourly.first;
+    final bestWeather = bestReport?.weather ?? searchList.first;
     return FlightWindowRecommendation(
       start: bestWeather.time,
       end: bestWeather.time.add(const Duration(hours: 1)),
@@ -364,6 +393,7 @@ class WeatherSession extends ChangeNotifier {
     final reasons = _reasonsFor(report);
 
     return ForecastRow(
+      time: weather.time,
       hour: _time(weather.time),
       status: report.status.label,
       primaryReason: reasons.first.title,
@@ -373,6 +403,8 @@ class WeatherSession extends ChangeNotifier {
       gustKmh: weather.gustKmh ?? 0,
       rainPercent: weather.precipitationProbability ?? 0,
       visibilityKm: weather.visibilityKm ?? 0,
+      score: report.score,
+      windDirectionDegrees: weather.windDirectionDegrees,
     );
   }
 
@@ -443,20 +475,6 @@ class WeatherSession extends ChangeNotifier {
     );
   }
 
-  WeatherDataSource? _dataSourceFromName(String? name) {
-    if (name == null) {
-      return null;
-    }
-
-    for (final source in WeatherDataSource.values) {
-      if (source.name == name) {
-        return source;
-      }
-    }
-
-    return null;
-  }
-
   bool _isFavoriteLocation(String id) {
     return _favoriteLocations.any((location) => location.id == id);
   }
@@ -466,8 +484,10 @@ class WeatherSession extends ChangeNotifier {
   }
 
   Future<void> _loadNearbyAirspaces() async {
-    final repository = _airspaceRepository;
-    if (repository == null) {
+    final airspaceRepo = _airspaceRepository;
+    final airportRepo = _airportRepository;
+
+    if (airspaceRepo == null && airportRepo == null) {
       _airspaceState = const AirspaceEmptyState();
       notifyListeners();
       return;
@@ -477,35 +497,84 @@ class WeatherSession extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final airspaces = await repository.fetchNearbyAirspaces(
-        latitude: _selectedLocation.latitude,
-        longitude: _selectedLocation.longitude,
-        radiusKm: _guideRadiusKm,
-      );
+      final futures = <Future>[];
+      List<Airspace> airspaces = [];
+      List<Airport> airports = [];
+
+      if (airspaceRepo != null) {
+        futures.add(
+          airspaceRepo
+              .fetchNearbyAirspaces(
+                latitude: _selectedLocation.latitude,
+                longitude: _selectedLocation.longitude,
+                radiusKm: regulatoryFetchRadiusKm,
+              )
+              .then((val) => airspaces = val),
+        );
+      }
+
+      if (airportRepo != null) {
+        futures.add(
+          airportRepo
+              .fetchNearbyAirports(
+                latitude: _selectedLocation.latitude,
+                longitude: _selectedLocation.longitude,
+                radiusKm: regulatoryFetchRadiusKm,
+              )
+              .then((val) => airports = val),
+        );
+      }
+
+      await Future.wait(futures);
 
       _loadedAirspaces = airspaces;
+      _loadedAirports = airports;
 
-      if (airspaces.isEmpty) {
+      if (airspaces.isEmpty && airports.isEmpty) {
         _airspaceState = const AirspaceEmptyState();
       } else {
-        _airspaceState = AirspaceLoadedState(airspaces);
+        _airspaceState = AirspaceLoadedState(
+          airspaces: airspaces,
+          airports: airports,
+        );
       }
       notifyListeners();
     } catch (error) {
       _loadedAirspaces = [];
+      _loadedAirports = [];
       _airspaceState = AirspaceErrorState(error);
       notifyListeners();
     }
   }
 
   bool _isInsideOpenAipAirspace() {
+    // 1. Check Special Use Airspaces (SUA: Restricted type 1, Danger type 2, Prohibited type 3)
     for (final airspace in _loadedAirspaces) {
-      if (AirspaceGeomHelper.isPointInsideAirspace(
-        pointLatitude: _selectedLocation.latitude,
-        pointLongitude: _selectedLocation.longitude,
-        airspace: airspace,
-      )) {
-        return true;
+      final type = airspace.typeCode;
+      if (type == 1 || type == 2 || type == 3) {
+        if (AirspaceGeomHelper.isPointInsideAirspace(
+          pointLatitude: _selectedLocation.latitude,
+          pointLongitude: _selectedLocation.longitude,
+          airspace: airspace,
+        )) {
+          return true;
+        }
+      }
+    }
+
+    // 2. Check Airports (types 1, 2, 3, 4 represent civil/military/civil-military airports/airfields and heliports)
+    for (final airport in _loadedAirports) {
+      final type = airport.typeCode;
+      if (type == 1 || type == 2 || type == 3 || type == 4) {
+        final dist = AirspaceGeomHelper.haversineDistance(
+          _selectedLocation.latitude,
+          _selectedLocation.longitude,
+          airport.latitude,
+          airport.longitude,
+        );
+        if (dist <= 5.0) {
+          return true;
+        }
       }
     }
     return false;
@@ -514,15 +583,34 @@ class WeatherSession extends ChangeNotifier {
   bool _isNearOpenAipAirspace() {
     const warningDistanceKm = 0.5;
 
+    // 1. Check Special Use Airspaces (SUA: Restricted type 1, Danger type 2, Prohibited type 3)
     for (final airspace in _loadedAirspaces) {
-      final distanceKm = AirspaceGeomHelper.distanceToAirspaceKm(
-        pointLatitude: _selectedLocation.latitude,
-        pointLongitude: _selectedLocation.longitude,
-        airspace: airspace,
-      );
+      final type = airspace.typeCode;
+      if (type == 1 || type == 2 || type == 3) {
+        final distanceKm = AirspaceGeomHelper.distanceToAirspaceKm(
+          pointLatitude: _selectedLocation.latitude,
+          pointLongitude: _selectedLocation.longitude,
+          airspace: airspace,
+        );
+        if (distanceKm > 0 && distanceKm <= warningDistanceKm) {
+          return true;
+        }
+      }
+    }
 
-      if (distanceKm > 0 && distanceKm <= warningDistanceKm) {
-        return true;
+    // 2. Check Airports (types 1, 2, 3, 4)
+    for (final airport in _loadedAirports) {
+      final type = airport.typeCode;
+      if (type == 1 || type == 2 || type == 3 || type == 4) {
+        final dist = AirspaceGeomHelper.haversineDistance(
+          _selectedLocation.latitude,
+          _selectedLocation.longitude,
+          airport.latitude,
+          airport.longitude,
+        );
+        if (dist > 5.0 && dist <= 5.0 + warningDistanceKm) {
+          return true;
+        }
       }
     }
     return false;

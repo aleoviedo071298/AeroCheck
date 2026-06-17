@@ -10,6 +10,7 @@ class EvaluatedWindProfileRow {
     required this.temperatureC,
     required this.status,
     required this.limitExceededAt,
+    this.windDirectionDegrees,
   });
 
   final String altitude;
@@ -18,12 +19,14 @@ class EvaluatedWindProfileRow {
   final double temperatureC;
   final String status; // 'ok', 'warning', or 'blocked'
   final String? limitExceededAt; // 'wind', 'gust', or null if ok
+  final double? windDirectionDegrees;
 
   WindProfileRow toBaseRow() => WindProfileRow(
     altitude: altitude,
     windKmh: windKmh,
     gustKmh: gustKmh,
     temperatureC: temperatureC,
+    windDirectionDegrees: windDirectionDegrees,
   );
 }
 
@@ -70,6 +73,7 @@ class WindProfileEvaluator {
       temperatureC: row.temperatureC,
       status: status,
       limitExceededAt: limitExceededAt,
+      windDirectionDegrees: row.windDirectionDegrees,
     );
   }
 

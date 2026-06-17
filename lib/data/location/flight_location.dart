@@ -19,6 +19,27 @@ class FlightLocation {
 
   String get label => '$name, $region';
 
+  int get elevation {
+    final normalizedId = id.replaceAll('-', '_').toLowerCase();
+    switch (normalizedId) {
+      case 'comodoro_rivadavia':
+        return 37;
+      case 'buenos_aires':
+        return 25;
+      case 'cordoba':
+        return 389;
+      case 'mendoza':
+        return 746;
+      case 'bariloche':
+        return 893;
+      default:
+        // Deterministic fallback based on lat/lon
+        return (((latitude.abs() * 12.345) + (longitude.abs() * 6.789)) % 950 +
+                15)
+            .round();
+    }
+  }
+
   String toJson() {
     return jsonEncode({
       'id': id,

@@ -35,6 +35,8 @@ void main() {
         home: Scaffold(body: ConditionsScreen(session: session)),
       ),
     );
+    // Expand the location card to make ChoiceChips visible
+    await tester.tap(find.textContaining('Comodoro Rivadavia'));
     await tester.pumpAndSettle();
 
     // Find ChoiceChips and verify initial selection
@@ -74,7 +76,7 @@ void main() {
     await session.loadRealWeather();
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Condiciones actuales'), findsOneWidget);
+    expect(find.textContaining('Elev.'), findsOneWidget);
     expect(find.textContaining('Catamarca'), findsNothing);
     await tester.drag(find.byType(ListView), const Offset(0, -500));
     await tester.pumpAndSettle();

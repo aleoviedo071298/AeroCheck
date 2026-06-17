@@ -125,7 +125,7 @@ class AirspaceGeomHelper {
     final len2 = dx * dx + dy * dy;
 
     if (len2 == 0) {
-      return _haversineDistance(px, py, x1, y1);
+      return haversineDistance(px, py, x1, y1);
     }
 
     // Parameter t represents where the perpendicular meets the line segment
@@ -135,11 +135,11 @@ class AirspaceGeomHelper {
     final closestX = x1 + t * dx;
     final closestY = y1 + t * dy;
 
-    return _haversineDistance(px, py, closestX, closestY);
+    return haversineDistance(px, py, closestX, closestY);
   }
 
   // Haversine formula for distance between two lat/lon points
-  static double _haversineDistance(
+  static double haversineDistance(
     double lat1,
     double lon1,
     double lat2,
