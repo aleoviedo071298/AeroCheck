@@ -6,7 +6,6 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../../app/airspace_state.dart';
 import '../../../../data/location/flight_location.dart';
-import '../../../../data/mock/mock_sensitive_zone.dart';
 import '../../../../data/regulatory/airspace.dart';
 
 class RealMapWidget extends StatefulWidget {
@@ -14,13 +13,11 @@ class RealMapWidget extends StatefulWidget {
     super.key,
     required this.location,
     required this.guideRadiusKm,
-    required this.detectedMockZones,
     required this.airspaceState,
   });
 
   final FlightLocation location;
   final double guideRadiusKm;
-  final List<MockSensitiveZoneDetection> detectedMockZones;
   final AirspaceState airspaceState;
 
   @override
@@ -105,33 +102,6 @@ class _RealMapWidgetState extends State<RealMapWidget> {
               .toList(),
         ),
       ],
-
-      // Mock sensitive zones
-      MarkerLayer(
-        markers: widget.detectedMockZones.map((detection) {
-          final zone = detection.zone;
-          developer.log(
-            'Mock zone: ${zone.name} at (${zone.latitude}, ${zone.longitude})',
-            name: 'AeroCheck.Map',
-          );
-          return Marker(
-            point: LatLng(zone.latitude, zone.longitude),
-            width: 24,
-            height: 24,
-            alignment: Alignment.center,
-            child: Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.red.withValues(alpha: 0.8),
-                  width: 2,
-                ),
-                color: Colors.red.withValues(alpha: 0.2),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
 
       // Location marker
       MarkerLayer(

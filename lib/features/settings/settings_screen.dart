@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../app/weather_session.dart';
 import '../../data/location/flight_location.dart';
-import '../../data/mock/mock_flight_data.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key, required this.session});
@@ -11,9 +10,6 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final drone = MockFlightData.droneProfile;
-    final mission = MockFlightData.missionProfile;
-
     return AnimatedBuilder(
       animation: session,
       builder: (context, _) {
@@ -39,24 +35,10 @@ class SettingsScreen extends StatelessWidget {
                     '${session.selectedLocation.label} | guardada localmente',
               ),
               _FavoriteLocationsCard(session: session),
-              _SettingCard(
+              const _SettingCard(
                 icon: Icons.cloud_sync_rounded,
                 title: 'Datos',
-                value: session.dataSource == WeatherDataSource.real
-                    ? 'Clima real | Open-Meteo'
-                    : 'Datos mock | ${session.mockScenario.label}',
-              ),
-              _SettingCard(
-                icon: Icons.flight_takeoff_rounded,
-                title: 'Perfil de dron',
-                value:
-                    '${drone.name} | viento ${drone.maxWindKmh.toStringAsFixed(0)} km/h | rafagas ${drone.maxGustKmh.toStringAsFixed(0)} km/h',
-              ),
-              _SettingCard(
-                icon: Icons.camera_alt_rounded,
-                title: 'Mision',
-                value:
-                    '${mission.name} | modificador viento ${(mission.windModifier * 100).toStringAsFixed(0)}%',
+                value: 'Clima real | Open-Meteo',
               ),
               const _SettingCard(
                 icon: Icons.straighten_rounded,

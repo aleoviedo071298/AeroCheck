@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../app/weather_session.dart';
 import '../../data/location/flight_location.dart';
-import '../../data/mock/mock_flight_data.dart';
-import '../../data/mock/mock_sensitive_zone.dart';
 import '../../data/weather/weather_bundle.dart';
 import '../../domain/entities/flight_readiness_report.dart';
 import '../../domain/entities/flight_rule_result.dart';
@@ -35,30 +33,10 @@ class ConditionsScreen extends StatelessWidget {
                 )
               else
                 const _LoadingHeader(),
-              if (session.closestMockSensitiveZone != null) ...[
-                const SizedBox(height: 12),
-                _MockRiskHeader(
-                  detection: session.closestMockSensitiveZone!,
-                  guideRadiusKm: session.guideRadiusKm,
-                ),
-              ],
               const SizedBox(height: 12),
               _LocationSelector(session: session),
               const SizedBox(height: 12),
-              _DataSourceSelector(
-                selected: session.dataSource,
-                onChanged: session.setDataSource,
-              ),
-              const SizedBox(height: 12),
-              if (session.dataSource == WeatherDataSource.mock) ...[
-                _ScenarioSelector(
-                  selected: session.mockScenario,
-                  onChanged: session.setMockScenario,
-                ),
-                const SizedBox(height: 12),
-              ],
-              if (session.dataSource == WeatherDataSource.real &&
-                  session.isLoadingReal)
+              if (session.isLoadingReal)
                 const _RealWeatherLoadingCard()
               else if (session.dataSource == WeatherDataSource.real &&
                   session.realError != null)
@@ -126,37 +104,7 @@ class ConditionsScreen extends StatelessWidget {
 
   String _subtitleFor(WeatherSnapshot weather) {
     final time = _time(weather.time);
-    if (session.dataSource == WeatherDataSource.real) {
-      return 'Open-Meteo - $time';
-    }
-    return 'Mock operativo - $time';
-  }
-}
-
-class _MockRiskHeader extends StatelessWidget {
-  const _MockRiskHeader({required this.detection, required this.guideRadiusKm});
-
-  final MockSensitiveZoneDetection detection;
-  final double guideRadiusKm;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
-      child: ListTile(
-        leading: const Icon(
-          Icons.warning_amber_rounded,
-          color: Color(0xFFF59E0B),
-        ),
-        title: const Text(
-          'Zona sensible mock dentro del radio',
-          style: TextStyle(fontWeight: FontWeight.w900),
-        ),
-        subtitle: Text(
-          '${detection.zone.name} a ${_fmt(detection.distanceKm)} km | Radio guia ${_fmt(guideRadiusKm)} km | Capa no oficial.',
-        ),
-      ),
-    );
+    return 'Open-Meteo - $time';
   }
 }
 
@@ -199,74 +147,13 @@ class _LocationSelector extends StatelessWidget {
                 ),
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DataSourceSelector extends StatelessWidget {
-  const _DataSourceSelector({required this.selected, required this.onChanged});
-
-  final WeatherDataSource selected;
-  final ValueChanged<WeatherDataSource> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: SegmentedButton<WeatherDataSource>(
-          showSelectedIcon: false,
-          selected: {selected},
-          onSelectionChanged: (selection) => onChanged(selection.first),
-          style: ButtonStyle(
-            visualDensity: VisualDensity.compact,
-            textStyle: WidgetStateProperty.all(
-              const TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
-            ),
-          ),
-          segments: const [
-            ButtonSegment(value: WeatherDataSource.mock, label: Text('Mock')),
-            ButtonSegment(
-              value: WeatherDataSource.real,
-              label: Text('Clima real'),
+            IconButton(
+              key: const ValueKey('gps-location-button'),
+              icon: const Icon(Icons.my_location_rounded),
+              tooltip: 'Mi ubicación (GPS)',
+              onPressed: () => session.setLocationToCurrentGPS(),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ScenarioSelector extends StatelessWidget {
-  const _ScenarioSelector({required this.selected, required this.onChanged});
-
-  final MockFlightScenario selected;
-  final ValueChanged<MockFlightScenario> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: SegmentedButton<MockFlightScenario>(
-          showSelectedIcon: false,
-          selected: {selected},
-          onSelectionChanged: (selection) => onChanged(selection.first),
-          style: ButtonStyle(
-            visualDensity: VisualDensity.compact,
-            textStyle: WidgetStateProperty.all(
-              const TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
-            ),
-          ),
-          segments: MockFlightScenario.values
-              .map(
-                (scenario) =>
-                    ButtonSegment(value: scenario, label: Text(scenario.label)),
-              )
-              .toList(),
         ),
       ),
     );

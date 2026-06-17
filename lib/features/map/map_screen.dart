@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../app/airspace_state.dart';
 import '../../app/weather_session.dart';
-import '../../data/mock/mock_sensitive_zone.dart';
 import 'presentation/widgets/real_map_widget.dart';
 
 class MapScreen extends StatelessWidget {
@@ -17,7 +16,6 @@ class MapScreen extends StatelessWidget {
       builder: (context, _) {
         final location = session.selectedLocation;
         final guideRadiusKm = session.guideRadiusKm;
-        final detections = session.detectedMockSensitiveZones;
         final airspaceState = session.airspaceState;
 
         return SafeArea(
@@ -46,13 +44,10 @@ class MapScreen extends StatelessWidget {
                   child: RealMapWidget(
                     location: location,
                     guideRadiusKm: guideRadiusKm,
-                    detectedMockZones: detections,
                     airspaceState: airspaceState,
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
-              _SensitiveZoneLayerCard(detections: detections),
               const SizedBox(height: 12),
               _AirspaceLayerCard(state: airspaceState),
               const SizedBox(height: 12),
@@ -68,60 +63,6 @@ class MapScreen extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class _SensitiveZoneLayerCard extends StatelessWidget {
-  const _SensitiveZoneLayerCard({required this.detections});
-
-  final List<MockSensitiveZoneDetection> detections;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
-        child: Column(
-          children: [
-            ListTile(
-              leading: Icon(
-                Icons.warning_amber_rounded,
-                color: detections.isEmpty
-                    ? Theme.of(context).colorScheme.primary
-                    : const Color(0xFFF59E0B),
-              ),
-              title: const Text(
-                'Zonas sensibles mock',
-                style: TextStyle(fontWeight: FontWeight.w900),
-              ),
-              subtitle: const Text('Capa local de prueba, no oficial.'),
-            ),
-            if (detections.isEmpty)
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text('No hay zonas mock dentro del radio guia.'),
-                ),
-              )
-            else
-              ...detections.map(
-                (detection) => ListTile(
-                  dense: true,
-                  leading: const Icon(Icons.place_rounded),
-                  title: Text(
-                    detection.zone.name,
-                    style: const TextStyle(fontWeight: FontWeight.w800),
-                  ),
-                  subtitle: Text(
-                    'Distancia aprox.: ${_formatDistance(detection.distanceKm)}',
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
     );
   }
 }

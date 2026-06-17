@@ -66,5 +66,9 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>AeroCheck necesita acceso a tu ubicación para mostrar tu posición actual al planificar vuelos.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>AeroCheck necesita acceso a tu ubicación para mostrar tu posición actual al planificar vuelos.</string>
 </dict>
 </plist>

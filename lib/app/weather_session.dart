@@ -1,11 +1,12 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../data/location/default_flight_locations.dart';
 import '../data/location/flight_location.dart';
 import '../data/mock/mock_flight_data.dart';
-import '../data/mock/mock_sensitive_zone.dart';
 import '../data/preferences/shared_preferences_user_preferences_store.dart';
 import '../data/preferences/user_preferences.dart';
 import '../data/preferences/user_preferences_store.dart';
@@ -48,8 +49,7 @@ class WeatherSession extends ChangeNotifier {
   FlightLocation _selectedLocation = DefaultFlightLocations.comodoroRivadavia;
   List<FlightLocation> _favoriteLocations =
       DefaultFlightLocations.seedFavorites;
-  WeatherDataSource _dataSource = WeatherDataSource.mock;
-  MockFlightScenario _mockScenario = MockFlightScenario.cautionWind;
+  WeatherDataSource _dataSource = WeatherDataSource.real;
   WeatherBundle? _realBundle;
   Object? _realError;
   var _isLoadingReal = false;
@@ -64,30 +64,13 @@ class WeatherSession extends ChangeNotifier {
       .where((location) => !_isFavoriteLocation(location.id))
       .toList();
   WeatherDataSource get dataSource => _dataSource;
-  MockFlightScenario get mockScenario => _mockScenario;
   WeatherBundle? get realBundle => _realBundle;
   Object? get realError => _realError;
   bool get isLoadingReal => _isLoadingReal;
   double get guideRadiusKm => _guideRadiusKm;
   AirspaceState get airspaceState => _airspaceState;
-  List<MockSensitiveZoneDetection> get detectedMockSensitiveZones =>
-      MockSensitiveZones.detectionsWithin(
-        location: _selectedLocation,
-        radiusKm: _guideRadiusKm,
-      );
-  MockSensitiveZoneDetection? get closestMockSensitiveZone =>
-      detectedMockSensitiveZones.isEmpty
-      ? null
-      : detectedMockSensitiveZones.first;
 
   FlightReadinessReport? get currentReport {
-    if (_dataSource == WeatherDataSource.mock) {
-      return _evaluateWeather(
-        _withOperationalContext(MockFlightData.snapshotFor(_mockScenario)),
-        MockFlightData.bestWindow,
-      );
-    }
-
     final bundle = _realBundle;
     if (bundle == null) {
       return null;
@@ -101,30 +84,28 @@ class WeatherSession extends ChangeNotifier {
 
   List<ForecastRow> get forecastRows {
     final bundle = _realBundle;
-    if (_dataSource == WeatherDataSource.real && bundle != null) {
+    if (bundle != null) {
       final bestWindow = bestWindowFor(bundle.hourlySnapshots);
       return bundle.hourlySnapshots
           .take(12)
           .map((snapshot) => _forecastRowFor(snapshot, bestWindow))
           .toList();
     }
-    return MockFlightData.forecastSnapshots()
-        .map((snapshot) => _forecastRowFor(snapshot, MockFlightData.bestWindow))
-        .toList();
+    return [];
   }
 
   List<WindProfileRow> get windProfileRows {
-    if (_dataSource == WeatherDataSource.real && _realBundle != null) {
+    if (_realBundle != null) {
       return _realBundle!.windProfileRows;
     }
-    return MockFlightData.windProfileRows();
+    return [];
   }
 
   String get sourceLabel {
-    if (_dataSource == WeatherDataSource.real && _realBundle != null) {
+    if (_realBundle != null) {
       return 'Clima real | ${_realBundle!.providerName}';
     }
-    return 'Datos mock';
+    return 'Cargando clima real...';
   }
 
   Future<void> restorePreferences() async {
@@ -136,16 +117,12 @@ class WeatherSession extends ChangeNotifier {
         savedLocation,
       );
       final dataSource = _dataSourceFromName(preferences.dataSourceName);
-      final scenario = _mockScenarioFromName(preferences.mockScenarioName);
 
       _favoriteLocations = favorites;
       _selectedLocation = savedLocation ?? favorites.first;
       _favoriteLocations = _withFavorite(_favoriteLocations, _selectedLocation);
       if (preferences.guideRadiusKm != null) {
         _guideRadiusKm = _clampGuideRadius(preferences.guideRadiusKm!);
-      }
-      if (scenario != null) {
-        _mockScenario = scenario;
       }
       if (dataSource != null) {
         _dataSource = dataSource;
@@ -242,15 +219,6 @@ class WeatherSession extends ChangeNotifier {
     }
   }
 
-  void setMockScenario(MockFlightScenario scenario) {
-    if (_mockScenario == scenario) {
-      return;
-    }
-    _mockScenario = scenario;
-    notifyListeners();
-    _persistPreferences();
-  }
-
   Future<void> loadRealWeather() async {
     _isLoadingReal = true;
     _realError = null;
@@ -275,8 +243,23 @@ class WeatherSession extends ChangeNotifier {
 
   FlightWindowRecommendation bestWindowFor(List<WeatherSnapshot> hourly) {
     if (hourly.isEmpty) {
-      return MockFlightData.bestWindow;
+      final now = DateTime.now();
+      return FlightWindowRecommendation(
+        start: now,
+        end: now.add(const Duration(hours: 1)),
+        score: 0,
+        status: FlightReadinessStatus.notReady,
+        summary: 'No hay datos de clima disponibles',
+      );
     }
+
+    final defaultWindow = FlightWindowRecommendation(
+      start: hourly.first.time,
+      end: hourly.first.time.add(const Duration(hours: 1)),
+      score: 0,
+      status: FlightReadinessStatus.caution,
+      summary: 'Hora por defecto (esperando datos)',
+    );
 
     FlightReadinessReport? bestReport;
     for (final snapshot in hourly.take(24)) {
@@ -285,7 +268,7 @@ class WeatherSession extends ChangeNotifier {
         weather: weather,
         droneProfile: MockFlightData.droneProfile,
         missionProfile: MockFlightData.missionProfile,
-        bestWindow: MockFlightData.bestWindow,
+        bestWindow: defaultWindow,
       );
       if (bestReport == null || report.score > bestReport.score) {
         bestReport = report;
@@ -315,15 +298,13 @@ class WeatherSession extends ChangeNotifier {
   }
 
   WeatherSnapshot _withOperationalContext(WeatherSnapshot weather) {
-    final hasNearbyMockZone = detectedMockSensitiveZones.isNotEmpty;
     final isInsideOpenAip = _isInsideOpenAipAirspace();
     final isNearOpenAip = _isNearOpenAipAirspace();
 
     return weather.copyWith(
       locationLabel: _selectedLocation.label,
       isInsideRestrictedArea: weather.isInsideRestrictedArea || isInsideOpenAip,
-      isNearRestrictedArea:
-          weather.isNearRestrictedArea || hasNearbyMockZone || isNearOpenAip,
+      isNearRestrictedArea: weather.isNearRestrictedArea || isNearOpenAip,
     );
   }
 
@@ -414,7 +395,6 @@ class WeatherSession extends ChangeNotifier {
                   .toList(),
               guideRadiusKm: _guideRadiusKm,
               dataSourceName: _dataSource.name,
-              mockScenarioName: _mockScenario.name,
             ),
           )
           .catchError((_) {}),
@@ -429,20 +409,6 @@ class WeatherSession extends ChangeNotifier {
     for (final source in WeatherDataSource.values) {
       if (source.name == name) {
         return source;
-      }
-    }
-
-    return null;
-  }
-
-  MockFlightScenario? _mockScenarioFromName(String? name) {
-    if (name == null) {
-      return null;
-    }
-
-    for (final scenario in MockFlightScenario.values) {
-      if (scenario.name == name) {
-        return scenario;
       }
     }
 
@@ -554,5 +520,50 @@ class WeatherSession extends ChangeNotifier {
       }
     }
     return false;
+  }
+
+  Future<void> setLocationToCurrentGPS() async {
+    try {
+      developer.log('Requesting GPS location...', name: 'AeroCheck.GPS');
+
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        final newPermission = await Geolocator.requestPermission();
+        if (newPermission == LocationPermission.denied ||
+            newPermission == LocationPermission.deniedForever) {
+          developer.log('GPS permission denied', name: 'AeroCheck.GPS');
+          return;
+        }
+      }
+
+      final position = await Geolocator.getCurrentPosition();
+
+      developer.log(
+        'Got GPS: ${position.latitude}, ${position.longitude}',
+        name: 'AeroCheck.GPS',
+      );
+
+      final location = FlightLocation(
+        id: 'gps_current',
+        name: 'Mi Ubicación',
+        region: 'GPS Actual',
+        country: 'Argentina',
+        latitude: position.latitude,
+        longitude: position.longitude,
+      );
+
+      _selectedLocation = location;
+      _realBundle = null;
+      _realError = null;
+      notifyListeners();
+      _persistPreferences();
+
+      if (_dataSource == WeatherDataSource.real) {
+        await loadRealWeather();
+      }
+      _loadNearbyAirspaces();
+    } catch (error) {
+      developer.log('GPS error: $error', name: 'AeroCheck.GPS');
+    }
   }
 }

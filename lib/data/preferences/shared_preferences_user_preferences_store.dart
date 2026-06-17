@@ -13,13 +13,16 @@ class SharedPreferencesUserPreferencesStore implements UserPreferencesStore {
   @override
   Future<UserPreferences> load() async {
     final preferences = await SharedPreferences.getInstance();
+    // Clear legacy mock scenario data if present
+    if (preferences.containsKey(_mockScenarioKey)) {
+      await preferences.remove(_mockScenarioKey);
+    }
     return UserPreferences(
       locationId: preferences.getString(_locationIdKey),
       favoriteLocationIds:
           preferences.getStringList(_favoriteLocationIdsKey) ?? const [],
       guideRadiusKm: preferences.getDouble(_guideRadiusKmKey),
       dataSourceName: preferences.getString(_dataSourceKey),
-      mockScenarioName: preferences.getString(_mockScenarioKey),
     );
   }
 
@@ -34,7 +37,6 @@ class SharedPreferencesUserPreferencesStore implements UserPreferencesStore {
       ),
       _setDoubleOrRemove(store, _guideRadiusKmKey, preferences.guideRadiusKm),
       _setOrRemove(store, _dataSourceKey, preferences.dataSourceName),
-      _setOrRemove(store, _mockScenarioKey, preferences.mockScenarioName),
     ]);
   }
 
