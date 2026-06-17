@@ -67,10 +67,7 @@ class _LanguageScreenState extends State<LanguageScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: FilledButton(
-                      onPressed: () {
-                        widget.onSave(selectedLanguage);
-                        Navigator.pop(context, selectedLanguage);
-                      },
+                      onPressed: () => widget.onSave(selectedLanguage),
                       child: Text(
                         AppStrings.get('guardar', language: selectedLanguage),
                       ),

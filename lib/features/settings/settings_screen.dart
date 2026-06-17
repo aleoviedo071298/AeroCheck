@@ -432,22 +432,21 @@ class SettingsScreen extends StatelessWidget {
                                       ? const Color(0xFF64748B)
                                       : const Color(0xFF94A3B8),
                                 ),
-                                onTap: () async {
-                                  final result = await Navigator.of(context)
-                                      .push<UnitPreferences>(
-                                        MaterialPageRoute(
-                                          builder: (context) => UnitsScreen(
-                                            initialUnits:
-                                                session.preferences.units,
-                                            language:
-                                                session.preferences.language,
-                                            onSave: (_) {},
-                                          ),
-                                        ),
-                                      );
-                                  if (result != null) {
-                                    await session.updateUnits(result);
-                                  }
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) => UnitsScreen(
+                                        initialUnits: session.preferences.units,
+                                        language: session.preferences.language,
+                                        onSave: (units) async {
+                                          await session.updateUnits(units);
+                                          if (context.mounted) {
+                                            Navigator.pop(context);
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                  );
                                 },
                               ),
                               Padding(
@@ -494,20 +493,23 @@ class SettingsScreen extends StatelessWidget {
                                       ? const Color(0xFF64748B)
                                       : const Color(0xFF94A3B8),
                                 ),
-                                onTap: () async {
-                                  final result = await Navigator.of(context)
-                                      .push<Language>(
-                                        MaterialPageRoute(
-                                          builder: (context) => LanguageScreen(
-                                            initialLanguage:
-                                                session.preferences.language,
-                                            onSave: (_) {},
-                                          ),
-                                        ),
-                                      );
-                                  if (result != null) {
-                                    await session.updateLanguage(result);
-                                  }
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) => LanguageScreen(
+                                        initialLanguage:
+                                            session.preferences.language,
+                                        onSave: (language) async {
+                                          await session.updateLanguage(
+                                            language,
+                                          );
+                                          if (context.mounted) {
+                                            Navigator.pop(context);
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                  );
                                 },
                               ),
                               Padding(
