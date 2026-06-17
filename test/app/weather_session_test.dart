@@ -166,6 +166,22 @@ void main() {
       'Zona sensible cercana',
     );
   });
+
+  test('exposes detected mock sensitive zones with distance', () {
+    final session = WeatherSession(
+      weatherRepository: _FakeWeatherRepository(),
+      preferencesStore: _FakePreferencesStore(),
+    );
+
+    session.setGuideRadiusKm(7);
+
+    expect(session.detectedMockSensitiveZones, hasLength(1));
+    expect(
+      session.detectedMockSensitiveZones.first.zone.name,
+      'Zona sensible mock Comodoro',
+    );
+    expect(session.detectedMockSensitiveZones.first.distanceKm, greaterThan(0));
+  });
 }
 
 class _FakePreferencesStore implements UserPreferencesStore {

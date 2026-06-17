@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../app/weather_session.dart';
 import '../../data/location/flight_location.dart';
+import '../../data/mock/mock_sensitive_zone.dart';
 
 class MapScreen extends StatelessWidget {
   const MapScreen({super.key, required this.session});
@@ -15,6 +16,7 @@ class MapScreen extends StatelessWidget {
       builder: (context, _) {
         final location = session.selectedLocation;
         final guideRadiusKm = session.guideRadiusKm;
+        final detections = session.detectedMockSensitiveZones;
 
         return SafeArea(
           child: ListView(
@@ -46,6 +48,7 @@ class MapScreen extends StatelessWidget {
                         painter: _MapPlaceholderPainter(
                           location: location,
                           guideRadiusKm: guideRadiusKm,
+                          detectedZoneCount: detections.length,
                         ),
                       ),
                       Center(
@@ -70,6 +73,11 @@ class MapScreen extends StatelessWidget {
                           size: 42,
                           color: Color(0xFF2563EB),
                         ),
+                      ),
+                      Positioned(
+                        top: 16,
+                        right: 16,
+                        child: _LayerBadge(count: detections.length),
                       ),
                       Positioned(
                         left: 16,
@@ -97,6 +105,8 @@ class MapScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
+              _SensitiveZoneLayerCard(detections: detections),
+              const SizedBox(height: 12),
               const Card(
                 child: Padding(
                   padding: EdgeInsets.all(16),
@@ -109,6 +119,89 @@ class MapScreen extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _LayerBadge extends StatelessWidget {
+  const _LayerBadge({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final active = count > 0;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: active
+            ? const Color(0xFFF59E0B)
+            : Colors.black.withValues(alpha: 0.62),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        child: Text(
+          active ? '$count zona mock' : 'Sin zonas mock',
+          style: TextStyle(
+            color: active ? Colors.black : Colors.white,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SensitiveZoneLayerCard extends StatelessWidget {
+  const _SensitiveZoneLayerCard({required this.detections});
+
+  final List<MockSensitiveZoneDetection> detections;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
+        child: Column(
+          children: [
+            ListTile(
+              leading: Icon(
+                Icons.warning_amber_rounded,
+                color: detections.isEmpty
+                    ? Theme.of(context).colorScheme.primary
+                    : const Color(0xFFF59E0B),
+              ),
+              title: const Text(
+                'Zonas sensibles mock',
+                style: TextStyle(fontWeight: FontWeight.w900),
+              ),
+              subtitle: const Text('Capa local de prueba, no oficial.'),
+            ),
+            if (detections.isEmpty)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('No hay zonas mock dentro del radio guia.'),
+                ),
+              )
+            else
+              ...detections.map(
+                (detection) => ListTile(
+                  dense: true,
+                  leading: const Icon(Icons.place_rounded),
+                  title: Text(
+                    detection.zone.name,
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  subtitle: Text(
+                    'Distancia aprox.: ${_formatDistance(detection.distanceKm)}',
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -196,6 +289,10 @@ String _formatRadius(double value) {
   return '${value.toStringAsFixed(0)} km';
 }
 
+String _formatDistance(double value) {
+  return '${value.toStringAsFixed(1)} km';
+}
+
 double _circleSizeForRadius(double radiusKm) {
   return 150 + ((radiusKm - WeatherSession.minGuideRadiusKm) * 8);
 }
@@ -209,10 +306,12 @@ class _MapPlaceholderPainter extends CustomPainter {
   const _MapPlaceholderPainter({
     required this.location,
     required this.guideRadiusKm,
+    required this.detectedZoneCount,
   });
 
   final FlightLocation location;
   final double guideRadiusKm;
+  final int detectedZoneCount;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -225,7 +324,11 @@ class _MapPlaceholderPainter extends CustomPainter {
       ..strokeWidth = 4
       ..style = PaintingStyle.stroke;
     final warning = Paint()
-      ..color = const Color(0xFFF59E0B).withValues(alpha: 0.30);
+      ..color =
+          (detectedZoneCount > 0
+                  ? const Color(0xFFF59E0B)
+                  : const Color(0xFF22C55E))
+              .withValues(alpha: detectedZoneCount > 0 ? 0.32 : 0.18);
     final water = Paint()
       ..color = const Color(0xFF0F2F3A).withValues(alpha: 0.58);
 
@@ -270,6 +373,7 @@ class _MapPlaceholderPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _MapPlaceholderPainter oldDelegate) {
     return oldDelegate.location.id != location.id ||
-        oldDelegate.guideRadiusKm != guideRadiusKm;
+        oldDelegate.guideRadiusKm != guideRadiusKm ||
+        oldDelegate.detectedZoneCount != detectedZoneCount;
   }
 }

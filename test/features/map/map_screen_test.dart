@@ -22,6 +22,14 @@ void main() {
     expect(find.textContaining('Comodoro Rivadavia, Chubut'), findsWidgets);
     expect(find.textContaining('-45.8641, -67.4966'), findsOneWidget);
     expect(find.text('5 km'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('No hay zonas mock dentro del radio guia.'),
+      300,
+    );
+    expect(
+      find.text('No hay zonas mock dentro del radio guia.'),
+      findsOneWidget,
+    );
     expect(
       find.textContaining('Datos regulatorios no conectados'),
       findsOneWidget,
@@ -66,6 +74,26 @@ void main() {
     expect(session.guideRadiusKm, 10);
     expect(find.text('10 km'), findsOneWidget);
     expect(find.textContaining('Radio guia: 10 km'), findsOneWidget);
+  });
+
+  testWidgets('map screen lists detected mock sensitive zones', (tester) async {
+    final session = WeatherSession(preferencesStore: _FakePreferencesStore());
+    session.setGuideRadiusKm(7);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: MapScreen(session: session)),
+      ),
+    );
+
+    await tester.scrollUntilVisible(
+      find.text('Zona sensible mock Comodoro'),
+      300,
+    );
+
+    expect(find.text('Zona sensible mock Comodoro'), findsOneWidget);
+    expect(find.textContaining('Distancia aprox.:'), findsOneWidget);
+    expect(find.text('1 zona mock'), findsOneWidget);
   });
 }
 

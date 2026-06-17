@@ -58,6 +58,11 @@ class WeatherSession extends ChangeNotifier {
   Object? get realError => _realError;
   bool get isLoadingReal => _isLoadingReal;
   double get guideRadiusKm => _guideRadiusKm;
+  List<MockSensitiveZoneDetection> get detectedMockSensitiveZones =>
+      MockSensitiveZones.detectionsWithin(
+        location: _selectedLocation,
+        radiusKm: _guideRadiusKm,
+      );
 
   FlightReadinessReport? get currentReport {
     if (_dataSource == WeatherDataSource.mock) {
@@ -285,10 +290,7 @@ class WeatherSession extends ChangeNotifier {
   }
 
   WeatherSnapshot _withOperationalContext(WeatherSnapshot weather) {
-    final hasNearbyMockZone = MockSensitiveZones.hasZoneWithin(
-      location: _selectedLocation,
-      radiusKm: _guideRadiusKm,
-    );
+    final hasNearbyMockZone = detectedMockSensitiveZones.isNotEmpty;
 
     return weather.copyWith(
       locationLabel: _selectedLocation.label,

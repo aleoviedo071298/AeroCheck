@@ -16,6 +16,16 @@ class MockSensitiveZone {
   final double longitude;
 }
 
+class MockSensitiveZoneDetection {
+  const MockSensitiveZoneDetection({
+    required this.zone,
+    required this.distanceKm,
+  });
+
+  final MockSensitiveZone zone;
+  final double distanceKm;
+}
+
 class MockSensitiveZones {
   static const all = [
     MockSensitiveZone(
@@ -36,16 +46,31 @@ class MockSensitiveZones {
     required FlightLocation location,
     required double radiusKm,
   }) {
-    return all.any(
-      (zone) =>
-          distanceKm(
-            fromLatitude: location.latitude,
-            fromLongitude: location.longitude,
-            toLatitude: zone.latitude,
-            toLongitude: zone.longitude,
-          ) <=
-          radiusKm,
-    );
+    return detectionsWithin(location: location, radiusKm: radiusKm).isNotEmpty;
+  }
+
+  static List<MockSensitiveZoneDetection> detectionsWithin({
+    required FlightLocation location,
+    required double radiusKm,
+  }) {
+    final detections =
+        all
+            .map(
+              (zone) => MockSensitiveZoneDetection(
+                zone: zone,
+                distanceKm: distanceKm(
+                  fromLatitude: location.latitude,
+                  fromLongitude: location.longitude,
+                  toLatitude: zone.latitude,
+                  toLongitude: zone.longitude,
+                ),
+              ),
+            )
+            .where((detection) => detection.distanceKm <= radiusKm)
+            .toList()
+          ..sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
+
+    return detections;
   }
 
   static double distanceKm({
