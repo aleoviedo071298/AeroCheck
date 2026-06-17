@@ -150,10 +150,6 @@ String _formatRadius(double value) {
   return '${value.toStringAsFixed(0)} km';
 }
 
-String _formatDistance(double value) {
-  return '${value.toStringAsFixed(1)} km';
-}
-
 class _AirspaceLayerCard extends StatelessWidget {
   const _AirspaceLayerCard({required this.state});
 

@@ -108,54 +108,171 @@ class ConditionsScreen extends StatelessWidget {
   }
 }
 
-class _LocationSelector extends StatelessWidget {
+class _LocationSelector extends StatefulWidget {
   const _LocationSelector({required this.session});
 
   final WeatherSession session;
 
   @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 8, 10, 8),
-        child: Row(
-          children: [
-            Icon(
-              Icons.location_on_rounded,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<FlightLocation>(
-                  key: const ValueKey('location-selector-dropdown'),
-                  value: session.selectedLocation,
-                  isExpanded: true,
-                  items: session.availableLocations
-                      .map(
-                        (location) => DropdownMenuItem(
-                          value: location,
-                          child: Text(location.label),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (location) {
-                    if (location != null) {
-                      session.setLocation(location);
-                    }
+  State<_LocationSelector> createState() => _LocationSelectorState();
+}
+
+class _LocationSelectorState extends State<_LocationSelector> {
+  late TextEditingController _searchController;
+  List<FlightLocation> _filteredLocations = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+    _filteredLocations = widget.session.addableLocations;
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _filterLocations(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        _filteredLocations = widget.session.addableLocations;
+      } else {
+        final lowerQuery = query.toLowerCase();
+        _filteredLocations = widget.session.addableLocations
+            .where(
+              (loc) =>
+                  loc.name.toLowerCase().contains(lowerQuery) ||
+                  loc.region.toLowerCase().contains(lowerQuery),
+            )
+            .toList();
+      }
+    });
+  }
+
+  void _showAddLocationDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Agregar ubicación'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Buscar ciudad...',
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                onChanged: _filterLocations,
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 300,
+                width: double.maxFinite,
+                child: ListView.builder(
+                  itemCount: _filteredLocations.length,
+                  itemBuilder: (context, index) {
+                    final location = _filteredLocations[index];
+                    return ListTile(
+                      key: ValueKey('add-location-${location.id}'),
+                      title: Text(location.name),
+                      subtitle: Text(location.region),
+                      trailing: const Icon(Icons.add_circle_outline),
+                      onTap: () {
+                        widget.session.addFavoriteLocation(location);
+                        Navigator.pop(context);
+                        _searchController.clear();
+                        _filterLocations('');
+                      },
+                    );
                   },
                 ),
               ),
-            ),
-            IconButton(
-              key: const ValueKey('gps-location-button'),
-              icon: const Icon(Icons.my_location_rounded),
-              tooltip: 'Mi ubicación (GPS)',
-              onPressed: () => session.setLocationToCurrentGPS(),
-            ),
-          ],
+            ],
+          ),
         ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _searchController.clear();
+              _filterLocations('');
+            },
+            child: const Text('Cerrar'),
+          ),
+        ],
       ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: widget.session,
+      builder: (context, _) {
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.location_on_rounded,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Ubicación',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      key: const ValueKey('gps-location-button'),
+                      icon: const Icon(Icons.my_location_rounded),
+                      iconSize: 20,
+                      tooltip: 'Mi ubicación (GPS)',
+                      onPressed: () => widget.session.setLocationToCurrentGPS(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    ...widget.session.availableLocations.map((location) {
+                      final isSelected =
+                          location.id == widget.session.selectedLocation.id;
+                      return ChoiceChip(
+                        key: ValueKey('location-chip-${location.id}'),
+                        label: Text(location.name),
+                        selected: isSelected,
+                        onSelected: (_) => widget.session.setLocation(location),
+                      );
+                    }),
+                    ActionChip(
+                      key: const ValueKey('add-location-button'),
+                      label: const Text('Agregar'),
+                      avatar: const Icon(Icons.add, size: 18),
+                      onPressed: _showAddLocationDialog,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

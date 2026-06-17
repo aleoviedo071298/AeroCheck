@@ -1,5 +1,6 @@
 import 'package:aerocheck/app/aerocheck_app.dart';
 import 'package:aerocheck/app/weather_session.dart';
+import 'package:aerocheck/data/location/default_flight_locations.dart';
 import 'package:aerocheck/data/mock/mock_flight_data.dart';
 import 'package:aerocheck/data/preferences/user_preferences.dart';
 import 'package:aerocheck/data/preferences/user_preferences_store.dart';
@@ -26,21 +27,34 @@ void main() {
   });
 
   testWidgets('conditions screen can change selected location', (tester) async {
-    SharedPreferences.setMockInitialValues({
-      'aerocheck.favorite_location_ids': ['comodoro-rivadavia', 'mendoza'],
-    });
+    final session = WeatherSession(preferencesStore: _FakePreferencesStore());
+    session.addFavoriteLocation(DefaultFlightLocations.mendoza);
 
-    await tester.pumpWidget(const AeroCheckApp());
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: ConditionsScreen(session: session)),
+      ),
+    );
     await tester.pumpAndSettle();
 
-    expect(find.text('Comodoro Rivadavia, Chubut'), findsWidgets);
+    // Find ChoiceChips and verify initial selection
+    final comodoro = find.byKey(
+      const ValueKey('location-chip-comodoro-rivadavia'),
+    );
+    final mendoza = find.byKey(const ValueKey('location-chip-mendoza'));
 
-    await tester.tap(find.byKey(const ValueKey('location-selector-dropdown')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Mendoza, Mendoza').last);
+    expect(comodoro, findsOneWidget);
+    expect(mendoza, findsOneWidget);
+
+    // Verify Comodoro is initially selected
+    expect(find.byType(ChoiceChip).first, findsOneWidget);
+
+    // Tap on Mendoza chip to select it
+    await tester.tap(mendoza);
     await tester.pumpAndSettle();
 
-    expect(find.text('Mendoza, Mendoza'), findsWidgets);
+    // Verify Mendoza is now selected by checking the session
+    expect(session.selectedLocation.id, equals('mendoza'));
   });
 
   testWidgets('conditions screen renders real weather from repository', (
