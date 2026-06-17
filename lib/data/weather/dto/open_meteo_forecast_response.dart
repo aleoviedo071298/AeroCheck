@@ -40,6 +40,10 @@ class OpenMeteoForecastResponse {
   WeatherBundle toWeatherBundle({required String locationLabel}) {
     final hourlySnapshots = _hourlySnapshots(locationLabel);
     final currentSnapshot = _currentSnapshot(locationLabel, hourlySnapshots);
+    final nearestIndex = _nearestHourlyIndex(
+      currentSnapshot.time,
+      hourlySnapshots,
+    );
 
     return WeatherBundle(
       providerName: 'Open-Meteo',
@@ -47,7 +51,7 @@ class OpenMeteoForecastResponse {
       timezone: timezone,
       current: currentSnapshot,
       hourlySnapshots: hourlySnapshots,
-      windProfileRows: _windProfileRows(),
+      windProfileRows: _windProfileRows(nearestIndex),
     );
   }
 
@@ -74,6 +78,7 @@ class OpenMeteoForecastResponse {
       cloudBaseMeters: null,
       visibilityKm: nearest?.visibilityKm,
       kpIndex: null,
+      relativeHumidityPercent: _optionalDouble(current, 'relative_humidity_2m'),
       isDaylight: _optionalInt(current, 'is_day') == 1,
       isInsideRestrictedArea: false,
       isNearRestrictedArea: false,
@@ -121,6 +126,7 @@ class OpenMeteoForecastResponse {
             _optionalDoubleAt(hourly, 'visibility', index),
           ),
           kpIndex: null,
+          relativeHumidityPercent: null,
           isDaylight: _optionalIntAt(hourly, 'is_day', index) == 1,
           isInsideRestrictedArea: false,
           isNearRestrictedArea: false,
@@ -153,33 +159,76 @@ class OpenMeteoForecastResponse {
     return nearest;
   }
 
-  List<WindProfileRow> _windProfileRows() {
-    final firstTemperature =
-        _optionalDoubleAt(hourly, 'temperature_2m', 0) ?? 0;
+  int _nearestHourlyIndex(
+    DateTime currentTime,
+    List<WeatherSnapshot> hourlySnapshots,
+  ) {
+    if (hourlySnapshots.isEmpty) {
+      return 0;
+    }
+
+    var nearestIndex = 0;
+    var nearestDifference = hourlySnapshots[0].time
+        .difference(currentTime)
+        .abs();
+
+    for (var i = 1; i < hourlySnapshots.length; i++) {
+      final difference = hourlySnapshots[i].time.difference(currentTime).abs();
+      if (difference < nearestDifference) {
+        nearestIndex = i;
+        nearestDifference = difference;
+      }
+    }
+
+    return nearestIndex;
+  }
+
+  List<WindProfileRow> _windProfileRows(int index) {
+    final temperature = _optionalDoubleAt(hourly, 'temperature_2m', index) ?? 0;
     return [
       WindProfileRow(
         altitude: '10 m',
-        windKmh: _optionalDoubleAt(hourly, 'wind_speed_10m', 0) ?? 0,
-        gustKmh: _optionalDoubleAt(hourly, 'wind_gusts_10m', 0) ?? 0,
-        temperatureC: firstTemperature,
+        windKmh: _optionalDoubleAt(hourly, 'wind_speed_10m', index) ?? 0,
+        gustKmh: _optionalDoubleAt(hourly, 'wind_gusts_10m', index) ?? 0,
+        temperatureC: temperature,
+        windDirectionDegrees: _optionalDoubleAt(
+          hourly,
+          'wind_direction_10m',
+          index,
+        ),
       ),
       WindProfileRow(
         altitude: '80 m',
-        windKmh: _optionalDoubleAt(hourly, 'wind_speed_80m', 0) ?? 0,
+        windKmh: _optionalDoubleAt(hourly, 'wind_speed_80m', index) ?? 0,
         gustKmh: 0,
-        temperatureC: firstTemperature,
+        temperatureC: temperature,
+        windDirectionDegrees: _optionalDoubleAt(
+          hourly,
+          'wind_direction_80m',
+          index,
+        ),
       ),
       WindProfileRow(
         altitude: '120 m',
-        windKmh: _optionalDoubleAt(hourly, 'wind_speed_120m', 0) ?? 0,
+        windKmh: _optionalDoubleAt(hourly, 'wind_speed_120m', index) ?? 0,
         gustKmh: 0,
-        temperatureC: firstTemperature,
+        temperatureC: temperature,
+        windDirectionDegrees: _optionalDoubleAt(
+          hourly,
+          'wind_direction_120m',
+          index,
+        ),
       ),
       WindProfileRow(
         altitude: '180 m',
-        windKmh: _optionalDoubleAt(hourly, 'wind_speed_180m', 0) ?? 0,
+        windKmh: _optionalDoubleAt(hourly, 'wind_speed_180m', index) ?? 0,
         gustKmh: 0,
-        temperatureC: firstTemperature,
+        temperatureC: temperature,
+        windDirectionDegrees: _optionalDoubleAt(
+          hourly,
+          'wind_direction_180m',
+          index,
+        ),
       ),
     ];
   }

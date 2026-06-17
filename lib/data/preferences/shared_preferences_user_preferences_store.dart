@@ -1,25 +1,65 @@
+import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../domain/i18n/language.dart';
+import '../../domain/units/unit_preferences.dart';
 import 'user_preferences.dart';
 import 'user_preferences_store.dart';
 
 class SharedPreferencesUserPreferencesStore implements UserPreferencesStore {
-  static const _locationIdKey = 'aerocheck.location_id';
-  static const _favoriteLocationIdsKey = 'aerocheck.favorite_location_ids';
+  static const _selectedLocationIdKey = 'aerocheck.selected_location_id';
+  static const _favoriteLocationsJsonKey = 'aerocheck.favorite_locations_json';
   static const _guideRadiusKmKey = 'aerocheck.guide_radius_km';
   static const _dataSourceKey = 'aerocheck.data_source';
+  static const _languageKey = 'aerocheck.language';
+  static const _unitsKey = 'aerocheck.units';
   static const _mockScenarioKey = 'aerocheck.mock_scenario';
+  // Legacy keys for migration
+  static const _legacyLocationIdKey = 'aerocheck.location_id';
+  static const _legacyFavoriteLocationIdsKey =
+      'aerocheck.favorite_location_ids';
 
   @override
   Future<UserPreferences> load() async {
     final preferences = await SharedPreferences.getInstance();
+
+    // Clear legacy mock scenario data if present
+    if (preferences.containsKey(_mockScenarioKey)) {
+      await preferences.remove(_mockScenarioKey);
+    }
+
+    // Migrate legacy data if present
+    if (preferences.containsKey(_legacyLocationIdKey)) {
+      await preferences.remove(_legacyLocationIdKey);
+    }
+    if (preferences.containsKey(_legacyFavoriteLocationIdsKey)) {
+      await preferences.remove(_legacyFavoriteLocationIdsKey);
+    }
+
+    // Load new preferences
+    final languageCode = preferences.getString(_languageKey) ?? 'es';
+    final language = LanguageHelper.fromCode(languageCode);
+
+    UnitPreferences units = const UnitPreferences();
+    final unitsJson = preferences.getString(_unitsKey);
+    if (unitsJson != null) {
+      try {
+        final decoded = jsonDecode(unitsJson) as Map<String, dynamic>;
+        units = UnitPreferences.fromJson(decoded);
+      } catch (e) {
+        // Use default if JSON is corrupted
+      }
+    }
+
     return UserPreferences(
-      locationId: preferences.getString(_locationIdKey),
-      favoriteLocationIds:
-          preferences.getStringList(_favoriteLocationIdsKey) ?? const [],
+      selectedLocationId: preferences.getString(_selectedLocationIdKey),
+      favoriteLocationsJson:
+          preferences.getStringList(_favoriteLocationsJsonKey) ?? const [],
       guideRadiusKm: preferences.getDouble(_guideRadiusKmKey),
       dataSourceName: preferences.getString(_dataSourceKey),
-      mockScenarioName: preferences.getString(_mockScenarioKey),
+      language: language,
+      units: units,
     );
   }
 
@@ -27,14 +67,19 @@ class SharedPreferencesUserPreferencesStore implements UserPreferencesStore {
   Future<void> save(UserPreferences preferences) async {
     final store = await SharedPreferences.getInstance();
     await Future.wait([
-      _setOrRemove(store, _locationIdKey, preferences.locationId),
+      _setOrRemove(
+        store,
+        _selectedLocationIdKey,
+        preferences.selectedLocationId,
+      ),
       store.setStringList(
-        _favoriteLocationIdsKey,
-        preferences.favoriteLocationIds,
+        _favoriteLocationsJsonKey,
+        preferences.favoriteLocationsJson,
       ),
       _setDoubleOrRemove(store, _guideRadiusKmKey, preferences.guideRadiusKm),
       _setOrRemove(store, _dataSourceKey, preferences.dataSourceName),
-      _setOrRemove(store, _mockScenarioKey, preferences.mockScenarioName),
+      store.setString(_languageKey, preferences.language.code),
+      store.setString(_unitsKey, jsonEncode(preferences.units.toJson())),
     ]);
   }
 

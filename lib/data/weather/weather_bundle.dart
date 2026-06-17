@@ -17,4 +17,17 @@ class WeatherBundle {
   final WeatherSnapshot current;
   final List<WeatherSnapshot> hourlySnapshots;
   final List<WindProfileRow> windProfileRows;
+
+  WeatherBundle copyWithKpIndex(double kpIndex) {
+    return WeatherBundle(
+      providerName: providerName,
+      locationLabel: locationLabel,
+      timezone: timezone,
+      current: current.copyWith(kpIndex: kpIndex),
+      hourlySnapshots: hourlySnapshots
+          .map((snapshot) => snapshot.copyWith(kpIndex: kpIndex))
+          .toList(),
+      windProfileRows: windProfileRows,
+    );
+  }
 }

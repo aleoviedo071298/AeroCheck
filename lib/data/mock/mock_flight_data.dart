@@ -146,34 +146,32 @@ class MockFlightData {
   static List<WindProfileRow> windProfileRows() {
     return const [
       WindProfileRow(
-        altitude: 'Suelo',
-        windKmh: 19,
-        gustKmh: 31,
-        temperatureC: 16,
+        altitude: '10 m',
+        windKmh: 20.2,
+        gustKmh: 42.1,
+        temperatureC: 7.7,
+        windDirectionDegrees: 112,
       ),
       WindProfileRow(
-        altitude: '50 m',
-        windKmh: 21,
-        gustKmh: 33,
-        temperatureC: 15,
-      ),
-      WindProfileRow(
-        altitude: '100 m',
-        windKmh: 23,
-        gustKmh: 35,
-        temperatureC: 15,
+        altitude: '80 m',
+        windKmh: 26.0,
+        gustKmh: 0.0,
+        temperatureC: 7.7,
+        windDirectionDegrees: 100,
       ),
       WindProfileRow(
         altitude: '120 m',
-        windKmh: 24,
-        gustKmh: 36,
-        temperatureC: 14,
+        windKmh: 27.2,
+        gustKmh: 0.0,
+        temperatureC: 7.7,
+        windDirectionDegrees: 101,
       ),
       WindProfileRow(
-        altitude: '150 m',
-        windKmh: 25,
-        gustKmh: 38,
-        temperatureC: 14,
+        altitude: '180 m',
+        windKmh: 24.7,
+        gustKmh: 0.0,
+        temperatureC: 7.7,
+        windDirectionDegrees: 104,
       ),
     ];
   }
@@ -190,6 +188,9 @@ class ForecastRow {
     required this.gustKmh,
     required this.rainPercent,
     required this.visibilityKm,
+    required this.score,
+    this.windDirectionDegrees,
+    this.time,
   });
 
   final String hour;
@@ -201,6 +202,9 @@ class ForecastRow {
   final double gustKmh;
   final double rainPercent;
   final double visibilityKm;
+  final int score;
+  final double? windDirectionDegrees;
+  final DateTime? time;
 }
 
 class ForecastReason {
@@ -221,10 +225,12 @@ class WindProfileRow {
     required this.windKmh,
     required this.gustKmh,
     required this.temperatureC,
+    this.windDirectionDegrees,
   });
 
   final String altitude;
   final double windKmh;
   final double gustKmh;
   final double temperatureC;
+  final double? windDirectionDegrees;
 }

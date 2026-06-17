@@ -13,6 +13,7 @@ class WeatherSnapshot {
     this.cloudBaseMeters,
     this.visibilityKm,
     this.kpIndex,
+    this.relativeHumidityPercent,
     required this.isDaylight,
     required this.isInsideRestrictedArea,
     required this.isNearRestrictedArea,
@@ -31,9 +32,35 @@ class WeatherSnapshot {
   final double? cloudBaseMeters;
   final double? visibilityKm;
   final double? kpIndex;
+  final double? relativeHumidityPercent;
   final bool isDaylight;
   final bool isInsideRestrictedArea;
   final bool isNearRestrictedArea;
+
+  String? get windDirectionCardinal {
+    if (windDirectionDegrees == null) return null;
+    final normalized = (windDirectionDegrees! % 360 + 360) % 360;
+    final index = ((normalized + 11.25) / 22.5).floor() % 16;
+    const directions = [
+      'N',
+      'NNE',
+      'NE',
+      'ENE',
+      'E',
+      'ESE',
+      'SE',
+      'SSE',
+      'S',
+      'SSO',
+      'SO',
+      'OSO',
+      'O',
+      'ONO',
+      'NO',
+      'NNO',
+    ];
+    return directions[index];
+  }
 
   WeatherSnapshot copyWith({
     DateTime? time,
@@ -49,6 +76,7 @@ class WeatherSnapshot {
     double? cloudBaseMeters,
     double? visibilityKm,
     double? kpIndex,
+    double? relativeHumidityPercent,
     bool? isDaylight,
     bool? isInsideRestrictedArea,
     bool? isNearRestrictedArea,
@@ -69,6 +97,8 @@ class WeatherSnapshot {
       cloudBaseMeters: cloudBaseMeters ?? this.cloudBaseMeters,
       visibilityKm: visibilityKm ?? this.visibilityKm,
       kpIndex: kpIndex ?? this.kpIndex,
+      relativeHumidityPercent:
+          relativeHumidityPercent ?? this.relativeHumidityPercent,
       isDaylight: isDaylight ?? this.isDaylight,
       isInsideRestrictedArea:
           isInsideRestrictedArea ?? this.isInsideRestrictedArea,

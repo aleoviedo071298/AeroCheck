@@ -1,8 +1,16 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../app/weather_session.dart';
+import '../../data/location/flight_location.dart';
 import '../../data/mock/mock_flight_data.dart';
+import '../../domain/entities/flight_readiness_report.dart';
+import '../../domain/i18n/app_strings.dart';
 import '../../domain/rules/rule_severity.dart';
+import '../../domain/units/unit_formatters.dart';
+import '../../domain/units/unit_preferences.dart';
 
 class ForecastScreen extends StatelessWidget {
   const ForecastScreen({super.key, required this.session});
@@ -11,134 +19,1007 @@ class ForecastScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final contentBg = isDark
+        ? const Color(0xFF0F172A)
+        : const Color(0xFFF1F5F9);
+
     return AnimatedBuilder(
       animation: session,
       builder: (context, _) {
+        AppStrings.currentLanguage = session.preferences.language;
+        final report = session.currentReport;
         final rows = session.forecastRows;
-        return SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              Text(
-                'Forecast horario',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w900,
+        final location = session.selectedLocation;
+
+        return Column(
+          children: [
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: contentBg,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+                    children: [
+                      // 1. Collapsible Location Card
+                      _CollapsibleLocationCard(
+                        session: session,
+                        report: report,
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Title & Subtitle Info
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              AppStrings.get('forecast_horario'),
+                              style: Theme.of(context).textTheme.headlineSmall
+                                  ?.copyWith(fontWeight: FontWeight.w900),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _descriptionFor(session, location),
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isDark
+                                    ? const Color(0xFF94A3B8)
+                                    : const Color(0xFF64748B),
+                                height: 1.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      if (session.isLoadingReal)
+                        const _RealWeatherLoadingCard()
+                      else if (session.dataSource == WeatherDataSource.real &&
+                          session.realError != null)
+                        _RealWeatherErrorCard(onRetry: session.loadRealWeather)
+                      else if (report == null)
+                        const _StaticLoadingCard()
+                      else ...[
+                        // 2. Selected Window Card
+                        _ForecastWindowStatsCard(session: session),
+                        const SizedBox(height: 16),
+
+                        // 3. Forecast Table Header
+                        _ForecastTableHeader(units: session.preferences.units),
+                        const SizedBox(height: 4),
+
+                        // 4. Forecast Rows List
+                        ...rows.map(
+                          (row) => _RedesignedForecastRowTile(
+                            row: row,
+                            units: session.preferences.units,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // 5. Timeline Index Chart
+                        _HourlyScoreTimeline(rows: rows),
+                        const SizedBox(height: 16),
+
+                        // 6. Bottom optimal window tip
+                        const _ForecastTipCard(),
+                      ],
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 6),
-              Text(_descriptionFor(session)),
-              const SizedBox(height: 16),
-              ...rows.map((row) => _ForecastRowCard(row: row)),
-            ],
-          ),
+            ),
+          ],
         );
       },
     );
   }
 
-  String _descriptionFor(WeatherSession session) {
-    if (session.dataSource == WeatherDataSource.real &&
-        session.realBundle != null) {
-      return '${session.selectedLocation.label} - clima real de Open-Meteo evaluado con AeroCheck.';
-    }
-    if (session.dataSource == WeatherDataSource.real && session.isLoadingReal) {
-      return 'Cargando clima real para el forecast.';
-    }
-    return '${session.selectedLocation.label} - datos mock para validar la lectura del MVP.';
+  String _descriptionFor(WeatherSession session, FlightLocation location) {
+    final isReal = session.dataSource == WeatherDataSource.real;
+    final providerName = session.realBundle?.providerName ?? 'Open-Meteo';
+    final sourceText = isReal
+        ? '${AppStrings.get('clima_real')} · $providerName'
+        : AppStrings.get('datos_mock');
+    return '${location.name}, ${location.region} · $sourceText · ${AppStrings.get('evaluado_aerocheck')}.';
   }
 }
 
-class _ForecastRowCard extends StatelessWidget {
-  const _ForecastRowCard({required this.row});
+class _CollapsibleLocationCard extends StatefulWidget {
+  const _CollapsibleLocationCard({required this.session, this.report});
 
-  final ForecastRow row;
+  final WeatherSession session;
+  final FlightReadinessReport? report;
+
+  @override
+  State<_CollapsibleLocationCard> createState() =>
+      _CollapsibleLocationCardState();
+}
+
+class _CollapsibleLocationCardState extends State<_CollapsibleLocationCard> {
+  bool _isExpanded = false;
+  final _searchController = TextEditingController();
+  Future<List<FlightLocation>>? _searchFuture;
+  Timer? _debounceTimer;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _debounceTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final location = widget.session.selectedLocation;
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Card(
-      child: ExpansionTile(
-        key: ValueKey('forecast-row-${row.hour}'),
-        tilePadding: const EdgeInsets.fromLTRB(14, 2, 8, 2),
-        childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-        title: _ForecastRowSummary(row: row),
+      margin: EdgeInsets.zero,
+      elevation: 0,
+      color: isDark ? const Color(0xFF1E293B) : Colors.white,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          setState(() {
+            _isExpanded = !_isExpanded;
+          });
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.location_on_rounded,
+                    color: colorScheme.primary,
+                    size: 28,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          location.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Lat: ${location.latitude.toStringAsFixed(4)} · Lon: ${location.longitude.toStringAsFixed(4)} · Elev. ${UnitFormatters.formatAltitude(location.elevation.toDouble(), widget.session.preferences.units, decimals: 0)}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark
+                                ? const Color(0xFF94A3B8)
+                                : const Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    _isExpanded
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    color: isDark
+                        ? const Color(0xFF94A3B8)
+                        : const Color(0xFF64748B),
+                  ),
+                ],
+              ),
+              if (_isExpanded) ...[
+                const SizedBox(height: 14),
+                const Divider(height: 1),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Text(
+                      AppStrings.get('cambiar_ubicacion'),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.primary,
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      key: const ValueKey('gps-location-button'),
+                      icon: const Icon(Icons.my_location_rounded),
+                      iconSize: 20,
+                      tooltip: AppStrings.get('mi_ubicacion_gps'),
+                      onPressed: () {
+                        widget.session.setLocationToCurrentGPS();
+                        setState(() {
+                          _isExpanded = false;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ...widget.session.availableLocations.map((loc) {
+                      final isSelected = loc.id == location.id;
+                      return ChoiceChip(
+                        key: ValueKey('location-chip-${loc.id}'),
+                        label: Text(loc.name),
+                        selected: isSelected,
+                        onSelected: (_) {
+                          widget.session.setLocation(loc);
+                          setState(() {
+                            _isExpanded = false;
+                          });
+                        },
+                      );
+                    }),
+                    ActionChip(
+                      key: const ValueKey('add-location-button'),
+                      label: Text(AppStrings.get('buscar')),
+                      avatar: const Icon(Icons.search_rounded, size: 16),
+                      onPressed: () {
+                        _showAddLocationDialog();
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAddLocationDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: Text(AppStrings.get('buscar_ciudad')),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: AppStrings.get('escribe_nombre_ciudad'),
+                      prefixIcon: const Icon(Icons.search),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    onChanged: (val) {
+                      _debounceTimer?.cancel();
+                      _debounceTimer = Timer(
+                        const Duration(milliseconds: 300),
+                        () {
+                          setDialogState(() {
+                            _searchFuture = widget.session.searchCities(val);
+                          });
+                        },
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    height: 300,
+                    width: double.maxFinite,
+                    child: _searchFuture == null
+                        ? Center(
+                            child: Text(
+                              AppStrings.get('escribe_buscar_ciudades'),
+                            ),
+                          )
+                        : FutureBuilder<List<FlightLocation>>(
+                            future: _searchFuture,
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return const Center(
+                                  child: CircularProgressIndicator(),
+                                );
+                              }
+                              if (snapshot.hasError) {
+                                return Center(
+                                  child: Text(
+                                    '${AppStrings.get('error')}: ${snapshot.error}',
+                                  ),
+                                );
+                              }
+                              final locations = snapshot.data ?? [];
+                              if (locations.isEmpty) {
+                                return Center(
+                                  child: Text(
+                                    AppStrings.get('sin_resultados_ciudades'),
+                                  ),
+                                );
+                              }
+                              return ListView.builder(
+                                itemCount: locations.length,
+                                itemBuilder: (context, index) {
+                                  final loc = locations[index];
+                                  return ListTile(
+                                    key: ValueKey('search-location-${loc.id}'),
+                                    title: Text(loc.name),
+                                    subtitle: Text(
+                                      '${loc.region}, ${loc.country}',
+                                    ),
+                                    trailing: const Icon(
+                                      Icons.add_circle_outline_rounded,
+                                    ),
+                                    onTap: () {
+                                      widget.session.addFavoriteLocation(loc);
+                                      Navigator.pop(context);
+                                      _searchController.clear();
+                                      setState(() {
+                                        _isExpanded = false;
+                                        _searchFuture = null;
+                                      });
+                                    },
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _searchController.clear();
+                  setState(() {
+                    _searchFuture = null;
+                  });
+                },
+                child: Text(AppStrings.get('cerrar')),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ForecastWindowStatsCard extends StatelessWidget {
+  const _ForecastWindowStatsCard({required this.session});
+
+  final WeatherSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final report = session.currentReport;
+    if (report == null) return const SizedBox.shrink();
+
+    final window = report.bestWindow;
+    final start = window.start;
+    final end = window.end;
+    final durationHours = end.difference(start).inHours;
+
+    // Filter forecast rows that fall within the best window
+    final windowRows = session.forecastRows.where((row) {
+      if (row.time == null) return false;
+      return !row.time!.isBefore(start) && row.time!.isBefore(end);
+    }).toList();
+
+    int aptoHours = 0;
+    int noAptoHours = 0;
+    double maxRainPercent = 0.0;
+
+    for (final r in windowRows) {
+      final s = r.status.toUpperCase();
+      if (s == 'APTO' || s == 'READY') {
+        aptoHours++;
+      } else {
+        noAptoHours++;
+      }
+      if (r.rainPercent > maxRainPercent) {
+        maxRainPercent = r.rainPercent;
+      }
+    }
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textStyleValue = const TextStyle(
+      fontSize: 16,
+      fontWeight: FontWeight.w900,
+      height: 1.2,
+    );
+    final textStyleLabel = TextStyle(
+      fontSize: 9,
+      fontWeight: FontWeight.w900,
+      letterSpacing: 0.5,
+      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+    );
+
+    return Card(
+      margin: EdgeInsets.zero,
+      elevation: 0,
+      color: isDark ? const Color(0xFF1E293B) : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+        child: Row(
+          children: [
+            // Ventana Seleccionada
+            Expanded(
+              flex: 3,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    AppStrings.get('ventana_seleccionada').toUpperCase(),
+                    style: textStyleLabel,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${_time(start)} - ${_time(end)}',
+                    style: textStyleValue.copyWith(fontSize: 14),
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    '$durationHours ${AppStrings.get('horas')}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark
+                          ? const Color(0xFF94A3B8)
+                          : const Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            _vDivider(isDark),
+
+            // Mejor Hora
+            Expanded(
+              flex: 2,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    AppStrings.get('mejor_hora').toUpperCase(),
+                    style: textStyleLabel,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    _time(start),
+                    style: textStyleValue.copyWith(
+                      color: const Color(0xFF0D9488),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            _vDivider(isDark),
+
+            // Apto
+            Expanded(
+              flex: 1,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    AppStrings.get('apto').toUpperCase(),
+                    style: textStyleLabel,
+                  ),
+                  const SizedBox(height: 2),
+                  Text('$aptoHours h', style: textStyleValue),
+                ],
+              ),
+            ),
+
+            _vDivider(isDark),
+
+            // No Apto
+            Expanded(
+              flex: 2,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    AppStrings.get('no_apto').toUpperCase(),
+                    style: textStyleLabel,
+                  ),
+                  const SizedBox(height: 2),
+                  Text('$noAptoHours h', style: textStyleValue),
+                ],
+              ),
+            ),
+
+            _vDivider(isDark),
+
+            // Lluvia en Ventana
+            Expanded(
+              flex: 2,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    AppStrings.get('lluvia_en_ventana').toUpperCase(),
+                    style: textStyleLabel,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.opacity_rounded,
+                        color: Color(0xFF3B82F6),
+                        size: 14,
+                      ),
+                      const SizedBox(width: 3),
+                      Text('${_fmt(maxRainPercent)}%', style: textStyleValue),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _vDivider(bool isDark) {
+    return Container(
+      width: 1,
+      height: 32,
+      color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+    );
+  }
+
+  String _time(DateTime value) {
+    return '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
+  }
+
+  String _fmt(num value) {
+    if (value == value.roundToDouble()) return value.toStringAsFixed(0);
+    return value.toStringAsFixed(1);
+  }
+}
+
+class _ForecastTableHeader extends StatelessWidget {
+  const _ForecastTableHeader({required this.units});
+
+  final UnitPreferences units;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final labelStyle = TextStyle(
+      fontSize: 9,
+      fontWeight: FontWeight.w900,
+      letterSpacing: 0.5,
+      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+    );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      child: Row(
         children: [
-          const Divider(height: 1),
-          const SizedBox(height: 10),
-          ...row.reasons.map((reason) => _ForecastReasonLine(reason: reason)),
+          // Hora
+          SizedBox(
+            width: 46,
+            child: Text(
+              AppStrings.get('hora').toUpperCase(),
+              style: labelStyle,
+            ),
+          ),
+          // Estado / Razón Principal
+          Expanded(
+            child: Row(
+              children: [
+                Text(AppStrings.get('estado').toUpperCase(), style: labelStyle),
+                const SizedBox(width: 8),
+                Text(
+                  AppStrings.get('razon_principal').toUpperCase(),
+                  style: labelStyle,
+                ),
+              ],
+            ),
+          ),
+          // Viento
+          SizedBox(
+            width: 58,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(AppStrings.get('viento').toUpperCase(), style: labelStyle),
+                Text(
+                  units.speed.shortName,
+                  style: labelStyle.copyWith(
+                    fontSize: 8,
+                    fontWeight: FontWeight.normal,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Ráfagas
+          SizedBox(
+            width: 52,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  AppStrings.get('rafagas').toUpperCase(),
+                  style: labelStyle,
+                ),
+                Text(
+                  units.speed.shortName,
+                  style: labelStyle.copyWith(
+                    fontSize: 8,
+                    fontWeight: FontWeight.normal,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Lluvia
+          SizedBox(
+            width: 58,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(AppStrings.get('lluvia').toUpperCase(), style: labelStyle),
+                Text(
+                  '%',
+                  style: labelStyle.copyWith(
+                    fontSize: 8,
+                    fontWeight: FontWeight.normal,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Spacer for expandable chevron
+          const SizedBox(width: 24),
         ],
       ),
     );
   }
 }
 
-class _ForecastRowSummary extends StatelessWidget {
-  const _ForecastRowSummary({required this.row});
+class _RedesignedForecastRowTile extends StatefulWidget {
+  const _RedesignedForecastRowTile({required this.row, required this.units});
 
   final ForecastRow row;
+  final UnitPreferences units;
+
+  @override
+  State<_RedesignedForecastRowTile> createState() =>
+      _RedesignedForecastRowTileState();
+}
+
+class _RedesignedForecastRowTileState
+    extends State<_RedesignedForecastRowTile> {
+  bool _isExpanded = false;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 54,
-          child: Text(
-            row.hour,
-            style: const TextStyle(fontWeight: FontWeight.w900),
-          ),
+    final row = widget.row;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final borderHighlightColor = const Color(
+      0xFF22C55E,
+    ); // Green highlight border
+    final isHighlight = row.isBestWindow;
+
+    return Card(
+      key: ValueKey('forecast-row-${row.hour}'),
+      margin: const EdgeInsets.only(bottom: 8),
+      elevation: 0,
+      color: isHighlight
+          ? borderHighlightColor.withValues(alpha: 0.05)
+          : (isDark ? const Color(0xFF1E293B) : Colors.white),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: isHighlight
+              ? borderHighlightColor
+              : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+          width: isHighlight ? 1.5 : 1,
         ),
-        const SizedBox(width: 8),
-        Expanded(
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          setState(() {
+            _isExpanded = !_isExpanded;
+          });
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(14),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                row.status,
-                style: TextStyle(
-                  color: _statusColor(row.status),
-                  fontWeight: FontWeight.w900,
-                ),
+              Row(
+                children: [
+                  // Column 1: HORA
+                  SizedBox(
+                    width: 46,
+                    child: Text(
+                      row.hour,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14,
+                        color: isHighlight && !isDark
+                            ? const Color(0xFF16A34A)
+                            : null,
+                      ),
+                    ),
+                  ),
+
+                  // Column 2: ESTADO & RAZÓN PRINCIPAL
+                  Expanded(
+                    child: Row(
+                      children: [
+                        _StatusIcon(
+                          status: row.status,
+                          reasonTitle: row.primaryReason,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 2,
+                                children: [
+                                  Text(
+                                    row.status,
+                                    style: TextStyle(
+                                      color: _statusColor(row.status),
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  if (row.isBestWindow) const _BestWindowPill(),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                row.primaryReason,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: isDark
+                                      ? const Color(0xFF94A3B8)
+                                      : const Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Column 3: VIENTO
+                  SizedBox(
+                    width: 58,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            if (row.windDirectionDegrees != null)
+                              Transform.rotate(
+                                angle:
+                                    (row.windDirectionDegrees! *
+                                    math.pi /
+                                    180.0),
+                                child: const Icon(
+                                  Icons.navigation_rounded,
+                                  size: 11,
+                                  color: Color(0xFF0EA5E9),
+                                ),
+                              ),
+                            const SizedBox(width: 3),
+                            Text(
+                              UnitFormatters.formatSpeedValue(
+                                row.windKmh,
+                                widget.units,
+                                decimals: 0,
+                              ),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${_windDirectionCardinal(row.windDirectionDegrees)} ${row.windDirectionDegrees == null ? "-" : _fmt(row.windDirectionDegrees!)}°',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: isDark
+                                ? const Color(0xFF94A3B8)
+                                : const Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Column 4: RÁFAGAS
+                  SizedBox(
+                    width: 52,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          UnitFormatters.formatSpeedValue(
+                            row.gustKmh,
+                            widget.units,
+                            decimals: 0,
+                          ),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        if (row.gustKmh - row.windKmh > 0)
+                          Text(
+                            'Δ ${UnitFormatters.formatSpeedValue(row.gustKmh - row.windKmh, widget.units, decimals: 0)}',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Color(0xFFF59E0B),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          )
+                        else
+                          Text(
+                            AppStrings.get('sin_rafagas'),
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: isDark
+                                  ? const Color(0xFF64748B)
+                                  : const Color(0xFF94A3B8),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+
+                  // Column 5: LLUVIA
+                  SizedBox(
+                    width: 58,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            const Icon(
+                              Icons.opacity_rounded,
+                              size: 11,
+                              color: Color(0xFF3B82F6),
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              '${_fmt(row.rainPercent)}%',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          row.rainPercent > 0
+                              ? AppStrings.get('con_lluvia')
+                              : AppStrings.get('sin_lluvia'),
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: isDark
+                                ? const Color(0xFF94A3B8)
+                                : const Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Chevron indicator on right
+                  const SizedBox(width: 4),
+                  Icon(
+                    _isExpanded
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    size: 20,
+                    color: isDark
+                        ? const Color(0xFF64748B)
+                        : const Color(0xFF94A3B8),
+                  ),
+                ],
               ),
-              if (row.isBestWindow) ...[
-                const SizedBox(height: 5),
-                const _BestWindowPill(),
+
+              // Expandable content
+              if (_isExpanded) ...[
+                const SizedBox(height: 12),
+                const Divider(height: 1),
+                const SizedBox(height: 12),
+                ...row.reasons.map(
+                  (reason) => _ForecastReasonLine(reason: reason),
+                ),
               ],
-              const SizedBox(height: 3),
-              Text(
-                row.primaryReason,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.72),
-                  height: 1.15,
-                ),
-              ),
             ],
           ),
         ),
-        const SizedBox(width: 12),
-        SizedBox(
-          width: 96,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '${_fmt(row.windKmh)} / ${_fmt(row.gustKmh)} km/h',
-                textAlign: TextAlign.end,
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                '${_fmt(row.rainPercent)}% lluvia',
-                textAlign: TextAlign.end,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
-          ),
-        ),
-      ],
+      ),
+    );
+  }
+
+  String _fmt(num value) {
+    if (value == value.roundToDouble()) return value.toStringAsFixed(0);
+    return value.toStringAsFixed(1);
+  }
+}
+
+class _StatusIcon extends StatelessWidget {
+  const _StatusIcon({required this.status, required this.reasonTitle});
+
+  final String status;
+  final String reasonTitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _statusColor(status);
+    final icon = _iconForReasonTitle(reasonTitle);
+
+    return Container(
+      width: 26,
+      height: 26,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      child: Icon(icon, color: Colors.white, size: 14),
     );
   }
 }
@@ -150,17 +1031,17 @@ class _BestWindowPill extends StatelessWidget {
   Widget build(BuildContext context) {
     const color = Color(0xFF0F766E);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: color.withValues(alpha: 0.26)),
       ),
-      child: const Text(
-        'Mejor hora',
-        style: TextStyle(
+      child: Text(
+        AppStrings.get('mejor_hora'),
+        style: const TextStyle(
           color: color,
-          fontSize: 11,
+          fontSize: 9,
           fontWeight: FontWeight.w900,
           height: 1,
         ),
@@ -177,34 +1058,46 @@ class _ForecastReasonLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = _severityColor(reason.severity);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          // Circular colored icon container
           Container(
-            width: 8,
-            height: 8,
-            margin: const EdgeInsets.only(top: 5),
+            width: 28,
+            height: 28,
             decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            child: Icon(
+              _iconForReasonTitle(reason.title),
+              color: Colors.white,
+              size: 14,
+            ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
+
+          // Rule Details
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   reason.title,
-                  style: TextStyle(fontWeight: FontWeight.w800, color: color),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   reason.details,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.72),
-                    height: 1.2,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isDark
+                        ? const Color(0xFF94A3B8)
+                        : const Color(0xFF64748B),
                   ),
                 ),
               ],
@@ -216,9 +1109,297 @@ class _ForecastReasonLine extends StatelessWidget {
   }
 }
 
+class _HourlyScoreTimeline extends StatelessWidget {
+  const _HourlyScoreTimeline({required this.rows});
+
+  final List<ForecastRow> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    if (rows.isEmpty) return const SizedBox.shrink();
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark
+        ? const Color(0xFF94A3B8)
+        : const Color(0xFF64748B);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          AppStrings.get('indice_por_hora').toUpperCase(),
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0.5,
+            color: textColor,
+          ),
+        ),
+        const SizedBox(height: 12),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            child: Row(
+              children: List.generate(rows.length, (index) {
+                final row = rows[index];
+                final hourStr = row.hour.split(':').first;
+                final scoreColor = _indexColor(row.score);
+
+                return SizedBox(
+                  width: 50,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Hour text
+                      Text(
+                        hourStr,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: row.isBestWindow
+                              ? FontWeight.w900
+                              : FontWeight.w700,
+                          color: row.isBestWindow
+                              ? const Color(0xFF16A34A)
+                              : textColor,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      // Dot and connecting lines
+                      Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          // Left connecting line
+                          if (index > 0)
+                            Positioned(
+                              left: 0,
+                              right: 25,
+                              child: Container(
+                                height: 2,
+                                color: _lineColor(
+                                  rows[index - 1].score,
+                                  row.score,
+                                ),
+                              ),
+                            ),
+                          // Right connecting line
+                          if (index < rows.length - 1)
+                            Positioned(
+                              left: 25,
+                              right: 0,
+                              child: Container(
+                                height: 2,
+                                color: _lineColor(
+                                  row.score,
+                                  rows[index + 1].score,
+                                ),
+                              ),
+                            ),
+                          // The Dot
+                          Container(
+                            width: row.isBestWindow ? 16 : 8,
+                            height: row.isBestWindow ? 16 : 8,
+                            decoration: BoxDecoration(
+                              color: scoreColor,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isDark
+                                    ? const Color(0xFF0F172A)
+                                    : Colors.white,
+                                width: row.isBestWindow ? 3 : 1.5,
+                              ),
+                              boxShadow: row.isBestWindow
+                                  ? [
+                                      BoxShadow(
+                                        color: scoreColor.withValues(
+                                          alpha: 0.4,
+                                        ),
+                                        blurRadius: 4,
+                                        spreadRadius: 1,
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Color _indexColor(int score) {
+    if (score >= 80) return const Color(0xFF16A34A);
+    if (score >= 40) return const Color(0xFFF59E0B);
+    return const Color(0xFFDC2626);
+  }
+
+  Color _lineColor(int score1, int score2) {
+    final avg = (score1 + score2) / 2.0;
+    return _indexColor(avg.round());
+  }
+}
+
+class _ForecastTipCard extends StatelessWidget {
+  const _ForecastTipCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Card(
+      margin: EdgeInsets.zero,
+      elevation: 0,
+      color: isDark ? const Color(0xFF1E293B) : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.task_alt_rounded,
+              color: Color(0xFF16A34A),
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                AppStrings.get('ventana_optima_tip'),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: isDark
+                      ? const Color(0xFFCBD5E1)
+                      : const Color(0xFF475569),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RealWeatherLoadingCard extends StatelessWidget {
+  const _RealWeatherLoadingCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Card(
+      margin: EdgeInsets.zero,
+      color: isDark ? const Color(0xFF1E293B) : Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Row(
+          children: [
+            const SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(strokeWidth: 3),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                AppStrings.get('obteniendo_clima'),
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RealWeatherErrorCard extends StatelessWidget {
+  const _RealWeatherErrorCard({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Card(
+      margin: EdgeInsets.zero,
+      color: isDark ? const Color(0xFF1E293B) : Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.cloud_off_rounded,
+                  color: _severityColor(RuleSeverity.blocked),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    AppStrings.get('error_clima'),
+                    style: TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(AppStrings.get('reintentar_mock')),
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded),
+              label: Text(AppStrings.get('reintentar')),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StaticLoadingCard extends StatelessWidget {
+  const _StaticLoadingCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Card(
+      margin: EdgeInsets.zero,
+      color: isDark ? const Color(0xFF1E293B) : Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Center(
+          child: Text(
+            AppStrings.get('cargando_datos'),
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 Color _statusColor(String status) {
-  if (status == 'APTO') return const Color(0xFF16A34A);
-  if (status == 'PRECAUCION') return const Color(0xFFF59E0B);
+  final s = status.toUpperCase();
+  if (s == 'APTO' || s == 'READY') {
+    return const Color(0xFF16A34A);
+  }
+  if (s == 'PRECAUCION' || s == 'PRECAUCIÓN' || s == 'CAUTION') {
+    return const Color(0xFFF59E0B);
+  }
   return const Color(0xFFDC2626);
 }
 
@@ -230,7 +1411,56 @@ Color _severityColor(RuleSeverity severity) {
   };
 }
 
-String _fmt(num value) {
-  if (value == value.roundToDouble()) return value.toStringAsFixed(0);
-  return value.toStringAsFixed(1);
+String _windDirectionCardinal(double? degrees) {
+  if (degrees == null) return '';
+  final normalized = (degrees % 360 + 360) % 360;
+  final index = ((normalized + 11.25) / 22.5).floor() % 16;
+  const directions = [
+    'N',
+    'NNE',
+    'NE',
+    'ENE',
+    'E',
+    'ESE',
+    'SE',
+    'SSE',
+    'S',
+    'SSO',
+    'SO',
+    'OSO',
+    'O',
+    'ONO',
+    'NO',
+    'NNO',
+  ];
+  return directions[index];
+}
+
+IconData _iconForReasonTitle(String title) {
+  final t = title.toUpperCase();
+  if (t.contains('VIENTO') ||
+      t.contains('RÁFAGAS') ||
+      t.contains('WIND') ||
+      t.contains('GUST')) {
+    return Icons.air_rounded;
+  }
+  if (t.contains('RESTRIC') ||
+      t.contains('ZONA') ||
+      t.contains('LIMIT') ||
+      t.contains('NO VOLAR')) {
+    return Icons.block_rounded;
+  }
+  if (t.contains('LLUVIA') || t.contains('PRECIP')) {
+    return Icons.water_drop_rounded;
+  }
+  if (t.contains('SOL') ||
+      t.contains('DIA') ||
+      t.contains('NOCHE') ||
+      t.contains('DAYLIGHT')) {
+    return Icons.wb_sunny_rounded;
+  }
+  if (t.contains('VISIBIL')) {
+    return Icons.visibility_rounded;
+  }
+  return Icons.warning_amber_rounded;
 }
