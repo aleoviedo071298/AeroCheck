@@ -6,6 +6,7 @@ import 'user_preferences_store.dart';
 class SharedPreferencesUserPreferencesStore implements UserPreferencesStore {
   static const _locationIdKey = 'aerocheck.location_id';
   static const _favoriteLocationIdsKey = 'aerocheck.favorite_location_ids';
+  static const _guideRadiusKmKey = 'aerocheck.guide_radius_km';
   static const _dataSourceKey = 'aerocheck.data_source';
   static const _mockScenarioKey = 'aerocheck.mock_scenario';
 
@@ -16,6 +17,7 @@ class SharedPreferencesUserPreferencesStore implements UserPreferencesStore {
       locationId: preferences.getString(_locationIdKey),
       favoriteLocationIds:
           preferences.getStringList(_favoriteLocationIdsKey) ?? const [],
+      guideRadiusKm: preferences.getDouble(_guideRadiusKmKey),
       dataSourceName: preferences.getString(_dataSourceKey),
       mockScenarioName: preferences.getString(_mockScenarioKey),
     );
@@ -30,6 +32,7 @@ class SharedPreferencesUserPreferencesStore implements UserPreferencesStore {
         _favoriteLocationIdsKey,
         preferences.favoriteLocationIds,
       ),
+      _setDoubleOrRemove(store, _guideRadiusKmKey, preferences.guideRadiusKm),
       _setOrRemove(store, _dataSourceKey, preferences.dataSourceName),
       _setOrRemove(store, _mockScenarioKey, preferences.mockScenarioName),
     ]);
@@ -44,5 +47,16 @@ class SharedPreferencesUserPreferencesStore implements UserPreferencesStore {
       return store.remove(key);
     }
     return store.setString(key, value);
+  }
+
+  Future<void> _setDoubleOrRemove(
+    SharedPreferences store,
+    String key,
+    double? value,
+  ) {
+    if (value == null) {
+      return store.remove(key);
+    }
+    return store.setDouble(key, value);
   }
 }

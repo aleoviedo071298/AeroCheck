@@ -21,6 +21,7 @@ void main() {
     expect(find.text('Mapa operativo'), findsOneWidget);
     expect(find.textContaining('Comodoro Rivadavia, Chubut'), findsWidgets);
     expect(find.textContaining('-45.8641, -67.4966'), findsOneWidget);
+    expect(find.text('5 km'), findsOneWidget);
     expect(
       find.textContaining('Datos regulatorios no conectados'),
       findsOneWidget,
@@ -45,6 +46,26 @@ void main() {
     expect(session.selectedLocation, DefaultFlightLocations.mendoza);
     expect(find.textContaining('Mendoza, Mendoza'), findsWidgets);
     expect(find.textContaining('-32.8895, -68.8458'), findsOneWidget);
+  });
+
+  testWidgets('map screen updates guide radius from slider', (tester) async {
+    final session = WeatherSession(preferencesStore: _FakePreferencesStore());
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: MapScreen(session: session)),
+      ),
+    );
+
+    final slider = tester.widget<Slider>(
+      find.byKey(const ValueKey('guide-radius-slider')),
+    );
+    slider.onChanged!(10);
+    await tester.pumpAndSettle();
+
+    expect(session.guideRadiusKm, 10);
+    expect(find.text('10 km'), findsOneWidget);
+    expect(find.textContaining('Radio guia: 10 km'), findsOneWidget);
   });
 }
 

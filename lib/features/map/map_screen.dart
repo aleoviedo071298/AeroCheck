@@ -14,6 +14,7 @@ class MapScreen extends StatelessWidget {
       animation: session,
       builder: (context, _) {
         final location = session.selectedLocation;
+        final guideRadiusKm = session.guideRadiusKm;
 
         return SafeArea(
           child: ListView(
@@ -31,6 +32,8 @@ class MapScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               _FavoriteLocationSelector(session: session),
+              const SizedBox(height: 12),
+              _GuideRadiusControl(session: session),
               const SizedBox(height: 16),
               AspectRatio(
                 aspectRatio: 0.82,
@@ -39,11 +42,16 @@ class MapScreen extends StatelessWidget {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      CustomPaint(painter: _MapPlaceholderPainter(location)),
+                      CustomPaint(
+                        painter: _MapPlaceholderPainter(
+                          location: location,
+                          guideRadiusKm: guideRadiusKm,
+                        ),
+                      ),
                       Center(
                         child: Container(
-                          width: 210,
-                          height: 210,
+                          width: _circleSizeForRadius(guideRadiusKm),
+                          height: _circleSizeForRadius(guideRadiusKm),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.all(
@@ -75,7 +83,7 @@ class MapScreen extends StatelessWidget {
                           child: Padding(
                             padding: const EdgeInsets.all(12),
                             child: Text(
-                              '${location.label}\nRadio guia: 5 km | Datos regulatorios no conectados',
+                              '${location.label}\nRadio guia: ${_formatRadius(guideRadiusKm)} | Datos regulatorios no conectados',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w800,
@@ -101,6 +109,59 @@ class MapScreen extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _GuideRadiusControl extends StatelessWidget {
+  const _GuideRadiusControl({required this.session});
+
+  final WeatherSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = session.guideRadiusKm;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.radar_rounded,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Radio guia',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                Text(
+                  _formatRadius(radius),
+                  key: const ValueKey('guide-radius-value'),
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ],
+            ),
+            Slider(
+              key: const ValueKey('guide-radius-slider'),
+              value: radius,
+              min: WeatherSession.minGuideRadiusKm,
+              max: WeatherSession.maxGuideRadiusKm,
+              divisions: 14,
+              label: _formatRadius(radius),
+              onChanged: session.setGuideRadiusKm,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -131,15 +192,27 @@ String _formatCoordinate(double value) {
   return value.toStringAsFixed(4);
 }
 
+String _formatRadius(double value) {
+  return '${value.toStringAsFixed(0)} km';
+}
+
+double _circleSizeForRadius(double radiusKm) {
+  return 150 + ((radiusKm - WeatherSession.minGuideRadiusKm) * 8);
+}
+
 double _locationOffset(FlightLocation location, double fallback) {
   final normalized = (location.latitude.abs() + location.longitude.abs()) % 1;
   return fallback + (normalized - 0.5) * 0.18;
 }
 
 class _MapPlaceholderPainter extends CustomPainter {
-  const _MapPlaceholderPainter(this.location);
+  const _MapPlaceholderPainter({
+    required this.location,
+    required this.guideRadiusKm,
+  });
 
   final FlightLocation location;
+  final double guideRadiusKm;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -179,7 +252,7 @@ class _MapPlaceholderPainter extends CustomPainter {
         size.width * _locationOffset(location, 0.62),
         size.height * _locationOffset(location, 0.42),
       ),
-      105,
+      _circleSizeForRadius(guideRadiusKm) / 2,
       warning,
     );
     canvas.drawLine(
@@ -196,6 +269,7 @@ class _MapPlaceholderPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _MapPlaceholderPainter oldDelegate) {
-    return oldDelegate.location.id != location.id;
+    return oldDelegate.location.id != location.id ||
+        oldDelegate.guideRadiusKm != guideRadiusKm;
   }
 }

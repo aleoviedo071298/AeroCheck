@@ -20,6 +20,10 @@ import '../domain/rules/flight_readiness_status.dart';
 enum WeatherDataSource { mock, real }
 
 class WeatherSession extends ChangeNotifier {
+  static const defaultGuideRadiusKm = 5.0;
+  static const minGuideRadiusKm = 1.0;
+  static const maxGuideRadiusKm = 15.0;
+
   WeatherSession({
     WeatherRepository? weatherRepository,
     UserPreferencesStore? preferencesStore,
@@ -39,6 +43,7 @@ class WeatherSession extends ChangeNotifier {
   WeatherBundle? _realBundle;
   Object? _realError;
   var _isLoadingReal = false;
+  var _guideRadiusKm = defaultGuideRadiusKm;
 
   FlightLocation get selectedLocation => _selectedLocation;
   List<FlightLocation> get availableLocations => _favoriteLocations;
@@ -51,6 +56,7 @@ class WeatherSession extends ChangeNotifier {
   WeatherBundle? get realBundle => _realBundle;
   Object? get realError => _realError;
   bool get isLoadingReal => _isLoadingReal;
+  double get guideRadiusKm => _guideRadiusKm;
 
   FlightReadinessReport? get currentReport {
     if (_dataSource == WeatherDataSource.mock) {
@@ -108,6 +114,9 @@ class WeatherSession extends ChangeNotifier {
       _favoriteLocations = favorites;
       _selectedLocation = savedLocation ?? favorites.first;
       _favoriteLocations = _withFavorite(_favoriteLocations, _selectedLocation);
+      if (preferences.guideRadiusKm != null) {
+        _guideRadiusKm = _clampGuideRadius(preferences.guideRadiusKm!);
+      }
       if (scenario != null) {
         _mockScenario = scenario;
       }
@@ -123,6 +132,17 @@ class WeatherSession extends ChangeNotifier {
     } catch (_) {
       // Preferences should never block the operational screen.
     }
+  }
+
+  void setGuideRadiusKm(double radiusKm) {
+    final nextRadius = _clampGuideRadius(radiusKm);
+    if (_guideRadiusKm == nextRadius) {
+      return;
+    }
+
+    _guideRadiusKm = nextRadius;
+    notifyListeners();
+    _persistPreferences();
   }
 
   void addFavoriteLocation(FlightLocation location) {
@@ -281,6 +301,7 @@ class WeatherSession extends ChangeNotifier {
               favoriteLocationIds: _favoriteLocations
                   .map((location) => location.id)
                   .toList(),
+              guideRadiusKm: _guideRadiusKm,
               dataSourceName: _dataSource.name,
               mockScenarioName: _mockScenario.name,
             ),
@@ -355,5 +376,9 @@ class WeatherSession extends ChangeNotifier {
 
   bool _isFavoriteLocation(String id) {
     return _favoriteLocations.any((location) => location.id == id);
+  }
+
+  double _clampGuideRadius(double radiusKm) {
+    return radiusKm.clamp(minGuideRadiusKm, maxGuideRadiusKm).toDouble();
   }
 }

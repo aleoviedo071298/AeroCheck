@@ -56,6 +56,7 @@ void main() {
       const UserPreferences(
         locationId: 'bariloche',
         favoriteLocationIds: ['comodoro-rivadavia', 'bariloche'],
+        guideRadiusKm: 9,
         dataSourceName: 'real',
         mockScenarioName: 'goodToFly',
       ),
@@ -74,6 +75,7 @@ void main() {
     );
     expect(session.dataSource, WeatherDataSource.real);
     expect(session.mockScenario, MockFlightScenario.goodToFly);
+    expect(session.guideRadiusKm, 9);
     expect(repository.lastLatitude, DefaultFlightLocations.bariloche.latitude);
     expect(
       repository.lastLongitude,
@@ -94,6 +96,7 @@ void main() {
 
     session.addFavoriteLocation(DefaultFlightLocations.mendoza);
     session.setLocation(DefaultFlightLocations.mendoza);
+    session.setGuideRadiusKm(11);
     session.setMockScenario(MockFlightScenario.notReadyRainAndRestriction);
     session.setDataSource(WeatherDataSource.real);
     await Future<void>.delayed(Duration.zero);
@@ -103,6 +106,7 @@ void main() {
       'comodoro-rivadavia',
       'mendoza',
     ]);
+    expect(store.savedPreferences?.guideRadiusKm, 11);
     expect(
       store.savedPreferences?.mockScenarioName,
       'notReadyRainAndRestriction',
@@ -127,6 +131,19 @@ void main() {
     ]);
     expect(store.savedPreferences?.locationId, 'comodoro-rivadavia');
     expect(store.savedPreferences?.favoriteLocationIds, ['comodoro-rivadavia']);
+  });
+
+  test('clamps guide radius to MVP bounds', () {
+    final session = WeatherSession(
+      weatherRepository: _FakeWeatherRepository(),
+      preferencesStore: _FakePreferencesStore(),
+    );
+
+    session.setGuideRadiusKm(30);
+    expect(session.guideRadiusKm, WeatherSession.maxGuideRadiusKm);
+
+    session.setGuideRadiusKm(0);
+    expect(session.guideRadiusKm, WeatherSession.minGuideRadiusKm);
   });
 }
 
