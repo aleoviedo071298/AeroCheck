@@ -182,6 +182,7 @@ class ForecastRow {
   const ForecastRow({
     required this.hour,
     required this.status,
+    required this.primaryReason,
     required this.windKmh,
     required this.gustKmh,
     required this.rainPercent,
@@ -190,6 +191,7 @@ class ForecastRow {
 
   final String hour;
   final String status;
+  final String primaryReason;
   final double windKmh;
   final double gustKmh;
   final double rainPercent;

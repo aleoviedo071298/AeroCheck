@@ -20,6 +20,10 @@ void main() {
 
     expect(find.text('Forecast horario'), findsOneWidget);
     expect(find.text('APTO'), findsWidgets);
+    expect(
+      find.text('Condiciones principales dentro de tus limites.'),
+      findsWidgets,
+    );
   });
 
   testWidgets('forecast screen reflects mock sensitive-zone context', (
@@ -37,6 +41,7 @@ void main() {
     expect(find.text('Forecast horario'), findsOneWidget);
     expect(find.text('APTO'), findsNothing);
     expect(find.text('PRECAUCION'), findsWidgets);
+    expect(find.text('Zona sensible cercana'), findsWidgets);
   });
 }
 

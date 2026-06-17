@@ -66,18 +66,53 @@ class _ForecastRowCard extends StatelessWidget {
                 style: const TextStyle(fontWeight: FontWeight.w900),
               ),
             ),
+            const SizedBox(width: 8),
             Expanded(
-              child: Text(
-                row.status,
-                style: TextStyle(
-                  color: _statusColor(row.status),
-                  fontWeight: FontWeight.w900,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    row.status,
+                    style: TextStyle(
+                      color: _statusColor(row.status),
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    row.primaryReason,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.72),
+                      height: 1.15,
+                    ),
+                  ),
+                ],
               ),
             ),
-            Text('${_fmt(row.windKmh)} / ${_fmt(row.gustKmh)} km/h'),
             const SizedBox(width: 12),
-            Text('${_fmt(row.rainPercent)}%'),
+            SizedBox(
+              width: 96,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '${_fmt(row.windKmh)} / ${_fmt(row.gustKmh)} km/h',
+                    textAlign: TextAlign.end,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    '${_fmt(row.rainPercent)}% lluvia',
+                    textAlign: TextAlign.end,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),

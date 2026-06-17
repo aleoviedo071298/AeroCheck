@@ -17,6 +17,7 @@ import '../domain/entities/flight_window_recommendation.dart';
 import '../domain/entities/weather_snapshot.dart';
 import '../domain/rules/flight_readiness_evaluator.dart';
 import '../domain/rules/flight_readiness_status.dart';
+import '../domain/rules/rule_severity.dart';
 
 enum WeatherDataSource { mock, real }
 
@@ -316,11 +317,22 @@ class WeatherSession extends ChangeNotifier {
     return ForecastRow(
       hour: _time(weather.time),
       status: report.status.label,
+      primaryReason: _primaryReasonFor(report),
       windKmh: weather.windKmh ?? 0,
       gustKmh: weather.gustKmh ?? 0,
       rainPercent: weather.precipitationProbability ?? 0,
       visibilityKm: weather.visibilityKm ?? 0,
     );
+  }
+
+  String _primaryReasonFor(FlightReadinessReport report) {
+    final activeRules = report.rules.where(
+      (rule) => rule.severity != RuleSeverity.ok,
+    );
+    if (activeRules.isEmpty) {
+      return report.summary;
+    }
+    return activeRules.first.title;
   }
 
   String _time(DateTime value) {

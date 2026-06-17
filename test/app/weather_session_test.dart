@@ -175,10 +175,15 @@ void main() {
 
     session.setGuideRadiusKm(1);
     expect(session.forecastRows.first.status, 'APTO');
+    expect(
+      session.forecastRows.first.primaryReason,
+      'Condiciones principales dentro de tus limites.',
+    );
 
     session.setGuideRadiusKm(7);
 
     expect(session.forecastRows.first.status, 'PRECAUCION');
+    expect(session.forecastRows.first.primaryReason, 'Zona sensible cercana');
   });
 
   test('real forecast rows use the active operational context', () async {
@@ -192,6 +197,7 @@ void main() {
     session.setDataSource(WeatherDataSource.real);
 
     expect(session.forecastRows.first.status, 'PRECAUCION');
+    expect(session.forecastRows.first.primaryReason, 'Zona sensible cercana');
   });
 
   test('exposes detected mock sensitive zones with distance', () {
