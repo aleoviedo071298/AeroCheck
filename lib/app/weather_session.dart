@@ -12,6 +12,8 @@ import '../data/mock/mock_flight_data.dart';
 import '../data/preferences/shared_preferences_user_preferences_store.dart';
 import '../data/preferences/user_preferences.dart';
 import '../data/preferences/user_preferences_store.dart';
+import '../domain/i18n/language.dart';
+import '../domain/units/unit_preferences.dart';
 import '../data/regulatory/airport.dart';
 import '../data/regulatory/airport_repository.dart';
 import '../data/regulatory/airspace.dart';
@@ -87,6 +89,7 @@ class WeatherSession extends ChangeNotifier {
   AirspaceState _airspaceState = const AirspaceLoadingState();
   List<Airspace> _loadedAirspaces = [];
   List<Airport> _loadedAirports = [];
+  UserPreferences _userPreferences = const UserPreferences();
 
   FlightLocation get selectedLocation => _selectedLocation;
   List<FlightLocation> get availableLocations => _favoriteLocations;
@@ -96,6 +99,7 @@ class WeatherSession extends ChangeNotifier {
   bool get isLoadingReal => _isLoadingReal;
   double get guideRadiusKm => _guideRadiusKm;
   AirspaceState get airspaceState => _airspaceState;
+  UserPreferences get preferences => _userPreferences;
 
   FlightReadinessReport? get currentReport {
     final bundle = _realBundle;
@@ -149,6 +153,7 @@ class WeatherSession extends ChangeNotifier {
   Future<void> restorePreferences() async {
     try {
       final preferences = await _preferencesStore.load();
+      _userPreferences = preferences;
 
       // Restore favorite locations from JSON
       final favorites = <FlightLocation>[];
@@ -189,6 +194,7 @@ class WeatherSession extends ChangeNotifier {
       await loadRealWeather();
     } catch (_) {
       // Preferences should never block the operational screen.
+      _userPreferences = const UserPreferences();
       _dataSource = WeatherDataSource.real;
       _loadNearbyAirspaces();
       await loadRealWeather();
@@ -205,6 +211,26 @@ class WeatherSession extends ChangeNotifier {
     notifyListeners();
     _persistPreferences();
     _loadNearbyAirspaces();
+  }
+
+  Future<void> updateLanguage(Language language) async {
+    if (_userPreferences.language == language) {
+      return;
+    }
+
+    _userPreferences = _userPreferences.copyWith(language: language);
+    await _preferencesStore.save(_userPreferences);
+    notifyListeners();
+  }
+
+  Future<void> updateUnits(UnitPreferences units) async {
+    if (_userPreferences.units == units) {
+      return;
+    }
+
+    _userPreferences = _userPreferences.copyWith(units: units);
+    await _preferencesStore.save(_userPreferences);
+    notifyListeners();
   }
 
   void addFavoriteLocation(FlightLocation location) {

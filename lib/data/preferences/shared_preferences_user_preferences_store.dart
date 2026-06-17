@@ -1,5 +1,9 @@
+import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../domain/i18n/language.dart';
+import '../../domain/units/unit_preferences.dart';
 import 'user_preferences.dart';
 import 'user_preferences_store.dart';
 
@@ -8,6 +12,8 @@ class SharedPreferencesUserPreferencesStore implements UserPreferencesStore {
   static const _favoriteLocationsJsonKey = 'aerocheck.favorite_locations_json';
   static const _guideRadiusKmKey = 'aerocheck.guide_radius_km';
   static const _dataSourceKey = 'aerocheck.data_source';
+  static const _languageKey = 'aerocheck.language';
+  static const _unitsKey = 'aerocheck.units';
   static const _mockScenarioKey = 'aerocheck.mock_scenario';
   // Legacy keys for migration
   static const _legacyLocationIdKey = 'aerocheck.location_id';
@@ -31,12 +37,29 @@ class SharedPreferencesUserPreferencesStore implements UserPreferencesStore {
       await preferences.remove(_legacyFavoriteLocationIdsKey);
     }
 
+    // Load new preferences
+    final languageCode = preferences.getString(_languageKey) ?? 'es';
+    final language = LanguageHelper.fromCode(languageCode);
+
+    UnitPreferences units = const UnitPreferences();
+    final unitsJson = preferences.getString(_unitsKey);
+    if (unitsJson != null) {
+      try {
+        final decoded = jsonDecode(unitsJson) as Map<String, dynamic>;
+        units = UnitPreferences.fromJson(decoded);
+      } catch (e) {
+        // Use default if JSON is corrupted
+      }
+    }
+
     return UserPreferences(
       selectedLocationId: preferences.getString(_selectedLocationIdKey),
       favoriteLocationsJson:
           preferences.getStringList(_favoriteLocationsJsonKey) ?? const [],
       guideRadiusKm: preferences.getDouble(_guideRadiusKmKey),
       dataSourceName: preferences.getString(_dataSourceKey),
+      language: language,
+      units: units,
     );
   }
 
@@ -55,6 +78,8 @@ class SharedPreferencesUserPreferencesStore implements UserPreferencesStore {
       ),
       _setDoubleOrRemove(store, _guideRadiusKmKey, preferences.guideRadiusKm),
       _setOrRemove(store, _dataSourceKey, preferences.dataSourceName),
+      store.setString(_languageKey, preferences.language.code),
+      store.setString(_unitsKey, jsonEncode(preferences.units.toJson())),
     ]);
   }
 

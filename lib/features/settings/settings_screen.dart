@@ -3,6 +3,12 @@ import 'package:flutter/material.dart';
 
 import '../../app/weather_session.dart';
 import '../../data/location/flight_location.dart';
+import '../../domain/i18n/language.dart';
+import '../../domain/units/unit_preferences.dart';
+import 'screens/alerts_screen.dart';
+import 'screens/data_sources_screen.dart';
+import 'screens/language_screen.dart';
+import 'screens/units_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key, required this.session});
@@ -372,7 +378,15 @@ class SettingsScreen extends StatelessWidget {
                                       ? const Color(0xFF64748B)
                                       : const Color(0xFF94A3B8),
                                 ),
-                                onTap: () {},
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) => DataSourcesScreen(
+                                        language: session.preferences.language,
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
                               Padding(
                                 padding: const EdgeInsets.symmetric(
@@ -408,9 +422,9 @@ class SettingsScreen extends StatelessWidget {
                                     fontSize: 14,
                                   ),
                                 ),
-                                subtitle: const Text(
-                                  'Métrico: km/h, m, °C',
-                                  style: TextStyle(fontSize: 11),
+                                subtitle: Text(
+                                  '${session.preferences.units.speed.displayName}, ${session.preferences.units.altitude.displayName}, ${session.preferences.units.temperature.displayName}',
+                                  style: const TextStyle(fontSize: 11),
                                 ),
                                 trailing: Icon(
                                   Icons.chevron_right_rounded,
@@ -418,7 +432,83 @@ class SettingsScreen extends StatelessWidget {
                                       ? const Color(0xFF64748B)
                                       : const Color(0xFF94A3B8),
                                 ),
-                                onTap: () {},
+                                onTap: () async {
+                                  final result = await Navigator.of(context)
+                                      .push<UnitPreferences>(
+                                        MaterialPageRoute(
+                                          builder: (context) => UnitsScreen(
+                                            initialUnits:
+                                                session.preferences.units,
+                                            language:
+                                                session.preferences.language,
+                                            onSave: (_) {},
+                                          ),
+                                        ),
+                                      );
+                                  if (result != null) {
+                                    await session.updateUnits(result);
+                                  }
+                                },
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                ),
+                                child: Divider(
+                                  height: 1,
+                                  color: isDark
+                                      ? const Color(0xFF334155)
+                                      : const Color(0xFFF1F5F9),
+                                ),
+                              ),
+                              ListTile(
+                                leading: Container(
+                                  width: 38,
+                                  height: 38,
+                                  decoration: BoxDecoration(
+                                    color: isDark
+                                        ? const Color(0xFF334155)
+                                        : const Color(0xFFF1F5F9),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.language_rounded,
+                                    color: Color(0xFF0F766E),
+                                    size: 20,
+                                  ),
+                                ),
+                                title: const Text(
+                                  'Idioma',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  session.preferences.language.displayName,
+                                  style: const TextStyle(fontSize: 11),
+                                ),
+                                trailing: Icon(
+                                  Icons.chevron_right_rounded,
+                                  color: isDark
+                                      ? const Color(0xFF64748B)
+                                      : const Color(0xFF94A3B8),
+                                ),
+                                onTap: () async {
+                                  final result = await Navigator.of(context)
+                                      .push<Language>(
+                                        MaterialPageRoute(
+                                          builder: (context) => LanguageScreen(
+                                            initialLanguage:
+                                                session.preferences.language,
+                                            onSave: (_) {},
+                                          ),
+                                        ),
+                                      );
+                                  if (result != null) {
+                                    await session.updateLanguage(result);
+                                  }
+                                },
                               ),
                               Padding(
                                 padding: const EdgeInsets.symmetric(
@@ -464,7 +554,15 @@ class SettingsScreen extends StatelessWidget {
                                       ? const Color(0xFF64748B)
                                       : const Color(0xFF94A3B8),
                                 ),
-                                onTap: () {},
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) => AlertsScreen(
+                                        language: session.preferences.language,
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
                             ],
                           ),
