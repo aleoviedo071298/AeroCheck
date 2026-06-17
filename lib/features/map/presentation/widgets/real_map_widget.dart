@@ -100,27 +100,25 @@ class _RealMapWidgetState extends State<RealMapWidget> {
 
       // Mock sensitive zones
       MarkerLayer(
-        markers: widget.detectedMockZones
-            .map((detection) {
-              final zone = detection.zone;
-              return Marker(
-                point: LatLng(zone.latitude, zone.longitude),
-                width: 24,
-                height: 24,
-                alignment: Alignment.center,
-                child: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.red.withValues(alpha: 0.8),
-                      width: 2,
-                    ),
-                    color: Colors.red.withValues(alpha: 0.2),
-                  ),
+        markers: widget.detectedMockZones.map((detection) {
+          final zone = detection.zone;
+          return Marker(
+            point: LatLng(zone.latitude, zone.longitude),
+            width: 24,
+            height: 24,
+            alignment: Alignment.center,
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.red.withValues(alpha: 0.8),
+                  width: 2,
                 ),
-              );
-            })
-            .toList(),
+                color: Colors.red.withValues(alpha: 0.2),
+              ),
+            ),
+          );
+        }).toList(),
       ),
 
       // Location marker

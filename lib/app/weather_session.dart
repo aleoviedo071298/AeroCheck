@@ -11,6 +11,7 @@ import '../data/preferences/user_preferences.dart';
 import '../data/preferences/user_preferences_store.dart';
 import '../data/regulatory/airspace.dart';
 import '../data/regulatory/airspace_repository.dart';
+import '../data/regulatory/openaip_airspace_repository.dart';
 import '../data/weather/open_meteo_weather_repository.dart';
 import '../data/weather/weather_bundle.dart';
 import '../data/weather/weather_repository.dart';
@@ -37,7 +38,7 @@ class WeatherSession extends ChangeNotifier {
   }) : _weatherRepository = weatherRepository,
        _preferencesStore =
            preferencesStore ?? SharedPreferencesUserPreferencesStore(),
-       _airspaceRepository = airspaceRepository;
+       _airspaceRepository = airspaceRepository ?? OpenAipAirspaceRepository();
 
   WeatherRepository? _weatherRepository;
   final UserPreferencesStore _preferencesStore;
@@ -151,12 +152,14 @@ class WeatherSession extends ChangeNotifier {
       }
 
       notifyListeners();
+      _loadNearbyAirspaces();
 
       if (_dataSource == WeatherDataSource.real) {
         await loadRealWeather();
       }
     } catch (_) {
       // Preferences should never block the operational screen.
+      _loadNearbyAirspaces();
     }
   }
 
@@ -493,6 +496,8 @@ class WeatherSession extends ChangeNotifier {
   Future<void> _loadNearbyAirspaces() async {
     final repository = _airspaceRepository;
     if (repository == null) {
+      _airspaceState = const AirspaceEmptyState();
+      notifyListeners();
       return;
     }
 
