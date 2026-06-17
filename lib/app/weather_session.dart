@@ -4,8 +4,9 @@ import 'dart:developer' as developer;
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 
-import '../data/location/default_flight_locations.dart';
 import '../data/location/flight_location.dart';
+import '../data/location/geocoding_service.dart';
+import '../data/location/geocoding_repository.dart';
 import '../data/mock/mock_flight_data.dart';
 import '../data/preferences/shared_preferences_user_preferences_store.dart';
 import '../data/preferences/user_preferences.dart';
@@ -32,23 +33,35 @@ class WeatherSession extends ChangeNotifier {
   static const minGuideRadiusKm = 1.0;
   static const maxGuideRadiusKm = 15.0;
 
+  // Default initial location: Comodoro Rivadavia, Argentina
+  static const _defaultLocation = FlightLocation(
+    id: 'comodoro-rivadavia',
+    name: 'Comodoro Rivadavia',
+    region: 'Chubut',
+    country: 'Argentina',
+    latitude: -45.8641,
+    longitude: -67.4966,
+  );
+
   WeatherSession({
     WeatherRepository? weatherRepository,
     UserPreferencesStore? preferencesStore,
     AirspaceRepository? airspaceRepository,
+    GeocodingService? geocodingService,
   }) : _weatherRepository = weatherRepository,
        _preferencesStore =
            preferencesStore ?? SharedPreferencesUserPreferencesStore(),
-       _airspaceRepository = airspaceRepository ?? OpenAipAirspaceRepository();
+       _airspaceRepository = airspaceRepository ?? OpenAipAirspaceRepository(),
+       _geocodingService = geocodingService ?? GeocodingRepository();
 
   WeatherRepository? _weatherRepository;
   final UserPreferencesStore _preferencesStore;
   final AirspaceRepository? _airspaceRepository;
+  final GeocodingService _geocodingService;
   final _evaluator = const FlightReadinessEvaluator();
 
-  FlightLocation _selectedLocation = DefaultFlightLocations.comodoroRivadavia;
-  List<FlightLocation> _favoriteLocations =
-      DefaultFlightLocations.seedFavorites;
+  FlightLocation _selectedLocation = _defaultLocation;
+  List<FlightLocation> _favoriteLocations = [_defaultLocation];
   WeatherDataSource _dataSource = WeatherDataSource.real;
   WeatherBundle? _realBundle;
   Object? _realError;
@@ -59,10 +72,6 @@ class WeatherSession extends ChangeNotifier {
 
   FlightLocation get selectedLocation => _selectedLocation;
   List<FlightLocation> get availableLocations => _favoriteLocations;
-  List<FlightLocation> get locationCatalog => DefaultFlightLocations.all;
-  List<FlightLocation> get addableLocations => locationCatalog
-      .where((location) => !_isFavoriteLocation(location.id))
-      .toList();
   WeatherDataSource get dataSource => _dataSource;
   WeatherBundle? get realBundle => _realBundle;
   Object? get realError => _realError;
@@ -108,38 +117,46 @@ class WeatherSession extends ChangeNotifier {
     return 'Cargando clima real...';
   }
 
-  List<FlightLocation> searchLocations(String query) {
-    if (query.trim().isEmpty) {
-      return addableLocations;
-    }
-
-    final lowerQuery = query.toLowerCase();
-    return addableLocations
-        .where(
-          (location) =>
-              location.name.toLowerCase().contains(lowerQuery) ||
-              location.region.toLowerCase().contains(lowerQuery) ||
-              location.country.toLowerCase().contains(lowerQuery),
-        )
-        .toList();
+  Future<List<FlightLocation>> searchCities(String query) async {
+    return _geocodingService.searchCities(query);
   }
 
   Future<void> restorePreferences() async {
     try {
       final preferences = await _preferencesStore.load();
-      final savedLocation = DefaultFlightLocations.byId(preferences.locationId);
-      final favorites = _favoriteLocationsFrom(
-        preferences.favoriteLocationIds,
-        savedLocation,
-      );
-      final dataSource = _dataSourceFromName(preferences.dataSourceName);
+
+      // Restore favorite locations from JSON
+      final favorites = <FlightLocation>[];
+      for (final json in preferences.favoriteLocationsJson) {
+        try {
+          favorites.add(FlightLocation.fromJson(json));
+        } catch (_) {
+          // Skip invalid JSON
+        }
+      }
+
+      // If no favorites, use default
+      if (favorites.isEmpty) {
+        favorites.add(_defaultLocation);
+      }
+
+      // Try to restore selected location by ID
+      FlightLocation? selectedLocation;
+      if (preferences.selectedLocationId != null) {
+        selectedLocation = favorites.firstWhere(
+          (loc) => loc.id == preferences.selectedLocationId,
+          orElse: () => favorites.first,
+        );
+      }
 
       _favoriteLocations = favorites;
-      _selectedLocation = savedLocation ?? favorites.first;
-      _favoriteLocations = _withFavorite(_favoriteLocations, _selectedLocation);
+      _selectedLocation = selectedLocation ?? favorites.first;
+
       if (preferences.guideRadiusKm != null) {
         _guideRadiusKm = _clampGuideRadius(preferences.guideRadiusKm!);
       }
+
+      final dataSource = _dataSourceFromName(preferences.dataSourceName);
       if (dataSource != null) {
         _dataSource = dataSource;
       }
@@ -405,9 +422,9 @@ class WeatherSession extends ChangeNotifier {
       _preferencesStore
           .save(
             UserPreferences(
-              locationId: _selectedLocation.id,
-              favoriteLocationIds: _favoriteLocations
-                  .map((location) => location.id)
+              selectedLocationId: _selectedLocation.id,
+              favoriteLocationsJson: _favoriteLocations
+                  .map((location) => location.toJson())
                   .toList(),
               guideRadiusKm: _guideRadiusKm,
               dataSourceName: _dataSource.name,
@@ -429,42 +446,6 @@ class WeatherSession extends ChangeNotifier {
     }
 
     return null;
-  }
-
-  List<FlightLocation> _favoriteLocationsFrom(
-    List<String> ids,
-    FlightLocation? savedLocation,
-  ) {
-    final favorites = <FlightLocation>[];
-    if (ids.isEmpty) {
-      favorites.addAll(DefaultFlightLocations.seedFavorites);
-    } else {
-      for (final id in ids) {
-        final location = DefaultFlightLocations.byId(id);
-        if (location != null && !favorites.any((item) => item.id == id)) {
-          favorites.add(location);
-        }
-      }
-    }
-
-    if (savedLocation != null &&
-        !favorites.any((location) => location.id == savedLocation.id)) {
-      favorites.add(savedLocation);
-    }
-
-    return favorites.isEmpty
-        ? DefaultFlightLocations.seedFavorites
-        : List.unmodifiable(favorites);
-  }
-
-  List<FlightLocation> _withFavorite(
-    List<FlightLocation> favorites,
-    FlightLocation location,
-  ) {
-    if (favorites.any((favorite) => favorite.id == location.id)) {
-      return favorites;
-    }
-    return List.unmodifiable([...favorites, location]);
   }
 
   bool _isFavoriteLocation(String id) {

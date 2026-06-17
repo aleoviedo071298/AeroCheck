@@ -119,13 +119,12 @@ class _LocationSelector extends StatefulWidget {
 
 class _LocationSelectorState extends State<_LocationSelector> {
   late TextEditingController _searchController;
-  List<FlightLocation> _filteredLocations = [];
+  Future<List<FlightLocation>>? _searchFuture;
 
   @override
   void initState() {
     super.initState();
     _searchController = TextEditingController();
-    _filteredLocations = widget.session.addableLocations;
   }
 
   @override
@@ -136,7 +135,7 @@ class _LocationSelectorState extends State<_LocationSelector> {
 
   void _filterLocations(String query) {
     setState(() {
-      _filteredLocations = widget.session.searchLocations(query);
+      _searchFuture = widget.session.searchCities(query);
     });
   }
 
@@ -144,7 +143,7 @@ class _LocationSelectorState extends State<_LocationSelector> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Agregar ubicación'),
+        title: const Text('Buscar ciudad'),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -152,7 +151,7 @@ class _LocationSelectorState extends State<_LocationSelector> {
               TextField(
                 controller: _searchController,
                 decoration: InputDecoration(
-                  hintText: 'Buscar ciudad...',
+                  hintText: 'Escribe nombre de ciudad...',
                   prefixIcon: const Icon(Icons.search),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
@@ -164,24 +163,55 @@ class _LocationSelectorState extends State<_LocationSelector> {
               SizedBox(
                 height: 300,
                 width: double.maxFinite,
-                child: ListView.builder(
-                  itemCount: _filteredLocations.length,
-                  itemBuilder: (context, index) {
-                    final location = _filteredLocations[index];
-                    return ListTile(
-                      key: ValueKey('add-location-${location.id}'),
-                      title: Text(location.name),
-                      subtitle: Text(location.region),
-                      trailing: const Icon(Icons.add_circle_outline),
-                      onTap: () {
-                        widget.session.addFavoriteLocation(location);
-                        Navigator.pop(context);
-                        _searchController.clear();
-                        _filterLocations('');
-                      },
-                    );
-                  },
-                ),
+                child: _searchFuture == null
+                    ? const Center(child: Text('Escribe para buscar ciudades'))
+                    : FutureBuilder<List<FlightLocation>>(
+                        future: _searchFuture,
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const Center(
+                              child: CircularProgressIndicator(),
+                            );
+                          }
+
+                          if (snapshot.hasError) {
+                            return Center(
+                              child: Text('Error: ${snapshot.error}'),
+                            );
+                          }
+
+                          final locations = snapshot.data ?? [];
+                          if (locations.isEmpty) {
+                            return const Center(
+                              child: Text('No se encontraron ciudades'),
+                            );
+                          }
+
+                          return ListView.builder(
+                            itemCount: locations.length,
+                            itemBuilder: (context, index) {
+                              final location = locations[index];
+                              return ListTile(
+                                key: ValueKey('search-location-${location.id}'),
+                                title: Text(location.name),
+                                subtitle: Text(
+                                  '${location.region}, ${location.country}',
+                                ),
+                                trailing: const Icon(Icons.add_circle_outline),
+                                onTap: () {
+                                  widget.session.addFavoriteLocation(location);
+                                  Navigator.pop(context);
+                                  _searchController.clear();
+                                  setState(() {
+                                    _searchFuture = null;
+                                  });
+                                },
+                              );
+                            },
+                          );
+                        },
+                      ),
               ),
             ],
           ),
@@ -191,7 +221,9 @@ class _LocationSelectorState extends State<_LocationSelector> {
             onPressed: () {
               Navigator.pop(context);
               _searchController.clear();
-              _filterLocations('');
+              setState(() {
+                _searchFuture = null;
+              });
             },
             child: const Text('Cerrar'),
           ),

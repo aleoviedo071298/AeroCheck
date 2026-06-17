@@ -38,7 +38,7 @@ class SettingsScreen extends StatelessWidget {
               const _SettingCard(
                 icon: Icons.cloud_sync_rounded,
                 title: 'Datos',
-                value: 'Clima real | Open-Meteo',
+                value: 'Clima real | Open-Meteo + OpenMeteo Geocoding',
               ),
               const _SettingCard(
                 icon: Icons.straighten_rounded,
@@ -106,10 +106,7 @@ class _FavoriteLocationsCard extends StatelessWidget {
             const SizedBox(height: 4),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _LocationSearchControl(
-                addableLocations: session.addableLocations,
-                onAdd: session.addFavoriteLocation,
-              ),
+              child: _LocationSearchControl(session: session),
             ),
           ],
         ),
@@ -119,13 +116,9 @@ class _FavoriteLocationsCard extends StatelessWidget {
 }
 
 class _LocationSearchControl extends StatefulWidget {
-  const _LocationSearchControl({
-    required this.addableLocations,
-    required this.onAdd,
-  });
+  const _LocationSearchControl({required this.session});
 
-  final List<FlightLocation> addableLocations;
-  final ValueChanged<FlightLocation> onAdd;
+  final WeatherSession session;
 
   @override
   State<_LocationSearchControl> createState() => _LocationSearchControlState();
@@ -133,6 +126,7 @@ class _LocationSearchControl extends StatefulWidget {
 
 class _LocationSearchControlState extends State<_LocationSearchControl> {
   final _controller = TextEditingController();
+  Future<List<FlightLocation>>? _searchFuture;
 
   @override
   void dispose() {
@@ -140,33 +134,14 @@ class _LocationSearchControlState extends State<_LocationSearchControl> {
     super.dispose();
   }
 
-  @override
-  void didUpdateWidget(_LocationSearchControl oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.addableLocations.isEmpty && _controller.text.isNotEmpty) {
-      _controller.clear();
-    }
+  void _onSearchChanged(String query) {
+    setState(() {
+      _searchFuture = widget.session.searchCities(query);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (widget.addableLocations.isEmpty) {
-      return const Align(
-        alignment: Alignment.centerLeft,
-        child: Text('Catalogo MVP completo en favoritos.'),
-      );
-    }
-
-    final query = _controller.text.trim().toLowerCase();
-    final matches = query.isEmpty
-        ? widget.addableLocations
-        : widget.addableLocations.where((location) {
-            return location.label.toLowerCase().contains(query) ||
-                location.name.toLowerCase().contains(query) ||
-                location.region.toLowerCase().contains(query) ||
-                location.country.toLowerCase().contains(query);
-          }).toList();
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -176,41 +151,76 @@ class _LocationSearchControlState extends State<_LocationSearchControl> {
           textInputAction: TextInputAction.search,
           decoration: InputDecoration(
             prefixIcon: const Icon(Icons.search_rounded),
-            suffixIcon: query.isEmpty
+            suffixIcon: _controller.text.isEmpty
                 ? null
                 : IconButton(
-                    tooltip: 'Limpiar busqueda',
+                    tooltip: 'Limpiar búsqueda',
                     onPressed: () {
                       _controller.clear();
-                      setState(() {});
+                      setState(() {
+                        _searchFuture = null;
+                      });
                     },
                     icon: const Icon(Icons.close_rounded),
                   ),
-            hintText: 'Buscar ciudad o provincia',
+            hintText: 'Buscar ciudad mundial',
             border: const OutlineInputBorder(),
             isDense: true,
           ),
-          onChanged: (_) => setState(() {}),
+          onChanged: _onSearchChanged,
         ),
         const SizedBox(height: 8),
-        if (matches.isEmpty)
+        if (_searchFuture == null)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 8),
-            child: Text('Sin resultados en el catalogo local.'),
+            child: Text('Escribe para buscar ciudades en el mundo'),
           )
         else
-          ...matches
-              .take(4)
-              .map(
-                (location) => _SearchResultTile(
-                  location: location,
-                  onAdd: () {
-                    widget.onAdd(location);
-                    _controller.clear();
-                    setState(() {});
-                  },
-                ),
-              ),
+          FutureBuilder<List<FlightLocation>>(
+            future: _searchFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: CircularProgressIndicator(),
+                );
+              }
+
+              if (snapshot.hasError) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text('Error: ${snapshot.error}'),
+                );
+              }
+
+              final locations = snapshot.data ?? [];
+              if (locations.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: Text('No se encontraron ciudades'),
+                );
+              }
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: locations
+                    .take(4)
+                    .map(
+                      (location) => _SearchResultTile(
+                        location: location,
+                        onAdd: () {
+                          widget.session.addFavoriteLocation(location);
+                          _controller.clear();
+                          setState(() {
+                            _searchFuture = null;
+                          });
+                        },
+                      ),
+                    )
+                    .toList(),
+              );
+            },
+          ),
       ],
     );
   }
@@ -255,9 +265,11 @@ class _SettingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Card(
       child: ListTile(
-        leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
+        leading: Icon(icon, color: colorScheme.primary),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
         subtitle: Text(value),
       ),

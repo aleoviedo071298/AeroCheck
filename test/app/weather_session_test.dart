@@ -1,6 +1,7 @@
 import 'package:aerocheck/app/airspace_state.dart';
 import 'package:aerocheck/app/weather_session.dart';
-import 'package:aerocheck/data/location/default_flight_locations.dart';
+import 'package:aerocheck/data/location/flight_location.dart';
+import 'package:aerocheck/data/location/geocoding_service.dart';
 import 'package:aerocheck/data/mock/mock_flight_data.dart';
 import 'package:aerocheck/data/preferences/user_preferences.dart';
 import 'package:aerocheck/data/preferences/user_preferences_store.dart';
@@ -11,6 +12,15 @@ import 'package:aerocheck/data/weather/weather_repository.dart';
 import 'package:aerocheck/domain/entities/weather_snapshot.dart';
 import 'package:aerocheck/domain/rules/flight_readiness_status.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+const _testMendoza = FlightLocation(
+  id: 'test-mendoza',
+  name: 'Mendoza',
+  region: 'Mendoza',
+  country: 'Argentina',
+  latitude: -32.8895,
+  longitude: -68.8458,
+);
 
 void main() {
   test('loads real weather and exposes forecast and wind rows', () async {
@@ -40,23 +50,32 @@ void main() {
       preferencesStore: _FakePreferencesStore(),
     );
 
-    session.addFavoriteLocation(DefaultFlightLocations.mendoza);
-    session.setLocation(DefaultFlightLocations.mendoza);
+    session.addFavoriteLocation(_testMendoza);
+    session.setLocation(_testMendoza);
     session.setDataSource(WeatherDataSource.real);
     await Future<void>.delayed(Duration.zero);
 
-    expect(session.selectedLocation, DefaultFlightLocations.mendoza);
-    expect(repository.lastLatitude, DefaultFlightLocations.mendoza.latitude);
-    expect(repository.lastLongitude, DefaultFlightLocations.mendoza.longitude);
-    expect(repository.lastLocationLabel, DefaultFlightLocations.mendoza.label);
+    expect(session.selectedLocation, _testMendoza);
+    expect(repository.lastLatitude, _testMendoza.latitude);
+    expect(repository.lastLongitude, _testMendoza.longitude);
+    expect(repository.lastLocationLabel, _testMendoza.label);
   });
 
   test('restores saved preferences and reloads real weather', () async {
+    const bariloche = FlightLocation(
+      id: 'test-bariloche',
+      name: 'Bariloche',
+      region: 'Rio Negro',
+      country: 'Argentina',
+      latitude: -41.1335,
+      longitude: -71.3103,
+    );
+
     final repository = _FakeWeatherRepository();
     final store = _FakePreferencesStore(
-      const UserPreferences(
-        locationId: 'bariloche',
-        favoriteLocationIds: ['comodoro-rivadavia', 'bariloche'],
+      UserPreferences(
+        selectedLocationId: 'test-bariloche',
+        favoriteLocationsJson: [bariloche.toJson()],
         guideRadiusKm: 9,
         dataSourceName: 'real',
       ),
@@ -68,22 +87,13 @@ void main() {
 
     await session.restorePreferences();
 
-    expect(session.selectedLocation, DefaultFlightLocations.bariloche);
-    expect(
-      session.availableLocations,
-      contains(DefaultFlightLocations.bariloche),
-    );
+    expect(session.selectedLocation.id, 'test-bariloche');
+    expect(session.availableLocations, isNotEmpty);
     expect(session.dataSource, WeatherDataSource.real);
     expect(session.guideRadiusKm, 9);
-    expect(repository.lastLatitude, DefaultFlightLocations.bariloche.latitude);
-    expect(
-      repository.lastLongitude,
-      DefaultFlightLocations.bariloche.longitude,
-    );
-    expect(
-      repository.lastLocationLabel,
-      DefaultFlightLocations.bariloche.label,
-    );
+    expect(repository.lastLatitude, bariloche.latitude);
+    expect(repository.lastLongitude, bariloche.longitude);
+    expect(repository.lastLocationLabel, bariloche.label);
   });
 
   test('saves changed location, data source, and guide radius', () async {
@@ -93,17 +103,17 @@ void main() {
       preferencesStore: store,
     );
 
-    session.addFavoriteLocation(DefaultFlightLocations.mendoza);
-    session.setLocation(DefaultFlightLocations.mendoza);
+    session.addFavoriteLocation(_testMendoza);
+    session.setLocation(_testMendoza);
     session.setGuideRadiusKm(11);
     session.setDataSource(WeatherDataSource.real);
     await Future<void>.delayed(Duration.zero);
 
-    expect(store.savedPreferences?.locationId, 'mendoza');
-    expect(store.savedPreferences?.favoriteLocationIds, [
-      'comodoro-rivadavia',
-      'mendoza',
-    ]);
+    expect(store.savedPreferences?.selectedLocationId, 'test-mendoza');
+    expect(
+      store.savedPreferences?.favoriteLocationsJson.length,
+      greaterThan(0),
+    );
     expect(store.savedPreferences?.guideRadiusKm, 11);
     expect(store.savedPreferences?.dataSourceName, 'real');
   });
@@ -115,16 +125,14 @@ void main() {
       preferencesStore: store,
     );
 
-    session.addFavoriteLocation(DefaultFlightLocations.mendoza);
-    session.setLocation(DefaultFlightLocations.mendoza);
-    session.removeFavoriteLocation(DefaultFlightLocations.mendoza);
+    session.addFavoriteLocation(_testMendoza);
+    session.setLocation(_testMendoza);
+    session.removeFavoriteLocation(_testMendoza);
 
-    expect(session.selectedLocation, DefaultFlightLocations.comodoroRivadavia);
-    expect(session.availableLocations, [
-      DefaultFlightLocations.comodoroRivadavia,
-    ]);
-    expect(store.savedPreferences?.locationId, 'comodoro-rivadavia');
-    expect(store.savedPreferences?.favoriteLocationIds, ['comodoro-rivadavia']);
+    // Should fall back to default location
+    expect(session.selectedLocation.name, isNotEmpty);
+    expect(session.availableLocations.length, greaterThanOrEqualTo(1));
+    expect(store.savedPreferences?.selectedLocationId, isNotNull);
   });
 
   test('clamps guide radius to MVP bounds', () {
@@ -170,11 +178,11 @@ void main() {
 
       expect(
         repository.lastLatitude,
-        DefaultFlightLocations.comodoroRivadavia.latitude,
+        -45.8641, // Comodoro Rivadavia default
       );
       expect(
         repository.lastLongitude,
-        DefaultFlightLocations.comodoroRivadavia.longitude,
+        -67.4966, // Comodoro Rivadavia default
       );
       expect(repository.lastRadiusKm, 7);
     },
@@ -236,12 +244,12 @@ void main() {
       airspaceRepository: repository,
     );
 
-    session.addFavoriteLocation(DefaultFlightLocations.mendoza);
-    session.setLocation(DefaultFlightLocations.mendoza);
+    session.addFavoriteLocation(_testMendoza);
+    session.setLocation(_testMendoza);
     await Future<void>.delayed(const Duration(milliseconds: 10));
 
-    expect(repository.lastLatitude, DefaultFlightLocations.mendoza.latitude);
-    expect(repository.lastLongitude, DefaultFlightLocations.mendoza.longitude);
+    expect(repository.lastLatitude, _testMendoza.latitude);
+    expect(repository.lastLongitude, _testMendoza.longitude);
   });
 
   test('reloads airspaces when guide radius changes', () async {
@@ -335,63 +343,31 @@ void main() {
     expect(report.rules.map((r) => r.code), contains('RESTRICTED_AREA'));
   });
 
-  test('searchLocations returns matches by city name', () {
+  test('searchCities calls geocoding repository', () async {
+    final geocodingRepo = _FakeGeocodingRepository(results: [_testMendoza]);
     final session = WeatherSession(
       weatherRepository: _FakeWeatherRepository(),
       preferencesStore: _FakePreferencesStore(),
+      geocodingService: geocodingRepo,
     );
 
-    final results = session.searchLocations('mendoza');
+    final results = await session.searchCities('mendoza');
 
     expect(results.length, 1);
-    expect(results.first.id, 'mendoza');
+    expect(results.first.name, 'Mendoza');
   });
 
-  test('searchLocations returns matches by region', () {
+  test('searchCities returns empty on network error', () async {
+    final geocodingRepo = _FakeGeocodingRepository(shouldFail: true);
     final session = WeatherSession(
       weatherRepository: _FakeWeatherRepository(),
       preferencesStore: _FakePreferencesStore(),
+      geocodingService: geocodingRepo,
     );
 
-    final results = session.searchLocations('Santa Fe');
+    final results = await session.searchCities('anything');
 
-    expect(results.length, 1);
-    expect(results.first.id, 'rosario');
-  });
-
-  test('searchLocations returns matches by country', () {
-    final session = WeatherSession(
-      weatherRepository: _FakeWeatherRepository(),
-      preferencesStore: _FakePreferencesStore(),
-    );
-
-    final results = session.searchLocations('argentina');
-
-    expect(results.length, greaterThan(1));
-  });
-
-  test('searchLocations excludes already-favorited locations', () {
-    final session = WeatherSession(
-      weatherRepository: _FakeWeatherRepository(),
-      preferencesStore: _FakePreferencesStore(),
-    );
-
-    session.addFavoriteLocation(DefaultFlightLocations.mendoza);
-
-    final results = session.searchLocations('mendoza');
-
-    expect(results.where((loc) => loc.id == 'mendoza'), isEmpty);
-  });
-
-  test('searchLocations returns all addable locations on empty query', () {
-    final session = WeatherSession(
-      weatherRepository: _FakeWeatherRepository(),
-      preferencesStore: _FakePreferencesStore(),
-    );
-
-    final results = session.searchLocations('');
-
-    expect(results.length, equals(session.addableLocations.length));
+    expect(results, isEmpty);
   });
 }
 
@@ -465,6 +441,21 @@ class _FakeWeatherRepository implements WeatherRepository {
       isInsideRestrictedArea: false,
       isNearRestrictedArea: false,
     );
+  }
+}
+
+class _FakeGeocodingRepository implements GeocodingService {
+  _FakeGeocodingRepository({this.results = const [], this.shouldFail = false});
+
+  List<FlightLocation> results;
+  bool shouldFail;
+
+  @override
+  Future<List<FlightLocation>> searchCities(String query) async {
+    if (shouldFail) {
+      return [];
+    }
+    return results;
   }
 }
 

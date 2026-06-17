@@ -1,13 +1,13 @@
 class UserPreferences {
   const UserPreferences({
-    this.locationId,
-    this.favoriteLocationIds = const [],
+    this.selectedLocationId,
+    this.favoriteLocationsJson = const [],
     this.guideRadiusKm,
     this.dataSourceName,
   });
 
-  final String? locationId;
-  final List<String> favoriteLocationIds;
+  final String? selectedLocationId;
+  final List<String> favoriteLocationsJson;
   final double? guideRadiusKm;
   final String? dataSourceName;
 }
