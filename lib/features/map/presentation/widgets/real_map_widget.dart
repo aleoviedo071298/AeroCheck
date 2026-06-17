@@ -107,7 +107,7 @@ class _RealMapWidgetState extends State<RealMapWidget> {
         markers: widget.detectedMockZones.map((detection) {
           final zone = detection.zone;
           return Marker(
-            point: LatLng(zone.latitude, zone.longitude),
+            point: LatLng(zone.longitude, zone.latitude),
             width: 24,
             height: 24,
             alignment: Alignment.center,
@@ -157,7 +157,7 @@ class _RealMapWidgetState extends State<RealMapWidget> {
 
   Polygon _buildAirspacePolygon(Airspace airspace) {
     final points = airspace.coordinates
-        .map((coord) => LatLng(coord.latitude, coord.longitude))
+        .map((coord) => LatLng(coord.longitude, coord.latitude))
         .toList();
 
     final (fillColor, borderColor) = _colorForAirspace(airspace);
@@ -229,7 +229,7 @@ class _RealMapWidgetState extends State<RealMapWidget> {
               airspace.coordinates.length;
 
           return Marker(
-            point: LatLng(centerLat, centerLng),
+            point: LatLng(centerLng, centerLat),
             width: 30,
             height: 30,
             alignment: Alignment.center,
