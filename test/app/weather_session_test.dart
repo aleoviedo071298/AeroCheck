@@ -6,6 +6,7 @@ import 'package:aerocheck/data/preferences/user_preferences_store.dart';
 import 'package:aerocheck/data/weather/weather_bundle.dart';
 import 'package:aerocheck/data/weather/weather_repository.dart';
 import 'package:aerocheck/domain/entities/weather_snapshot.dart';
+import 'package:aerocheck/domain/rules/flight_readiness_status.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -144,6 +145,26 @@ void main() {
 
     session.setGuideRadiusKm(0);
     expect(session.guideRadiusKm, WeatherSession.minGuideRadiusKm);
+  });
+
+  test('guide radius can turn ready mock scenario into caution', () {
+    final session = WeatherSession(
+      weatherRepository: _FakeWeatherRepository(),
+      preferencesStore: _FakePreferencesStore(),
+    );
+
+    session.setMockScenario(MockFlightScenario.goodToFly);
+    session.setGuideRadiusKm(1);
+    expect(session.currentReport?.status, FlightReadinessStatus.ready);
+
+    session.setGuideRadiusKm(7);
+
+    final report = session.currentReport!;
+    expect(report.status, FlightReadinessStatus.caution);
+    expect(
+      report.rules.singleWhere((rule) => rule.code == 'RESTRICTED_AREA').title,
+      'Zona sensible cercana',
+    );
   });
 }
 

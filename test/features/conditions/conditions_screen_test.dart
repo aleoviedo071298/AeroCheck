@@ -69,6 +69,24 @@ void main() {
     expect(find.text('Mendoza, Mendoza'), findsWidgets);
   });
 
+  testWidgets('conditions screen reflects mock sensitive zone radius', (
+    tester,
+  ) async {
+    final session = WeatherSession(preferencesStore: _FakePreferencesStore());
+    session.setMockScenario(MockFlightScenario.goodToFly);
+    session.setGuideRadiusKm(7);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: ConditionsScreen(session: session)),
+      ),
+    );
+
+    expect(find.text('PRECAUCION'), findsWidgets);
+    await tester.scrollUntilVisible(find.text('Zona sensible cercana'), 300);
+    expect(find.text('Zona sensible cercana'), findsOneWidget);
+  });
+
   testWidgets('conditions screen renders real weather from repository', (
     tester,
   ) async {

@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../data/location/default_flight_locations.dart';
 import '../data/location/flight_location.dart';
 import '../data/mock/mock_flight_data.dart';
+import '../data/mock/mock_sensitive_zone.dart';
 import '../data/preferences/shared_preferences_user_preferences_store.dart';
 import '../data/preferences/user_preferences.dart';
 import '../data/preferences/user_preferences_store.dart';
@@ -60,7 +61,10 @@ class WeatherSession extends ChangeNotifier {
 
   FlightReadinessReport? get currentReport {
     if (_dataSource == WeatherDataSource.mock) {
-      return MockFlightData.reportFor(_mockScenario);
+      return _evaluateWeather(
+        _withOperationalContext(MockFlightData.snapshotFor(_mockScenario)),
+        MockFlightData.bestWindow,
+      );
     }
 
     final bundle = _realBundle;
@@ -68,11 +72,9 @@ class WeatherSession extends ChangeNotifier {
       return null;
     }
 
-    return _evaluator.evaluate(
-      weather: bundle.current,
-      droneProfile: MockFlightData.droneProfile,
-      missionProfile: MockFlightData.missionProfile,
-      bestWindow: bestWindowFor(bundle.hourlySnapshots),
+    return _evaluateWeather(
+      _withOperationalContext(bundle.current),
+      bestWindowFor(bundle.hourlySnapshots),
     );
   }
 
@@ -267,6 +269,31 @@ class WeatherSession extends ChangeNotifier {
       score: bestReport?.score ?? 0,
       status: bestReport?.status ?? FlightReadinessStatus.caution,
       summary: 'Mejor hora real estimada por clima disponible.',
+    );
+  }
+
+  FlightReadinessReport _evaluateWeather(
+    WeatherSnapshot weather,
+    FlightWindowRecommendation bestWindow,
+  ) {
+    return _evaluator.evaluate(
+      weather: weather,
+      droneProfile: MockFlightData.droneProfile,
+      missionProfile: MockFlightData.missionProfile,
+      bestWindow: bestWindow,
+    );
+  }
+
+  WeatherSnapshot _withOperationalContext(WeatherSnapshot weather) {
+    final hasNearbyMockZone = MockSensitiveZones.hasZoneWithin(
+      location: _selectedLocation,
+      radiusKm: _guideRadiusKm,
+    );
+
+    return weather.copyWith(
+      locationLabel: _selectedLocation.label,
+      isInsideRestrictedArea: weather.isInsideRestrictedArea,
+      isNearRestrictedArea: weather.isNearRestrictedArea || hasNearbyMockZone,
     );
   }
 
