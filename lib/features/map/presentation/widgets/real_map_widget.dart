@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -91,12 +93,14 @@ class _RealMapWidgetState extends State<RealMapWidget> {
       ),
 
       // OpenAIP airspaces
-      if (widget.airspaceState is AirspaceLoadedState)
+      if (widget.airspaceState is AirspaceLoadedState) ...[
+        _buildAirspaceDebugLayer(),
         PolygonLayer(
           polygons: (widget.airspaceState as AirspaceLoadedState).airspaces
               .map((airspace) => _buildAirspacePolygon(airspace))
               .toList(),
         ),
+      ],
 
       // Mock sensitive zones
       MarkerLayer(
@@ -173,14 +177,80 @@ class _RealMapWidgetState extends State<RealMapWidget> {
 
     if (controlled.contains(airspace.icaoClassCode)) {
       return (
-        Colors.red.withValues(alpha: 0.2),
-        Colors.red.withValues(alpha: 0.7),
+        Colors.red.withValues(alpha: 0.4),
+        Colors.red.withValues(alpha: 0.9),
       );
     } else {
       return (
-        Colors.yellow.withValues(alpha: 0.15),
-        Colors.orange.withValues(alpha: 0.6),
+        Colors.yellow.withValues(alpha: 0.35),
+        Colors.orange.withValues(alpha: 0.85),
       );
     }
+  }
+
+  Widget _buildAirspaceDebugLayer() {
+    final state = widget.airspaceState;
+    if (state is! AirspaceLoadedState) {
+      return const SizedBox();
+    }
+
+    final airspaces = state.airspaces;
+    developer.log(
+      'OpenAIP: Loaded ${airspaces.length} airspaces',
+      name: 'AeroCheck.Map',
+    );
+
+    for (final airspace in airspaces) {
+      developer.log(
+        '${airspace.name}: ${airspace.coordinates.length} coords, Class ${airspace.icaoClassLabel}',
+        name: 'AeroCheck.Map',
+      );
+      if (airspace.coordinates.isNotEmpty) {
+        final first = airspace.coordinates.first;
+        developer.log(
+          'First coord: ${first.latitude}, ${first.longitude}',
+          name: 'AeroCheck.Map',
+        );
+      }
+    }
+
+    final markers = airspaces
+        .map((airspace) {
+          if (airspace.coordinates.isEmpty) return null;
+          final centerLat =
+              airspace.coordinates
+                  .map((c) => c.latitude)
+                  .reduce((a, b) => a + b) /
+              airspace.coordinates.length;
+          final centerLng =
+              airspace.coordinates
+                  .map((c) => c.longitude)
+                  .reduce((a, b) => a + b) /
+              airspace.coordinates.length;
+
+          return Marker(
+            point: LatLng(centerLat, centerLng),
+            width: 30,
+            height: 30,
+            alignment: Alignment.center,
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.green,
+                border: Border.all(color: Colors.green.shade900, width: 2),
+              ),
+              child: const Center(
+                child: Text(
+                  'A',
+                  style: TextStyle(color: Colors.white, fontSize: 10),
+                ),
+              ),
+            ),
+          );
+        })
+        .whereType<Marker>()
+        .toList();
+
+    return MarkerLayer(markers: markers);
   }
 }
