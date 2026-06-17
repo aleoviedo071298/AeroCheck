@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../app/airspace_state.dart';
 import '../../app/weather_session.dart';
-import '../../data/location/flight_location.dart';
 import '../../data/mock/mock_sensitive_zone.dart';
+import 'presentation/widgets/real_map_widget.dart';
 
 class MapScreen extends StatelessWidget {
   const MapScreen({super.key, required this.session});
@@ -43,66 +43,11 @@ class MapScreen extends StatelessWidget {
                 aspectRatio: 0.82,
                 child: Card(
                   clipBehavior: Clip.antiAlias,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      CustomPaint(
-                        painter: _MapPlaceholderPainter(
-                          location: location,
-                          guideRadiusKm: guideRadiusKm,
-                          detectedZoneCount: detections.length,
-                        ),
-                      ),
-                      Center(
-                        child: Container(
-                          width: _circleSizeForRadius(guideRadiusKm),
-                          height: _circleSizeForRadius(guideRadiusKm),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: const Color(0xFF22C55E),
-                              width: 4,
-                            ),
-                            color: const Color(
-                              0xFF22C55E,
-                            ).withValues(alpha: 0.08),
-                          ),
-                        ),
-                      ),
-                      const Center(
-                        child: Icon(
-                          Icons.navigation_rounded,
-                          size: 42,
-                          color: Color(0xFF2563EB),
-                        ),
-                      ),
-                      Positioned(
-                        top: 16,
-                        right: 16,
-                        child: _LayerBadge(count: detections.length),
-                      ),
-                      Positioned(
-                        left: 16,
-                        right: 16,
-                        bottom: 16,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.72),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Text(
-                              '${location.label}\nRadio guia: ${_formatRadius(guideRadiusKm)} | Datos regulatorios no conectados',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                  child: RealMapWidget(
+                    location: location,
+                    guideRadiusKm: guideRadiusKm,
+                    detectedMockZones: detections,
+                    airspaceState: airspaceState,
                   ),
                 ),
               ),
@@ -123,35 +68,6 @@ class MapScreen extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class _LayerBadge extends StatelessWidget {
-  const _LayerBadge({required this.count});
-
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    final active = count > 0;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: active
-            ? const Color(0xFFF59E0B)
-            : Colors.black.withValues(alpha: 0.62),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        child: Text(
-          active ? '$count zona mock' : 'Sin zonas mock',
-          style: TextStyle(
-            color: active ? Colors.black : Colors.white,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-      ),
     );
   }
 }
@@ -297,15 +213,6 @@ String _formatDistance(double value) {
   return '${value.toStringAsFixed(1)} km';
 }
 
-double _circleSizeForRadius(double radiusKm) {
-  return 150 + ((radiusKm - WeatherSession.minGuideRadiusKm) * 8);
-}
-
-double _locationOffset(FlightLocation location, double fallback) {
-  final normalized = (location.latitude.abs() + location.longitude.abs()) % 1;
-  return fallback + (normalized - 0.5) * 0.18;
-}
-
 class _AirspaceLayerCard extends StatelessWidget {
   const _AirspaceLayerCard({required this.state});
 
@@ -388,81 +295,5 @@ class _AirspaceLayerCard extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-class _MapPlaceholderPainter extends CustomPainter {
-  const _MapPlaceholderPainter({
-    required this.location,
-    required this.guideRadiusKm,
-    required this.detectedZoneCount,
-  });
-
-  final FlightLocation location;
-  final double guideRadiusKm;
-  final int detectedZoneCount;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final bg = Paint()..color = const Color(0xFF10241F);
-    canvas.drawRect(Offset.zero & size, bg);
-
-    final land = Paint()..color = const Color(0xFF1F3D34);
-    final road = Paint()
-      ..color = const Color(0xFFCBD5E1).withValues(alpha: 0.35)
-      ..strokeWidth = 4
-      ..style = PaintingStyle.stroke;
-    final warning = Paint()
-      ..color =
-          (detectedZoneCount > 0
-                  ? const Color(0xFFF59E0B)
-                  : const Color(0xFF22C55E))
-              .withValues(alpha: detectedZoneCount > 0 ? 0.32 : 0.18);
-    final water = Paint()
-      ..color = const Color(0xFF0F2F3A).withValues(alpha: 0.58);
-
-    final landPath = Path()
-      ..moveTo(0, size.height * 0.15)
-      ..lineTo(size.width * 0.75, 0)
-      ..lineTo(size.width, size.height * 0.26)
-      ..lineTo(size.width * 0.82, size.height)
-      ..lineTo(0, size.height)
-      ..close();
-    canvas.drawPath(landPath, land);
-
-    final waterPath = Path()
-      ..moveTo(size.width * 0.78, 0)
-      ..lineTo(size.width, 0)
-      ..lineTo(size.width, size.height)
-      ..lineTo(size.width * 0.86, size.height)
-      ..lineTo(size.width * 0.94, size.height * 0.34)
-      ..close();
-    canvas.drawPath(waterPath, water);
-
-    canvas.drawCircle(
-      Offset(
-        size.width * _locationOffset(location, 0.62),
-        size.height * _locationOffset(location, 0.42),
-      ),
-      _circleSizeForRadius(guideRadiusKm) / 2,
-      warning,
-    );
-    canvas.drawLine(
-      Offset(0, size.height * 0.72),
-      Offset(size.width, size.height * 0.36),
-      road,
-    );
-    canvas.drawLine(
-      Offset(size.width * 0.18, 0),
-      Offset(size.width * 0.72, size.height),
-      road,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _MapPlaceholderPainter oldDelegate) {
-    return oldDelegate.location.id != location.id ||
-        oldDelegate.guideRadiusKm != guideRadiusKm ||
-        oldDelegate.detectedZoneCount != detectedZoneCount;
   }
 }
