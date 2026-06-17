@@ -83,8 +83,27 @@ void main() {
     );
 
     expect(find.text('PRECAUCION'), findsWidgets);
+    expect(find.text('Zona sensible mock dentro del radio'), findsOneWidget);
+    expect(find.textContaining('Zona sensible mock Comodoro'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Zona sensible cercana'), 300);
     expect(find.text('Zona sensible cercana'), findsOneWidget);
+  });
+
+  testWidgets('conditions screen hides mock risk header when radius is clear', (
+    tester,
+  ) async {
+    final session = WeatherSession(preferencesStore: _FakePreferencesStore());
+    session.setMockScenario(MockFlightScenario.goodToFly);
+    session.setGuideRadiusKm(1);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: ConditionsScreen(session: session)),
+      ),
+    );
+
+    expect(find.text('APTO'), findsWidgets);
+    expect(find.text('Zona sensible mock dentro del radio'), findsNothing);
   });
 
   testWidgets('conditions screen renders real weather from repository', (

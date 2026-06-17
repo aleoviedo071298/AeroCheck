@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app/weather_session.dart';
 import '../../data/location/flight_location.dart';
 import '../../data/mock/mock_flight_data.dart';
+import '../../data/mock/mock_sensitive_zone.dart';
 import '../../data/weather/weather_bundle.dart';
 import '../../domain/entities/flight_readiness_report.dart';
 import '../../domain/entities/flight_rule_result.dart';
@@ -34,6 +35,13 @@ class ConditionsScreen extends StatelessWidget {
                 )
               else
                 const _LoadingHeader(),
+              if (session.closestMockSensitiveZone != null) ...[
+                const SizedBox(height: 12),
+                _MockRiskHeader(
+                  detection: session.closestMockSensitiveZone!,
+                  guideRadiusKm: session.guideRadiusKm,
+                ),
+              ],
               const SizedBox(height: 12),
               _LocationSelector(session: session),
               const SizedBox(height: 12),
@@ -122,6 +130,33 @@ class ConditionsScreen extends StatelessWidget {
       return 'Open-Meteo - $time';
     }
     return 'Mock operativo - $time';
+  }
+}
+
+class _MockRiskHeader extends StatelessWidget {
+  const _MockRiskHeader({required this.detection, required this.guideRadiusKm});
+
+  final MockSensitiveZoneDetection detection;
+  final double guideRadiusKm;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+      child: ListTile(
+        leading: const Icon(
+          Icons.warning_amber_rounded,
+          color: Color(0xFFF59E0B),
+        ),
+        title: const Text(
+          'Zona sensible mock dentro del radio',
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
+        subtitle: Text(
+          '${detection.zone.name} a ${_fmt(detection.distanceKm)} km | Radio guia ${_fmt(guideRadiusKm)} km | Capa no oficial.',
+        ),
+      ),
+    );
   }
 }
 

@@ -63,6 +63,10 @@ class WeatherSession extends ChangeNotifier {
         location: _selectedLocation,
         radiusKm: _guideRadiusKm,
       );
+  MockSensitiveZoneDetection? get closestMockSensitiveZone =>
+      detectedMockSensitiveZones.isEmpty
+      ? null
+      : detectedMockSensitiveZones.first;
 
   FlightReadinessReport? get currentReport {
     if (_dataSource == WeatherDataSource.mock) {
