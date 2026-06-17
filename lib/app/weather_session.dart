@@ -9,6 +9,7 @@ import '../data/mock/mock_sensitive_zone.dart';
 import '../data/preferences/shared_preferences_user_preferences_store.dart';
 import '../data/preferences/user_preferences.dart';
 import '../data/preferences/user_preferences_store.dart';
+import '../data/regulatory/airspace.dart';
 import '../data/regulatory/airspace_repository.dart';
 import '../data/weather/open_meteo_weather_repository.dart';
 import '../data/weather/weather_bundle.dart';
@@ -19,6 +20,7 @@ import '../domain/entities/weather_snapshot.dart';
 import '../domain/rules/flight_readiness_evaluator.dart';
 import '../domain/rules/flight_readiness_status.dart';
 import '../domain/rules/rule_severity.dart';
+import 'airspace_geom_helper.dart';
 import 'airspace_state.dart';
 
 enum WeatherDataSource { mock, real }
@@ -52,6 +54,7 @@ class WeatherSession extends ChangeNotifier {
   var _isLoadingReal = false;
   var _guideRadiusKm = defaultGuideRadiusKm;
   AirspaceState _airspaceState = const AirspaceLoadingState();
+  List<Airspace> _loadedAirspaces = [];
 
   FlightLocation get selectedLocation => _selectedLocation;
   List<FlightLocation> get availableLocations => _favoriteLocations;
@@ -310,11 +313,14 @@ class WeatherSession extends ChangeNotifier {
 
   WeatherSnapshot _withOperationalContext(WeatherSnapshot weather) {
     final hasNearbyMockZone = detectedMockSensitiveZones.isNotEmpty;
+    final isInsideOpenAip = _isInsideOpenAipAirspace();
+    final isNearOpenAip = _isNearOpenAipAirspace();
 
     return weather.copyWith(
       locationLabel: _selectedLocation.label,
-      isInsideRestrictedArea: weather.isInsideRestrictedArea,
-      isNearRestrictedArea: weather.isNearRestrictedArea || hasNearbyMockZone,
+      isInsideRestrictedArea: weather.isInsideRestrictedArea || isInsideOpenAip,
+      isNearRestrictedArea:
+          weather.isNearRestrictedArea || hasNearbyMockZone || isNearOpenAip,
     );
   }
 
@@ -500,6 +506,8 @@ class WeatherSession extends ChangeNotifier {
         radiusKm: _guideRadiusKm,
       );
 
+      _loadedAirspaces = airspaces;
+
       if (airspaces.isEmpty) {
         _airspaceState = const AirspaceEmptyState();
       } else {
@@ -507,8 +515,39 @@ class WeatherSession extends ChangeNotifier {
       }
       notifyListeners();
     } catch (error) {
+      _loadedAirspaces = [];
       _airspaceState = AirspaceErrorState(error);
       notifyListeners();
     }
+  }
+
+  bool _isInsideOpenAipAirspace() {
+    for (final airspace in _loadedAirspaces) {
+      if (AirspaceGeomHelper.isPointInsideAirspace(
+        pointLatitude: _selectedLocation.latitude,
+        pointLongitude: _selectedLocation.longitude,
+        airspace: airspace,
+      )) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool _isNearOpenAipAirspace() {
+    const warningDistanceKm = 0.5;
+
+    for (final airspace in _loadedAirspaces) {
+      final distanceKm = AirspaceGeomHelper.distanceToAirspaceKm(
+        pointLatitude: _selectedLocation.latitude,
+        pointLongitude: _selectedLocation.longitude,
+        airspace: airspace,
+      );
+
+      if (distanceKm > 0 && distanceKm <= warningDistanceKm) {
+        return true;
+      }
+    }
+    return false;
   }
 }

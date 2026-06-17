@@ -360,6 +360,77 @@ void main() {
     expect(repository.callCount, 2);
     expect(repository.lastRadiusKm, 8);
   });
+
+  test('OpenAIP inside airspace changes flight readiness to NO_APTO', () async {
+    // Comodoro is at -45.8641, -67.4966
+    final airspace = Airspace(
+      id: 'nofly',
+      name: 'No Fly Zone',
+      typeCode: 3,
+      typeLabel: 'Prohibited',
+      icaoClassCode: 0,
+      icaoClassLabel: 'A',
+      country: 'AR',
+      lowerLimitLabel: '0 m GND',
+      upperLimitLabel: '1000 m MSL',
+      requestCompliance: false,
+      coordinates: const [
+        AirspaceCoordinate(latitude: -45.80, longitude: -67.50),
+        AirspaceCoordinate(latitude: -45.80, longitude: -67.45),
+        AirspaceCoordinate(latitude: -45.90, longitude: -67.45),
+        AirspaceCoordinate(latitude: -45.90, longitude: -67.50),
+      ],
+    );
+
+    final repository = _FakeAirspaceRepository(airspaces: [airspace]);
+    final session = WeatherSession(
+      weatherRepository: _FakeWeatherRepository(),
+      preferencesStore: _FakePreferencesStore(),
+      airspaceRepository: repository,
+    );
+
+    session.setGuideRadiusKm(7);
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+
+    final report = session.currentReport!;
+    expect(report.status, FlightReadinessStatus.notReady);
+    expect(report.rules.map((r) => r.code), contains('RESTRICTED_AREA'));
+  });
+
+  test('OpenAIP near airspace changes forecast hours', () async {
+    final airspace = Airspace(
+      id: 'controlled',
+      name: 'Controlled Airspace',
+      typeCode: 4,
+      typeLabel: 'CTR',
+      icaoClassCode: 1,
+      icaoClassLabel: 'B',
+      country: 'AR',
+      lowerLimitLabel: '0 m GND',
+      upperLimitLabel: '500 m MSL',
+      requestCompliance: false,
+      coordinates: [
+        const AirspaceCoordinate(latitude: -45.80, longitude: -67.40),
+        const AirspaceCoordinate(latitude: -45.80, longitude: -67.45),
+        const AirspaceCoordinate(latitude: -45.90, longitude: -67.45),
+        const AirspaceCoordinate(latitude: -45.90, longitude: -67.40),
+      ],
+    );
+
+    final repository = _FakeAirspaceRepository(airspaces: [airspace]);
+    final session = WeatherSession(
+      weatherRepository: _FakeWeatherRepository(),
+      preferencesStore: _FakePreferencesStore(),
+      airspaceRepository: repository,
+    );
+
+    session.setGuideRadiusKm(7);
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+
+    final report = session.currentReport!;
+    expect(report.status, FlightReadinessStatus.caution);
+    expect(report.rules.map((r) => r.code), contains('RESTRICTED_AREA'));
+  });
 }
 
 class _FakePreferencesStore implements UserPreferencesStore {
@@ -436,10 +507,7 @@ class _FakeWeatherRepository implements WeatherRepository {
 }
 
 class _FakeAirspaceRepository implements AirspaceRepository {
-  _FakeAirspaceRepository({
-    this.airspaces = const [],
-    this.shouldFail = false,
-  });
+  _FakeAirspaceRepository({this.airspaces = const [], this.shouldFail = false});
 
   List<Airspace> airspaces;
   bool shouldFail;
