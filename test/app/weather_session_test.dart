@@ -179,11 +179,39 @@ void main() {
       session.forecastRows.first.primaryReason,
       'Condiciones principales dentro de tus limites.',
     );
+    expect(session.forecastRows.first.reasons, hasLength(1));
+    expect(
+      session.forecastRows.first.reasons.single.details,
+      'Sin motivos activos para esta hora.',
+    );
 
     session.setGuideRadiusKm(7);
 
     expect(session.forecastRows.first.status, 'PRECAUCION');
     expect(session.forecastRows.first.primaryReason, 'Zona sensible cercana');
+    expect(
+      session.forecastRows.first.reasons.map((reason) => reason.title),
+      contains('Zona sensible cercana'),
+    );
+    expect(
+      session.forecastRows.first.reasons
+          .singleWhere((reason) => reason.title == 'Zona sensible cercana')
+          .details,
+      'Revisa normativa y permisos antes de despegar.',
+    );
+
+    final blockedRow = session.forecastRows.singleWhere(
+      (row) => row.hour == '17:00',
+    );
+    expect(blockedRow.reasons.length, greaterThan(3));
+    expect(
+      blockedRow.reasons.map((reason) => reason.title),
+      containsAll([
+        'Viento sobre el limite',
+        'Lluvia probable',
+        'Dentro de zona restringida',
+      ]),
+    );
   });
 
   test('real forecast rows use the active operational context', () async {

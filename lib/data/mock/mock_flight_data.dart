@@ -5,6 +5,7 @@ import '../../domain/entities/mission_profile.dart';
 import '../../domain/entities/weather_snapshot.dart';
 import '../../domain/rules/flight_readiness_evaluator.dart';
 import '../../domain/rules/flight_readiness_status.dart';
+import '../../domain/rules/rule_severity.dart';
 
 enum MockFlightScenario { goodToFly, cautionWind, notReadyRainAndRestriction }
 
@@ -183,6 +184,7 @@ class ForecastRow {
     required this.hour,
     required this.status,
     required this.primaryReason,
+    required this.reasons,
     required this.windKmh,
     required this.gustKmh,
     required this.rainPercent,
@@ -192,10 +194,23 @@ class ForecastRow {
   final String hour;
   final String status;
   final String primaryReason;
+  final List<ForecastReason> reasons;
   final double windKmh;
   final double gustKmh;
   final double rainPercent;
   final double visibilityKm;
+}
+
+class ForecastReason {
+  const ForecastReason({
+    required this.title,
+    required this.details,
+    required this.severity,
+  });
+
+  final String title;
+  final String details;
+  final RuleSeverity severity;
 }
 
 class WindProfileRow {

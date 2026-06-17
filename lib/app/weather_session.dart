@@ -313,11 +313,13 @@ class WeatherSession extends ChangeNotifier {
       missionProfile: MockFlightData.missionProfile,
       bestWindow: MockFlightData.bestWindow,
     );
+    final reasons = _reasonsFor(report);
 
     return ForecastRow(
       hour: _time(weather.time),
       status: report.status.label,
-      primaryReason: _primaryReasonFor(report),
+      primaryReason: reasons.first.title,
+      reasons: reasons,
       windKmh: weather.windKmh ?? 0,
       gustKmh: weather.gustKmh ?? 0,
       rainPercent: weather.precipitationProbability ?? 0,
@@ -325,14 +327,28 @@ class WeatherSession extends ChangeNotifier {
     );
   }
 
-  String _primaryReasonFor(FlightReadinessReport report) {
-    final activeRules = report.rules.where(
-      (rule) => rule.severity != RuleSeverity.ok,
-    );
+  List<ForecastReason> _reasonsFor(FlightReadinessReport report) {
+    final activeRules = report.rules
+        .where((rule) => rule.severity != RuleSeverity.ok)
+        .toList();
     if (activeRules.isEmpty) {
-      return report.summary;
+      return [
+        ForecastReason(
+          title: report.summary,
+          details: 'Sin motivos activos para esta hora.',
+          severity: RuleSeverity.ok,
+        ),
+      ];
     }
-    return activeRules.first.title;
+    return activeRules
+        .map(
+          (rule) => ForecastReason(
+            title: rule.title,
+            details: rule.details,
+            severity: rule.severity,
+          ),
+        )
+        .toList();
   }
 
   String _time(DateTime value) {

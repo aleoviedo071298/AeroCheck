@@ -24,6 +24,12 @@ void main() {
       find.text('Condiciones principales dentro de tus limites.'),
       findsWidgets,
     );
+    expect(find.text('Sin motivos activos para esta hora.'), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('forecast-row-08:00')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sin motivos activos para esta hora.'), findsOneWidget);
   });
 
   testWidgets('forecast screen reflects mock sensitive-zone context', (
@@ -42,6 +48,18 @@ void main() {
     expect(find.text('APTO'), findsNothing);
     expect(find.text('PRECAUCION'), findsWidgets);
     expect(find.text('Zona sensible cercana'), findsWidgets);
+    expect(
+      find.text('Revisa normativa y permisos antes de despegar.'),
+      findsNothing,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('forecast-row-08:00')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Revisa normativa y permisos antes de despegar.'),
+      findsOneWidget,
+    );
   });
 }
 
