@@ -11,6 +11,8 @@ import '../../domain/entities/weather_snapshot.dart';
 import '../../domain/rules/flight_readiness_status.dart';
 import '../../domain/rules/rule_severity.dart';
 import '../../data/mock/mock_flight_data.dart';
+import '../../domain/units/unit_formatters.dart';
+import '../../domain/units/unit_preferences.dart';
 
 class ConditionsScreen extends StatelessWidget {
   const ConditionsScreen({super.key, required this.session});
@@ -78,7 +80,10 @@ class ConditionsScreen extends StatelessWidget {
                         const SizedBox(height: 12),
 
                         // 5. Reworked metrics grid (2x2 + 1x4 secondary)
-                        _ReworkedMetricsGrid(weather: weather),
+                        _ReworkedMetricsGrid(
+                          weather: weather,
+                          session: session,
+                        ),
                         const SizedBox(height: 16),
 
                         // 6. Hourly timeline table
@@ -779,9 +784,10 @@ class _RedesignedReasonTile extends StatelessWidget {
 }
 
 class _ReworkedMetricsGrid extends StatelessWidget {
-  const _ReworkedMetricsGrid({required this.weather});
+  const _ReworkedMetricsGrid({required this.weather, required this.session});
 
   final WeatherSnapshot weather;
+  final WeatherSession session;
 
   @override
   Widget build(BuildContext context) {
@@ -796,25 +802,6 @@ class _ReworkedMetricsGrid extends StatelessWidget {
       final dp = t - ((100 - rh) / 5.0); // Simple dew point approximation
       dewPointStr = '${_fmt(dp)}°';
     }
-
-    // Gust delta
-    String gustDeltaStr = '';
-    if (weather.gustKmh != null && weather.windKmh != null) {
-      final delta = weather.gustKmh! - weather.windKmh!;
-      if (delta > 0) {
-        gustDeltaStr = 'Δ ${_fmt(delta)} km/h';
-      } else {
-        gustDeltaStr = 'Sin ráfagas';
-      }
-    }
-
-    // Apparent temperature/Feels like
-    final sensation = weather.temperatureC != null
-        ? (weather.temperatureC! - 2.0)
-        : null;
-    final sensationStr = sensation != null
-        ? 'Sensación ${_fmt(sensation)}°'
-        : 'Sin dato';
 
     return Column(
       children: [
@@ -832,9 +819,10 @@ class _ReworkedMetricsGrid extends StatelessWidget {
           children: [
             _MetricCard(
               label: 'VIENTO',
-              value: weather.windKmh == null
-                  ? 'Sin dato'
-                  : '${_fmt(weather.windKmh!)} km/h',
+              value: UnitFormatters.formatSpeed(
+                weather.windKmh,
+                session.preferences.units,
+              ),
               subValue:
                   '↗ ${weather.windDirectionCardinal ?? ""} ${_fmt(weather.windDirectionDegrees)}°',
               icon: Icons.air_rounded,
@@ -842,19 +830,21 @@ class _ReworkedMetricsGrid extends StatelessWidget {
             ),
             _MetricCard(
               label: 'RÁFAGAS',
-              value: weather.gustKmh == null
-                  ? 'Sin dato'
-                  : '${_fmt(weather.gustKmh!)} km/h',
-              subValue: gustDeltaStr,
+              value: UnitFormatters.formatSpeed(
+                weather.gustKmh,
+                session.preferences.units,
+              ),
+              subValue: _formatGustDelta(weather, session),
               icon: Icons.wind_power_rounded,
               accentColor: const Color(0xFFD97706), // Orange bottom line
             ),
             _MetricCard(
               label: 'TEMP.',
-              value: weather.temperatureC == null
-                  ? 'Sin dato'
-                  : '${_fmt(weather.temperatureC!)} °C',
-              subValue: sensationStr,
+              value: UnitFormatters.formatTemperature(
+                weather.temperatureC,
+                session.preferences.units,
+              ),
+              subValue: _formatSensation(weather, session),
               icon: Icons.device_thermostat_rounded,
               accentColor: const Color(0xFF3B82F6), // Blue bottom line
             ),
@@ -962,6 +952,28 @@ class _ReworkedMetricsGrid extends StatelessWidget {
       }
     }
     return buffer.toString().split('').reversed.join('');
+  }
+
+  String _formatGustDelta(WeatherSnapshot weather, WeatherSession session) {
+    if (weather.gustKmh != null && weather.windKmh != null) {
+      final delta = weather.gustKmh! - weather.windKmh!;
+      if (delta > 0) {
+        final unitName = session.preferences.units.speed.displayName;
+        return 'Δ ${_fmt(delta)} $unitName';
+      }
+      return 'Sin ráfagas';
+    }
+    return '';
+  }
+
+  String _formatSensation(WeatherSnapshot weather, WeatherSession session) {
+    final sensation = weather.temperatureC != null
+        ? (weather.temperatureC! - 2.0)
+        : null;
+    if (sensation != null) {
+      return 'Sensación ${UnitFormatters.formatTemperature(sensation, session.preferences.units)}';
+    }
+    return 'Sin dato';
   }
 }
 

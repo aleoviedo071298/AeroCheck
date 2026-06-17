@@ -31,132 +31,142 @@ class _UnitsScreenState extends State<UnitsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Scaffold(
       appBar: AppBar(
         title: Text(AppStrings.get('unidades', language: widget.language)),
         centerTitle: false,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _UnitSelector(
-              title: AppStrings.get(
-                'velocidad_viento',
-                language: widget.language,
+      body: Container(
+        color: const Color(0xFFF1F5F9),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _UnitSelector(
+                title: AppStrings.get(
+                  'velocidad_viento',
+                  language: widget.language,
+                ),
+                options: SpeedUnit.values.map((u) => u.displayName).toList(),
+                selectedIndex: units.speed.index,
+                onChanged: (index) {
+                  setState(() {
+                    units = units.copyWith(speed: SpeedUnit.values[index]);
+                  });
+                },
+                isDark: false,
               ),
-              options: SpeedUnit.values.map((u) => u.displayName).toList(),
-              selectedIndex: units.speed.index,
-              onChanged: (index) {
-                setState(() {
-                  units = units.copyWith(speed: SpeedUnit.values[index]);
-                });
-              },
-              isDark: isDark,
-            ),
-            const SizedBox(height: 16),
-            _UnitSelector(
-              title: AppStrings.get(
-                'altura_altitud',
-                language: widget.language,
+              const SizedBox(height: 16),
+              _UnitSelector(
+                title: AppStrings.get(
+                  'altura_altitud',
+                  language: widget.language,
+                ),
+                options: AltitudeUnit.values.map((u) => u.displayName).toList(),
+                selectedIndex: units.altitude.index,
+                onChanged: (index) {
+                  setState(() {
+                    units = units.copyWith(
+                      altitude: AltitudeUnit.values[index],
+                    );
+                  });
+                },
+                isDark: false,
               ),
-              options: AltitudeUnit.values.map((u) => u.displayName).toList(),
-              selectedIndex: units.altitude.index,
-              onChanged: (index) {
-                setState(() {
-                  units = units.copyWith(altitude: AltitudeUnit.values[index]);
-                });
-              },
-              isDark: isDark,
-            ),
-            const SizedBox(height: 16),
-            _UnitSelector(
-              title: AppStrings.get(
-                'distancia_visibilidad',
-                language: widget.language,
+              const SizedBox(height: 16),
+              _UnitSelector(
+                title: AppStrings.get(
+                  'distancia_visibilidad',
+                  language: widget.language,
+                ),
+                options: DistanceUnit.values.map((u) => u.displayName).toList(),
+                selectedIndex: units.distance.index,
+                onChanged: (index) {
+                  setState(() {
+                    units = units.copyWith(
+                      distance: DistanceUnit.values[index],
+                    );
+                  });
+                },
+                isDark: false,
               ),
-              options: DistanceUnit.values.map((u) => u.displayName).toList(),
-              selectedIndex: units.distance.index,
-              onChanged: (index) {
-                setState(() {
-                  units = units.copyWith(distance: DistanceUnit.values[index]);
-                });
-              },
-              isDark: isDark,
-            ),
-            const SizedBox(height: 16),
-            _UnitSelector(
-              title: AppStrings.get('temperatura', language: widget.language),
-              options: TemperatureUnit.values
-                  .map((u) => u.displayName)
-                  .toList(),
-              selectedIndex: units.temperature.index,
-              onChanged: (index) {
-                setState(() {
-                  units = units.copyWith(
-                    temperature: TemperatureUnit.values[index],
-                  );
-                });
-              },
-              isDark: isDark,
-            ),
-            const SizedBox(height: 16),
-            _UnitSelector(
-              title: AppStrings.get('presion', language: widget.language),
-              options: PressureUnit.values.map((u) => u.displayName).toList(),
-              selectedIndex: units.pressure.index,
-              onChanged: (index) {
-                setState(() {
-                  units = units.copyWith(pressure: PressureUnit.values[index]);
-                });
-              },
-              isDark: isDark,
-            ),
-            const SizedBox(height: 16),
-            _UnitSelector(
-              title: AppStrings.get('precipitacion', language: widget.language),
-              options: PrecipitationUnit.values
-                  .map((u) => u.displayName)
-                  .toList(),
-              selectedIndex: units.precipitation.index,
-              onChanged: (index) {
-                setState(() {
-                  units = units.copyWith(
-                    precipitation: PrecipitationUnit.values[index],
-                  );
-                });
-              },
-              isDark: isDark,
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text(
-                      AppStrings.get('cancelar', language: widget.language),
+              const SizedBox(height: 16),
+              _UnitSelector(
+                title: AppStrings.get('temperatura', language: widget.language),
+                options: TemperatureUnit.values
+                    .map((u) => u.displayName)
+                    .toList(),
+                selectedIndex: units.temperature.index,
+                onChanged: (index) {
+                  setState(() {
+                    units = units.copyWith(
+                      temperature: TemperatureUnit.values[index],
+                    );
+                  });
+                },
+                isDark: false,
+              ),
+              const SizedBox(height: 16),
+              _UnitSelector(
+                title: AppStrings.get('presion', language: widget.language),
+                options: PressureUnit.values.map((u) => u.displayName).toList(),
+                selectedIndex: units.pressure.index,
+                onChanged: (index) {
+                  setState(() {
+                    units = units.copyWith(
+                      pressure: PressureUnit.values[index],
+                    );
+                  });
+                },
+                isDark: false,
+              ),
+              const SizedBox(height: 16),
+              _UnitSelector(
+                title: AppStrings.get(
+                  'precipitacion',
+                  language: widget.language,
+                ),
+                options: PrecipitationUnit.values
+                    .map((u) => u.displayName)
+                    .toList(),
+                selectedIndex: units.precipitation.index,
+                onChanged: (index) {
+                  setState(() {
+                    units = units.copyWith(
+                      precipitation: PrecipitationUnit.values[index],
+                    );
+                  });
+                },
+                isDark: false,
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(
+                        AppStrings.get('cancelar', language: widget.language),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: () {
-                      widget.onSave(units);
-                      Navigator.pop(context, units);
-                    },
-                    child: Text(
-                      AppStrings.get('guardar', language: widget.language),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () {
+                        widget.onSave(units);
+                        Navigator.pop(context, units);
+                      },
+                      child: Text(
+                        AppStrings.get('guardar', language: widget.language),
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -183,12 +193,10 @@ class _UnitSelector extends StatelessWidget {
     return Card(
       margin: EdgeInsets.zero,
       elevation: 0,
-      color: isDark ? const Color(0xFF1E293B) : Colors.white,
+      color: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-        ),
+        side: const BorderSide(color: Color(0xFFE2E8F0)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -199,7 +207,7 @@ class _UnitSelector extends StatelessWidget {
               title,
               style: Theme.of(
                 context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 12),
             SingleChildScrollView(
@@ -209,20 +217,26 @@ class _UnitSelector extends StatelessWidget {
                   options.length,
                   (index) => Padding(
                     padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      label: Text(options[index]),
+                    child: FilterChip(
+                      label: Text(
+                        options[index],
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          color: selectedIndex == index
+                              ? Colors.white
+                              : const Color(0xFF475569),
+                        ),
+                      ),
                       selected: selectedIndex == index,
                       onSelected: (_) => onChanged(index),
-                      backgroundColor: isDark
-                          ? const Color(0xFF334155)
-                          : Colors.white,
+                      backgroundColor: const Color(0xFFF1F5F9),
                       selectedColor: const Color(0xFF0F766E),
                       side: BorderSide(
                         color: selectedIndex == index
-                            ? Colors.transparent
-                            : (isDark
-                                  ? const Color(0xFF334155)
-                                  : const Color(0xFFE2E8F0)),
+                            ? const Color(0xFF0F766E)
+                            : const Color(0xFFE2E8F0),
+                        width: 2,
                       ),
                     ),
                   ),
