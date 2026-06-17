@@ -4,6 +4,7 @@ import 'dart:developer' as developer;
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 
+import '../data/kp_index/noaa_kp_index_service.dart';
 import '../data/location/flight_location.dart';
 import '../data/location/geocoding_service.dart';
 import '../data/location/geocoding_repository.dart';
@@ -259,11 +260,19 @@ class WeatherSession extends ChangeNotifier {
 
     try {
       final repository = _weatherRepository ??= OpenMeteoWeatherRepository();
-      final bundle = await repository.fetchWeather(
+      var bundle = await repository.fetchWeather(
         latitude: _selectedLocation.latitude,
         longitude: _selectedLocation.longitude,
         locationLabel: _selectedLocation.label,
       );
+
+      // Fetch current Kp index from NOAA
+      final kpService = NoaaKpIndexService();
+      final kpIndex = await kpService.fetchCurrentKpIndex();
+      if (kpIndex != null) {
+        bundle = bundle.copyWithKpIndex(kpIndex);
+      }
+
       _realBundle = bundle;
       _isLoadingReal = false;
       notifyListeners();

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../app/weather_session.dart';
+import '../../data/kp_index/noaa_kp_index_service.dart';
 import '../../data/location/flight_location.dart';
 import '../../data/weather/weather_bundle.dart';
 import '../../domain/entities/flight_readiness_report.dart';
@@ -91,7 +92,9 @@ class ConditionsScreen extends StatelessWidget {
       ),
       _Metric(
         'Kp (magnético)',
-        weather.kpIndex == null ? 'Sin dato' : _fmt(weather.kpIndex),
+        weather.kpIndex == null
+            ? 'Sin dato'
+            : '${_fmt(weather.kpIndex)} - ${NoaaKpIndexService.interpretKp(weather.kpIndex!)}',
         Icons.sensors_rounded,
       ),
     ];
