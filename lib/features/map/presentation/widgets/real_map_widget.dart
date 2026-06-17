@@ -70,6 +70,10 @@ class _RealMapWidgetState extends State<RealMapWidget> {
       widget.location.latitude,
       widget.location.longitude,
     );
+    developer.log(
+      'Location: ${widget.location.label} at (${widget.location.latitude}, ${widget.location.longitude})',
+      name: 'AeroCheck.Map',
+    );
 
     final layers = <Widget>[
       // Base map layer
@@ -106,8 +110,12 @@ class _RealMapWidgetState extends State<RealMapWidget> {
       MarkerLayer(
         markers: widget.detectedMockZones.map((detection) {
           final zone = detection.zone;
+          developer.log(
+            'Mock zone: ${zone.name} at (${zone.latitude}, ${zone.longitude})',
+            name: 'AeroCheck.Map',
+          );
           return Marker(
-            point: LatLng(zone.longitude, zone.latitude),
+            point: LatLng(zone.latitude, zone.longitude),
             width: 24,
             height: 24,
             alignment: Alignment.center,
@@ -157,7 +165,7 @@ class _RealMapWidgetState extends State<RealMapWidget> {
 
   Polygon _buildAirspacePolygon(Airspace airspace) {
     final points = airspace.coordinates
-        .map((coord) => LatLng(coord.longitude, coord.latitude))
+        .map((coord) => LatLng(coord.latitude, coord.longitude))
         .toList();
 
     final (fillColor, borderColor) = _colorForAirspace(airspace);
@@ -229,7 +237,7 @@ class _RealMapWidgetState extends State<RealMapWidget> {
               airspace.coordinates.length;
 
           return Marker(
-            point: LatLng(centerLng, centerLat),
+            point: LatLng(centerLat, centerLng),
             width: 30,
             height: 30,
             alignment: Alignment.center,
