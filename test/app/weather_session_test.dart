@@ -1,8 +1,11 @@
+import 'package:aerocheck/app/airspace_state.dart';
 import 'package:aerocheck/app/weather_session.dart';
 import 'package:aerocheck/data/location/default_flight_locations.dart';
 import 'package:aerocheck/data/mock/mock_flight_data.dart';
 import 'package:aerocheck/data/preferences/user_preferences.dart';
 import 'package:aerocheck/data/preferences/user_preferences_store.dart';
+import 'package:aerocheck/data/regulatory/airspace.dart';
+import 'package:aerocheck/data/regulatory/airspace_repository.dart';
 import 'package:aerocheck/data/weather/weather_bundle.dart';
 import 'package:aerocheck/data/weather/weather_repository.dart';
 import 'package:aerocheck/domain/entities/weather_snapshot.dart';
@@ -250,6 +253,113 @@ void main() {
     );
     expect(session.detectedMockSensitiveZones.first.distanceKm, greaterThan(0));
   });
+
+  test(
+    'loads nearby airspaces with selected location and guide radius',
+    () async {
+      final repository = _FakeAirspaceRepository();
+      final session = WeatherSession(
+        weatherRepository: _FakeWeatherRepository(),
+        preferencesStore: _FakePreferencesStore(),
+        airspaceRepository: repository,
+      );
+
+      session.setGuideRadiusKm(7);
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+
+      expect(
+        repository.lastLatitude,
+        DefaultFlightLocations.comodoroRivadavia.latitude,
+      );
+      expect(
+        repository.lastLongitude,
+        DefaultFlightLocations.comodoroRivadavia.longitude,
+      );
+      expect(repository.lastRadiusKm, 7);
+    },
+  );
+
+  test('exposes airspace state: loading, loaded, error, empty', () async {
+    final repository = _FakeAirspaceRepository(
+      airspaces: [_createTestAirspace()],
+    );
+    final session = WeatherSession(
+      weatherRepository: _FakeWeatherRepository(),
+      preferencesStore: _FakePreferencesStore(),
+      airspaceRepository: repository,
+    );
+
+    expect(session.airspaceState, isA<AirspaceLoadingState>());
+
+    session.setGuideRadiusKm(7);
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+
+    expect(session.airspaceState, isA<AirspaceLoadedState>());
+    final loadedState = session.airspaceState as AirspaceLoadedState;
+    expect(loadedState.airspaces, hasLength(1));
+  });
+
+  test('airspace state changes to error when repository fails', () async {
+    final repository = _FakeAirspaceRepository(shouldFail: true);
+    final session = WeatherSession(
+      weatherRepository: _FakeWeatherRepository(),
+      preferencesStore: _FakePreferencesStore(),
+      airspaceRepository: repository,
+    );
+
+    session.setGuideRadiusKm(7);
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+
+    expect(session.airspaceState, isA<AirspaceErrorState>());
+  });
+
+  test('airspace state changes to empty when no airspaces found', () async {
+    final repository = _FakeAirspaceRepository();
+    final session = WeatherSession(
+      weatherRepository: _FakeWeatherRepository(),
+      preferencesStore: _FakePreferencesStore(),
+      airspaceRepository: repository,
+    );
+
+    session.setGuideRadiusKm(7);
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+
+    expect(session.airspaceState, isA<AirspaceEmptyState>());
+  });
+
+  test('reloads airspaces when location changes', () async {
+    final repository = _FakeAirspaceRepository();
+    final session = WeatherSession(
+      weatherRepository: _FakeWeatherRepository(),
+      preferencesStore: _FakePreferencesStore(),
+      airspaceRepository: repository,
+    );
+
+    session.addFavoriteLocation(DefaultFlightLocations.mendoza);
+    session.setLocation(DefaultFlightLocations.mendoza);
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+
+    expect(repository.lastLatitude, DefaultFlightLocations.mendoza.latitude);
+    expect(repository.lastLongitude, DefaultFlightLocations.mendoza.longitude);
+  });
+
+  test('reloads airspaces when guide radius changes', () async {
+    final repository = _FakeAirspaceRepository();
+    final session = WeatherSession(
+      weatherRepository: _FakeWeatherRepository(),
+      preferencesStore: _FakePreferencesStore(),
+      airspaceRepository: repository,
+    );
+
+    session.setGuideRadiusKm(3);
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    expect(repository.callCount, 1);
+
+    session.setGuideRadiusKm(8);
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    expect(repository.callCount, 2);
+    expect(repository.lastRadiusKm, 8);
+  });
 }
 
 class _FakePreferencesStore implements UserPreferencesStore {
@@ -323,4 +433,57 @@ class _FakeWeatherRepository implements WeatherRepository {
       isNearRestrictedArea: false,
     );
   }
+}
+
+class _FakeAirspaceRepository implements AirspaceRepository {
+  _FakeAirspaceRepository({
+    this.airspaces = const [],
+    this.shouldFail = false,
+  });
+
+  List<Airspace> airspaces;
+  bool shouldFail;
+  double? lastLatitude;
+  double? lastLongitude;
+  double? lastRadiusKm;
+  int callCount = 0;
+
+  @override
+  Future<List<Airspace>> fetchNearbyAirspaces({
+    required double latitude,
+    required double longitude,
+    required double radiusKm,
+  }) async {
+    callCount++;
+    lastLatitude = latitude;
+    lastLongitude = longitude;
+    lastRadiusKm = radiusKm;
+
+    if (shouldFail) {
+      throw Exception('Failed to fetch airspaces');
+    }
+
+    return airspaces;
+  }
+}
+
+Airspace _createTestAirspace() {
+  return const Airspace(
+    id: 'test-airspace-1',
+    name: 'Test Airspace A',
+    typeCode: 1,
+    typeLabel: 'Restricted',
+    icaoClassCode: 0,
+    icaoClassLabel: 'A',
+    country: 'AR',
+    lowerLimitLabel: '0 m GND',
+    upperLimitLabel: '500 m MSL',
+    requestCompliance: false,
+    coordinates: [
+      AirspaceCoordinate(latitude: -45.8, longitude: -67.5),
+      AirspaceCoordinate(latitude: -45.9, longitude: -67.5),
+      AirspaceCoordinate(latitude: -45.9, longitude: -67.4),
+      AirspaceCoordinate(latitude: -45.8, longitude: -67.4),
+    ],
+  );
 }

@@ -9,6 +9,7 @@ import '../data/mock/mock_sensitive_zone.dart';
 import '../data/preferences/shared_preferences_user_preferences_store.dart';
 import '../data/preferences/user_preferences.dart';
 import '../data/preferences/user_preferences_store.dart';
+import '../data/regulatory/airspace_repository.dart';
 import '../data/weather/open_meteo_weather_repository.dart';
 import '../data/weather/weather_bundle.dart';
 import '../data/weather/weather_repository.dart';
@@ -18,6 +19,7 @@ import '../domain/entities/weather_snapshot.dart';
 import '../domain/rules/flight_readiness_evaluator.dart';
 import '../domain/rules/flight_readiness_status.dart';
 import '../domain/rules/rule_severity.dart';
+import 'airspace_state.dart';
 
 enum WeatherDataSource { mock, real }
 
@@ -29,12 +31,15 @@ class WeatherSession extends ChangeNotifier {
   WeatherSession({
     WeatherRepository? weatherRepository,
     UserPreferencesStore? preferencesStore,
+    AirspaceRepository? airspaceRepository,
   }) : _weatherRepository = weatherRepository,
        _preferencesStore =
-           preferencesStore ?? SharedPreferencesUserPreferencesStore();
+           preferencesStore ?? SharedPreferencesUserPreferencesStore(),
+       _airspaceRepository = airspaceRepository;
 
   WeatherRepository? _weatherRepository;
   final UserPreferencesStore _preferencesStore;
+  final AirspaceRepository? _airspaceRepository;
   final _evaluator = const FlightReadinessEvaluator();
 
   FlightLocation _selectedLocation = DefaultFlightLocations.comodoroRivadavia;
@@ -46,6 +51,7 @@ class WeatherSession extends ChangeNotifier {
   Object? _realError;
   var _isLoadingReal = false;
   var _guideRadiusKm = defaultGuideRadiusKm;
+  AirspaceState _airspaceState = const AirspaceLoadingState();
 
   FlightLocation get selectedLocation => _selectedLocation;
   List<FlightLocation> get availableLocations => _favoriteLocations;
@@ -59,6 +65,7 @@ class WeatherSession extends ChangeNotifier {
   Object? get realError => _realError;
   bool get isLoadingReal => _isLoadingReal;
   double get guideRadiusKm => _guideRadiusKm;
+  AirspaceState get airspaceState => _airspaceState;
   List<MockSensitiveZoneDetection> get detectedMockSensitiveZones =>
       MockSensitiveZones.detectionsWithin(
         location: _selectedLocation,
@@ -159,6 +166,7 @@ class WeatherSession extends ChangeNotifier {
     _guideRadiusKm = nextRadius;
     notifyListeners();
     _persistPreferences();
+    _loadNearbyAirspaces();
   }
 
   void addFavoriteLocation(FlightLocation location) {
@@ -209,6 +217,7 @@ class WeatherSession extends ChangeNotifier {
     if (_dataSource == WeatherDataSource.real) {
       loadRealWeather();
     }
+    _loadNearbyAirspaces();
   }
 
   void setDataSource(WeatherDataSource source) {
@@ -473,5 +482,33 @@ class WeatherSession extends ChangeNotifier {
 
   double _clampGuideRadius(double radiusKm) {
     return radiusKm.clamp(minGuideRadiusKm, maxGuideRadiusKm).toDouble();
+  }
+
+  Future<void> _loadNearbyAirspaces() async {
+    final repository = _airspaceRepository;
+    if (repository == null) {
+      return;
+    }
+
+    _airspaceState = const AirspaceLoadingState();
+    notifyListeners();
+
+    try {
+      final airspaces = await repository.fetchNearbyAirspaces(
+        latitude: _selectedLocation.latitude,
+        longitude: _selectedLocation.longitude,
+        radiusKm: _guideRadiusKm,
+      );
+
+      if (airspaces.isEmpty) {
+        _airspaceState = const AirspaceEmptyState();
+      } else {
+        _airspaceState = AirspaceLoadedState(airspaces);
+      }
+      notifyListeners();
+    } catch (error) {
+      _airspaceState = AirspaceErrorState(error);
+      notifyListeners();
+    }
   }
 }

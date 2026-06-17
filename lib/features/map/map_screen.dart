@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../app/airspace_state.dart';
 import '../../app/weather_session.dart';
 import '../../data/location/flight_location.dart';
 import '../../data/mock/mock_sensitive_zone.dart';
@@ -17,6 +18,7 @@ class MapScreen extends StatelessWidget {
         final location = session.selectedLocation;
         final guideRadiusKm = session.guideRadiusKm;
         final detections = session.detectedMockSensitiveZones;
+        final airspaceState = session.airspaceState;
 
         return SafeArea(
           child: ListView(
@@ -107,11 +109,13 @@ class MapScreen extends StatelessWidget {
               const SizedBox(height: 12),
               _SensitiveZoneLayerCard(detections: detections),
               const SizedBox(height: 12),
+              _AirspaceLayerCard(state: airspaceState),
+              const SizedBox(height: 12),
               const Card(
                 child: Padding(
                   padding: EdgeInsets.all(16),
                   child: Text(
-                    'AeroCheck ayuda a planificar. El piloto debe validar normativa, permisos y restricciones oficiales antes de volar.',
+                    'AeroCheck ayuda a planificar. El piloto debe validar normativa, permisos y restricciones oficiales antes de volar. Los espacios aéreos mostrados son informativos.',
                   ),
                 ),
               ),
@@ -300,6 +304,91 @@ double _circleSizeForRadius(double radiusKm) {
 double _locationOffset(FlightLocation location, double fallback) {
   final normalized = (location.latitude.abs() + location.longitude.abs()) % 1;
   return fallback + (normalized - 0.5) * 0.18;
+}
+
+class _AirspaceLayerCard extends StatelessWidget {
+  const _AirspaceLayerCard({required this.state});
+
+  final AirspaceState state;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
+        child: Column(
+          children: [
+            ListTile(
+              leading: Icon(
+                Icons.airplanemode_active_rounded,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              title: const Text(
+                'Espacios aéreos OpenAIP',
+                style: TextStyle(fontWeight: FontWeight.w900),
+              ),
+              subtitle: const Text('Capa informativa, no oficial.'),
+            ),
+            if (state is AirspaceLoadingState)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: CircularProgressIndicator.adaptive(),
+                ),
+              )
+            else if (state is AirspaceErrorState)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'No se pudo cargar espacios aéreos. Verifica tu conexión.',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ),
+              )
+            else if (state is AirspaceEmptyState)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'No hay espacios aéreos en el radio configurado.',
+                  ),
+                ),
+              )
+            else if (state is AirspaceLoadedState)
+              ...(state as AirspaceLoadedState).airspaces.map(
+                (airspace) => ListTile(
+                  dense: true,
+                  leading: const Icon(Icons.cloud_rounded),
+                  title: Text(
+                    airspace.name,
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  subtitle: Text(
+                    '${airspace.icaoClassLabel} | ${airspace.typeLabel}',
+                  ),
+                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Datos cortesía de OpenAIP. Verifica siempre con autoridades oficiales.',
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _MapPlaceholderPainter extends CustomPainter {
