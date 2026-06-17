@@ -74,12 +74,11 @@ void main() {
     await session.loadRealWeather();
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Clima real | Open-Meteo'), findsOneWidget);
-    expect(find.textContaining('Open-Meteo -'), findsOneWidget);
+    expect(find.textContaining('Condiciones actuales'), findsOneWidget);
     expect(find.textContaining('Catamarca'), findsNothing);
     await tester.drag(find.byType(ListView), const Offset(0, -500));
     await tester.pumpAndSettle();
-    expect(find.text('No disp.'), findsWidgets);
+    expect(find.text('Sin dato'), findsWidgets);
   });
 
   testWidgets('conditions screen shows error and can retry real weather', (

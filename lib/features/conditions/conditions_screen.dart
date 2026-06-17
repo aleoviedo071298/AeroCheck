@@ -67,21 +67,14 @@ class ConditionsScreen extends StatelessWidget {
 
   List<_Metric> _metricsFor(WeatherSnapshot weather) {
     return [
-      _Metric('Viento', '${_fmt(weather.windKmh)} km/h', Icons.air_rounded),
-      _Metric('Rafagas', '${_fmt(weather.gustKmh)} km/h', Icons.speed_rounded),
       _Metric(
-        'Variacion',
-        '${_fmt((weather.gustKmh ?? 0) - (weather.windKmh ?? 0))} km/h',
-        Icons.swap_vert_rounded,
-      ),
-      _Metric(
-        'Temp.',
-        '${_fmt(weather.temperatureC)} C',
+        'Temperatura',
+        '${_fmt(weather.temperatureC)} °C',
         Icons.device_thermostat_rounded,
       ),
       _Metric(
         'Lluvia',
-        '${_fmt(weather.precipitationProbability)}%',
+        '${_fmt(weather.precipitationProbability)} %',
         Icons.water_drop_rounded,
       ),
       _Metric(
@@ -90,15 +83,15 @@ class ConditionsScreen extends StatelessWidget {
         Icons.visibility_rounded,
       ),
       _Metric(
-        'Nubes',
+        'Cobertura nubosa',
         weather.cloudBaseMeters == null
-            ? 'No disp.'
+            ? 'Sin dato'
             : '${_fmt(weather.cloudBaseMeters)} m',
         Icons.cloud_rounded,
       ),
       _Metric(
-        'Kp',
-        weather.kpIndex == null ? 'No disp.' : _fmt(weather.kpIndex),
+        'Kp (magnético)',
+        weather.kpIndex == null ? 'Sin dato' : _fmt(weather.kpIndex),
         Icons.sensors_rounded,
       ),
     ];
@@ -106,7 +99,7 @@ class ConditionsScreen extends StatelessWidget {
 
   String _subtitleFor(WeatherSnapshot weather) {
     final time = _time(weather.time);
-    return 'Open-Meteo - $time';
+    return 'Condiciones actuales · $time';
   }
 }
 
@@ -532,21 +525,34 @@ class _ScoreDial extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 74,
-      height: 74,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: color, width: 6),
-      ),
-      child: Text(
-        '$score',
-        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-          fontWeight: FontWeight.w900,
-          color: color,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: 74,
+          height: 74,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: color, width: 6),
+          ),
+          child: Text(
+            '$score',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w900,
+              color: color,
+            ),
+          ),
         ),
-      ),
+        const SizedBox(height: 6),
+        Text(
+          'Aptitud 0/100',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: color,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -559,29 +565,56 @@ class _BestWindowCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final window = report.bestWindow;
+    final now = DateTime.now();
+    final windowPassed = window.end.isBefore(now);
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.wb_sunny_rounded, color: Color(0xFFF59E0B)),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Mejor ventana',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.w900,
+            Row(
+              children: [
+                const Icon(Icons.wb_sunny_rounded, color: Color(0xFFF59E0B)),
+                const SizedBox(width: 12),
+                Text(
+                  windowPassed
+                      ? 'PRÓXIMA VENTANA DISPONIBLE'
+                      : 'MEJOR VENTANA DISPONIBLE',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w900),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      windowPassed ? 'Próxima:' : 'Horario:',
+                      style: Theme.of(context).textTheme.labelSmall,
                     ),
+                    Text(
+                      '${_time(window.start)} - ${_time(window.end)}',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+                Expanded(
+                  child: Text(
+                    window.summary,
+                    textAlign: TextAlign.right,
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
-                  Text(
-                    '${_time(window.start)} - ${_time(window.end)} | ${window.summary}',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ],
         ),
@@ -607,14 +640,14 @@ class _ReasonList extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Motivos',
+              'RAZONES DE RECHAZO',
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 10),
             if (activeRules.isEmpty)
-              const Text('No hay alertas para esta ventana.')
+              const Text('Sin restricciones detectadas.')
             else
               ...activeRules.map((rule) => _ReasonTile(rule: rule)),
           ],
@@ -632,8 +665,10 @@ class _ReasonTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = _severityColor(rule.severity);
+    final hasValues = rule.measuredValue != null && rule.threshold != null;
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -648,7 +683,30 @@ class _ReasonTile extends StatelessWidget {
                   style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 2),
-                Text(rule.details),
+                Text(
+                  rule.details,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                if (hasValues) ...[
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Actual: ${_fmt(rule.measuredValue)}',
+                        style: Theme.of(
+                          context,
+                        ).textTheme.labelSmall?.copyWith(color: color),
+                      ),
+                      Text(
+                        'Límite: ${_fmt(rule.threshold)}',
+                        style: Theme.of(
+                          context,
+                        ).textTheme.labelSmall?.copyWith(color: color),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
@@ -723,15 +781,77 @@ class _ProfileStrip extends StatelessWidget {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.flight_takeoff_rounded),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                '${report.droneProfile.name} | ${report.missionProfile.name} | ${report.droneProfile.preferredAltitudeMeters} m',
-                style: const TextStyle(fontWeight: FontWeight.w800),
-              ),
+            Row(
+              children: [
+                const Icon(Icons.flight_takeoff_rounded),
+                const SizedBox(width: 12),
+                Text(
+                  'OPERACIÓN CONFIGURADA',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w900),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Dron',
+                        style: Theme.of(
+                          context,
+                        ).textTheme.labelSmall?.copyWith(color: Colors.grey),
+                      ),
+                      Text(
+                        report.droneProfile.name,
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Misión',
+                        style: Theme.of(
+                          context,
+                        ).textTheme.labelSmall?.copyWith(color: Colors.grey),
+                      ),
+                      Text(
+                        report.missionProfile.name,
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Altitud',
+                        style: Theme.of(
+                          context,
+                        ).textTheme.labelSmall?.copyWith(color: Colors.grey),
+                      ),
+                      Text(
+                        '${report.droneProfile.preferredAltitudeMeters} m',
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ],
         ),
