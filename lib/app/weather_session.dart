@@ -89,13 +89,17 @@ class WeatherSession extends ChangeNotifier {
   }
 
   List<ForecastRow> get forecastRows {
-    if (_dataSource == WeatherDataSource.real && _realBundle != null) {
-      return _realBundle!.hourlySnapshots
+    final bundle = _realBundle;
+    if (_dataSource == WeatherDataSource.real && bundle != null) {
+      final bestWindow = bestWindowFor(bundle.hourlySnapshots);
+      return bundle.hourlySnapshots
           .take(12)
-          .map(_forecastRowFor)
+          .map((snapshot) => _forecastRowFor(snapshot, bestWindow))
           .toList();
     }
-    return MockFlightData.forecastSnapshots().map(_forecastRowFor).toList();
+    return MockFlightData.forecastSnapshots()
+        .map((snapshot) => _forecastRowFor(snapshot, MockFlightData.bestWindow))
+        .toList();
   }
 
   List<WindProfileRow> get windProfileRows {
@@ -305,13 +309,16 @@ class WeatherSession extends ChangeNotifier {
     );
   }
 
-  ForecastRow _forecastRowFor(WeatherSnapshot snapshot) {
+  ForecastRow _forecastRowFor(
+    WeatherSnapshot snapshot,
+    FlightWindowRecommendation bestWindow,
+  ) {
     final weather = _withOperationalContext(snapshot);
     final report = _evaluator.evaluate(
       weather: weather,
       droneProfile: MockFlightData.droneProfile,
       missionProfile: MockFlightData.missionProfile,
-      bestWindow: MockFlightData.bestWindow,
+      bestWindow: bestWindow,
     );
     final reasons = _reasonsFor(report);
 
@@ -320,6 +327,7 @@ class WeatherSession extends ChangeNotifier {
       status: report.status.label,
       primaryReason: reasons.first.title,
       reasons: reasons,
+      isBestWindow: _containsBestWindowStart(weather.time, bestWindow.start),
       windKmh: weather.windKmh ?? 0,
       gustKmh: weather.gustKmh ?? 0,
       rainPercent: weather.precipitationProbability ?? 0,
@@ -349,6 +357,28 @@ class WeatherSession extends ChangeNotifier {
           ),
         )
         .toList();
+  }
+
+  bool _containsBestWindowStart(DateTime rowTime, DateTime bestWindowStart) {
+    final rowStart = DateTime(
+      rowTime.year,
+      rowTime.month,
+      rowTime.day,
+      rowTime.hour,
+    );
+    final rowEnd = rowStart.add(const Duration(hours: 1));
+    if (_isSameDate(rowTime, bestWindowStart)) {
+      return !bestWindowStart.isBefore(rowStart) &&
+          bestWindowStart.isBefore(rowEnd);
+    }
+
+    return bestWindowStart.hour == rowTime.hour;
+  }
+
+  bool _isSameDate(DateTime first, DateTime second) {
+    return first.year == second.year &&
+        first.month == second.month &&
+        first.day == second.day;
   }
 
   String _time(DateTime value) {

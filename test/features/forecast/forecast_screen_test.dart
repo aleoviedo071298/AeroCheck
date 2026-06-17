@@ -20,6 +20,7 @@ void main() {
 
     expect(find.text('Forecast horario'), findsOneWidget);
     expect(find.text('APTO'), findsWidgets);
+    expect(find.text('Mejor hora'), findsOneWidget);
     expect(
       find.text('Condiciones principales dentro de tus limites.'),
       findsWidgets,

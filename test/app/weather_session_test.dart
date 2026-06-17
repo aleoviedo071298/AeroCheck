@@ -20,12 +20,18 @@ void main() {
 
       expect(session.dataSource, WeatherDataSource.mock);
       expect(session.forecastRows.first.hour, '08:00');
+      expect(session.forecastRows.first.isBestWindow, isTrue);
+      expect(
+        session.forecastRows.where((row) => row.isBestWindow),
+        hasLength(1),
+      );
 
       await session.loadRealWeather();
       session.setDataSource(WeatherDataSource.real);
 
       expect(session.realBundle, isNotNull);
       expect(session.forecastRows.first.hour, '13:00');
+      expect(session.forecastRows.first.isBestWindow, isTrue);
       expect(session.forecastRows.first.windKmh, 12);
       expect(session.windProfileRows.first.altitude, '10 m');
       expect(session.windProfileRows.first.windKmh, 12);
@@ -189,6 +195,7 @@ void main() {
 
     expect(session.forecastRows.first.status, 'PRECAUCION');
     expect(session.forecastRows.first.primaryReason, 'Zona sensible cercana');
+    expect(session.forecastRows.first.isBestWindow, isTrue);
     expect(
       session.forecastRows.first.reasons.map((reason) => reason.title),
       contains('Zona sensible cercana'),

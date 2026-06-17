@@ -185,6 +185,7 @@ class ForecastRow {
     required this.status,
     required this.primaryReason,
     required this.reasons,
+    required this.isBestWindow,
     required this.windKmh,
     required this.gustKmh,
     required this.rainPercent,
@@ -195,6 +196,7 @@ class ForecastRow {
   final String status;
   final String primaryReason;
   final List<ForecastReason> reasons;
+  final bool isBestWindow;
   final double windKmh;
   final double gustKmh;
   final double rainPercent;

@@ -99,6 +99,10 @@ class _ForecastRowSummary extends StatelessWidget {
                   fontWeight: FontWeight.w900,
                 ),
               ),
+              if (row.isBestWindow) ...[
+                const SizedBox(height: 5),
+                const _BestWindowPill(),
+              ],
               const SizedBox(height: 3),
               Text(
                 row.primaryReason,
@@ -135,6 +139,32 @@ class _ForecastRowSummary extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _BestWindowPill extends StatelessWidget {
+  const _BestWindowPill();
+
+  @override
+  Widget build(BuildContext context) {
+    const color = Color(0xFF0F766E);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.26)),
+      ),
+      child: const Text(
+        'Mejor hora',
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w900,
+          height: 1,
+        ),
+      ),
     );
   }
 }
