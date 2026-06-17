@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../app/weather_session.dart';
@@ -120,6 +122,7 @@ class _LocationSelector extends StatefulWidget {
 class _LocationSelectorState extends State<_LocationSelector> {
   late TextEditingController _searchController;
   Future<List<FlightLocation>>? _searchFuture;
+  Timer? _debounceTimer;
 
   @override
   void initState() {
@@ -130,12 +133,18 @@ class _LocationSelectorState extends State<_LocationSelector> {
   @override
   void dispose() {
     _searchController.dispose();
+    _debounceTimer?.cancel();
     super.dispose();
   }
 
   void _filterLocations(String query) {
-    setState(() {
-      _searchFuture = widget.session.searchCities(query);
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        setState(() {
+          _searchFuture = widget.session.searchCities(query);
+        });
+      }
     });
   }
 
