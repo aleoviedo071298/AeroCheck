@@ -10,11 +10,13 @@ class UnitsScreen extends StatefulWidget {
     required this.initialUnits,
     required this.language,
     required this.onSave,
+    required this.onBack,
   });
 
   final UnitPreferences initialUnits;
   final Language language;
   final void Function(UnitPreferences) onSave;
+  final VoidCallback onBack;
 
   @override
   State<UnitsScreen> createState() => _UnitsScreenState();
@@ -31,79 +33,75 @@ class _UnitsScreenState extends State<UnitsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(AppStrings.get('unidades', language: widget.language)),
-        centerTitle: false,
-      ),
-      body: Container(
-        color: const Color(0xFFF1F5F9),
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+      children: [
+        Text(
+          AppStrings.get('unidades', language: widget.language),
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
+        ),
+        const SizedBox(height: 12),
+        _buildSection(
+          AppStrings.get('velocidad_viento', language: widget.language),
+          SpeedUnit.values,
+          units.speed,
+          (unit) => setState(() => units = units.copyWith(speed: unit)),
+        ),
+        _buildSection(
+          AppStrings.get('altura_altitud', language: widget.language),
+          AltitudeUnit.values,
+          units.altitude,
+          (unit) => setState(() => units = units.copyWith(altitude: unit)),
+        ),
+        _buildSection(
+          AppStrings.get('distancia_visibilidad', language: widget.language),
+          DistanceUnit.values,
+          units.distance,
+          (unit) => setState(() => units = units.copyWith(distance: unit)),
+        ),
+        _buildSection(
+          AppStrings.get('temperatura', language: widget.language),
+          TemperatureUnit.values,
+          units.temperature,
+          (unit) => setState(() => units = units.copyWith(temperature: unit)),
+        ),
+        _buildSection(
+          AppStrings.get('presion', language: widget.language),
+          PressureUnit.values,
+          units.pressure,
+          (unit) => setState(() => units = units.copyWith(pressure: unit)),
+        ),
+        _buildSection(
+          AppStrings.get('precipitacion', language: widget.language),
+          PrecipitationUnit.values,
+          units.precipitation,
+          (unit) => setState(() => units = units.copyWith(precipitation: unit)),
+        ),
+        const SizedBox(height: 24),
+        Row(
           children: [
-            _buildSection(
-              'Velocidad de viento',
-              SpeedUnit.values,
-              units.speed,
-              (unit) => setState(() => units = units.copyWith(speed: unit)),
-            ),
-            _buildSection(
-              'Altura / altitud',
-              AltitudeUnit.values,
-              units.altitude,
-              (unit) => setState(() => units = units.copyWith(altitude: unit)),
-            ),
-            _buildSection(
-              'Distancia / visibilidad',
-              DistanceUnit.values,
-              units.distance,
-              (unit) => setState(() => units = units.copyWith(distance: unit)),
-            ),
-            _buildSection(
-              'Temperatura',
-              TemperatureUnit.values,
-              units.temperature,
-              (unit) =>
-                  setState(() => units = units.copyWith(temperature: unit)),
-            ),
-            _buildSection(
-              'Presión',
-              PressureUnit.values,
-              units.pressure,
-              (unit) => setState(() => units = units.copyWith(pressure: unit)),
-            ),
-            _buildSection(
-              'Precipitación',
-              PrecipitationUnit.values,
-              units.precipitation,
-              (unit) =>
-                  setState(() => units = units.copyWith(precipitation: unit)),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text(
-                      AppStrings.get('cancelar', language: widget.language),
-                    ),
-                  ),
+            Expanded(
+              child: OutlinedButton(
+                onPressed: widget.onBack,
+                child: Text(
+                  AppStrings.get('cancelar', language: widget.language),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: () => widget.onSave(units),
-                    child: Text(
-                      AppStrings.get('guardar', language: widget.language),
-                    ),
-                  ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: FilledButton(
+                onPressed: () => widget.onSave(units),
+                child: Text(
+                  AppStrings.get('guardar', language: widget.language),
                 ),
-              ],
+              ),
             ),
           ],
         ),
-      ),
+      ],
     );
   }
 

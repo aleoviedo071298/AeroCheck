@@ -8,10 +8,12 @@ class LanguageScreen extends StatefulWidget {
     super.key,
     required this.initialLanguage,
     required this.onSave,
+    required this.onBack,
   });
 
   final Language initialLanguage;
   final void Function(Language) onSave;
+  final VoidCallback onBack;
 
   @override
   State<LanguageScreen> createState() => _LanguageScreenState();
@@ -28,57 +30,50 @@ class _LanguageScreenState extends State<LanguageScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+      children: [
+        Text(
           AppStrings.get('seleccionar_idioma', language: selectedLanguage),
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
         ),
-        centerTitle: false,
-      ),
-      body: Container(
-        color: const Color(0xFFF1F5F9),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ...Language.values.map(
-                (lang) => _LanguageOption(
-                  language: lang,
-                  isSelected: selectedLanguage == lang,
-                  onTap: () {
-                    setState(() {
-                      selectedLanguage = lang;
-                    });
-                  },
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text(
-                        AppStrings.get('cancelar', language: selectedLanguage),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: () => widget.onSave(selectedLanguage),
-                      child: Text(
-                        AppStrings.get('guardar', language: selectedLanguage),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+        const SizedBox(height: 12),
+        ...Language.values.map(
+          (lang) => _LanguageOption(
+            language: lang,
+            isSelected: selectedLanguage == lang,
+            onTap: () {
+              setState(() {
+                selectedLanguage = lang;
+              });
+            },
           ),
         ),
-      ),
+        const SizedBox(height: 24),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: widget.onBack,
+                child: Text(
+                  AppStrings.get('cancelar', language: selectedLanguage),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: FilledButton(
+                onPressed: () => widget.onSave(selectedLanguage),
+                child: Text(
+                  AppStrings.get('guardar', language: selectedLanguage),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

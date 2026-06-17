@@ -5,6 +5,8 @@ import 'package:aerocheck/data/preferences/user_preferences_store.dart';
 import 'package:aerocheck/data/weather/weather_bundle.dart';
 import 'package:aerocheck/data/weather/weather_repository.dart';
 import 'package:aerocheck/domain/entities/weather_snapshot.dart';
+import 'package:aerocheck/domain/i18n/language.dart';
+import 'package:aerocheck/domain/units/unit_preferences.dart';
 import 'package:aerocheck/features/forecast/forecast_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -43,11 +45,45 @@ void main() {
 
     expect(find.text('Forecast horario'), findsOneWidget);
   });
+
+  testWidgets('forecast uses persisted English copy and speed units', (
+    tester,
+  ) async {
+    final session = WeatherSession(
+      weatherRepository: _FakeWeatherRepository(),
+      preferencesStore: _FakePreferencesStore(
+        const UserPreferences(
+          language: Language.en,
+          units: UnitPreferences(speed: SpeedUnit.mph),
+        ),
+      ),
+    );
+    await session.restorePreferences();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: ForecastScreen(session: session)),
+      ),
+    );
+
+    expect(find.text('Hourly forecast'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('mph').first,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('mph'), findsWidgets);
+    expect(find.text('km/h'), findsNothing);
+  });
 }
 
 class _FakePreferencesStore implements UserPreferencesStore {
+  _FakePreferencesStore([this.preferences = const UserPreferences()]);
+
+  final UserPreferences preferences;
+
   @override
-  Future<UserPreferences> load() async => const UserPreferences();
+  Future<UserPreferences> load() async => preferences;
 
   @override
   Future<void> save(UserPreferences preferences) async {}

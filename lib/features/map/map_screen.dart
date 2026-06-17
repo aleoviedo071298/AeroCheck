@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../../app/airspace_state.dart';
 import '../../app/weather_session.dart';
 import '../../data/location/flight_location.dart';
+import '../../domain/i18n/app_strings.dart';
+import '../../domain/units/unit_formatters.dart';
 import 'presentation/widgets/real_map_widget.dart';
 
 class MapScreen extends StatelessWidget {
@@ -21,6 +23,7 @@ class MapScreen extends StatelessWidget {
     return AnimatedBuilder(
       animation: session,
       builder: (context, _) {
+        AppStrings.currentLanguage = session.preferences.language;
         final location = session.selectedLocation;
         final guideRadiusKm = session.guideRadiusKm;
         final airspaceState = session.airspaceState;
@@ -160,7 +163,7 @@ class MapScreen extends StatelessWidget {
                                           ),
                                           const SizedBox(width: 4),
                                           Text(
-                                            'Ubicación',
+                                            AppStrings.get('ubicacion_mapa'),
                                             style: TextStyle(
                                               fontSize: 11,
                                               fontWeight: FontWeight.w800,
@@ -182,7 +185,11 @@ class MapScreen extends StatelessWidget {
                                           ),
                                           const SizedBox(width: 6),
                                           Text(
-                                            '${guideRadiusKm.toStringAsFixed(0)} km',
+                                            UnitFormatters.formatDistance(
+                                              guideRadiusKm,
+                                              session.preferences.units,
+                                              decimals: 0,
+                                            ),
                                             style: TextStyle(
                                               fontSize: 10,
                                               fontWeight: FontWeight.w700,
@@ -213,7 +220,7 @@ class MapScreen extends StatelessWidget {
                                           ),
                                           const SizedBox(width: 6),
                                           Text(
-                                            '5 km (Zonas CTR)',
+                                            '${UnitFormatters.formatDistance(5, session.preferences.units, decimals: 0)} (${AppStrings.get('zonas_ctr')})',
                                             style: TextStyle(
                                               fontSize: 10,
                                               fontWeight: FontWeight.w700,
@@ -299,14 +306,14 @@ class _MapTitleBlock extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Mapa operativo',
+                  AppStrings.get('mapa_operativo'),
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w900,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${location.label}\nLat: ${location.latitude.toStringAsFixed(4)} · Lon: ${location.longitude.toStringAsFixed(4)} · Elev. ${location.elevation} m',
+                  '${location.label}\nLat: ${location.latitude.toStringAsFixed(4)} · Lon: ${location.longitude.toStringAsFixed(4)} · Elev. ${UnitFormatters.formatAltitude(location.elevation.toDouble(), session.preferences.units, decimals: 0)}',
                   style: TextStyle(
                     fontSize: 12,
                     color: isDark
@@ -455,8 +462,8 @@ class _FavoriteLocationSelector extends StatelessWidget {
                     Icons.my_location_rounded,
                     color: Color(0xFF0D9488),
                   ),
-                  title: const Text(
-                    'Usar ubicación GPS actual',
+                  title: Text(
+                    AppStrings.get('usar_ubicacion_gps'),
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                   onTap: () {
@@ -469,8 +476,8 @@ class _FavoriteLocationSelector extends StatelessWidget {
                     Icons.search_rounded,
                     color: Color(0xFF0D9488),
                   ),
-                  title: const Text(
-                    'Buscar otra ciudad...',
+                  title: Text(
+                    AppStrings.get('buscar_otra_ciudad'),
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                   onTap: () {
@@ -500,7 +507,11 @@ class _GuideRadiusControl extends StatelessWidget {
   final WeatherSession session;
 
   String _formatRadius(double value) {
-    return '${value.toStringAsFixed(0)} km';
+    return UnitFormatters.formatDistance(
+      value,
+      session.preferences.units,
+      decimals: 0,
+    );
   }
 
   @override
@@ -533,7 +544,7 @@ class _GuideRadiusControl extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Radio guía',
+                    AppStrings.get('radio_vuelo'),
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w900,
@@ -582,7 +593,7 @@ class _GuideRadiusControl extends StatelessWidget {
                 children: [1.0, 3.0, 5.0, 10.0, 15.0].map((val) {
                   final isSelected = (radius - val).abs() < 1.0;
                   return Text(
-                    '${val.toStringAsFixed(0)} km',
+                    _formatRadius(val),
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: isSelected
@@ -660,13 +671,19 @@ class _MapSummaryMetricsCard extends StatelessWidget {
     final weather = session.currentReport?.weather;
     final airspaceState = session.airspaceState;
 
-    final elevationStr = '${location.elevation} m';
+    final elevationStr = UnitFormatters.formatAltitude(
+      location.elevation.toDouble(),
+      session.preferences.units,
+      decimals: 0,
+    );
 
     bool hasTma = false;
     if (airspaceState is AirspaceLoadedState) {
       hasTma = airspaceState.airspaces.any((a) => a.typeCode == 7);
     }
-    final tmaStr = hasTma ? 'Activa' : 'No activa';
+    final tmaStr = hasTma
+        ? AppStrings.get('activa')
+        : AppStrings.get('no_activa');
 
     String flightCategory = 'VFR';
     Color categoryColor = const Color(0xFF16A34A);
@@ -686,10 +703,14 @@ class _MapSummaryMetricsCard extends StatelessWidget {
       }
     }
 
-    String windSpeedStr = 'Sin dato';
+    String windSpeedStr = AppStrings.get('sin_dato');
     String windDirectionStr = '';
     if (weather != null && weather.windKmh != null) {
-      windSpeedStr = '${weather.windKmh!.toStringAsFixed(0)} km/h';
+      windSpeedStr = UnitFormatters.formatSpeed(
+        weather.windKmh,
+        session.preferences.units,
+        decimals: 0,
+      );
       final cardinal = weather.windDirectionCardinal ?? '';
       final deg = weather.windDirectionDegrees != null
           ? ' ${weather.windDirectionDegrees!.toStringAsFixed(0)}°'
@@ -716,7 +737,7 @@ class _MapSummaryMetricsCard extends StatelessWidget {
               child: _MetricItem(
                 icon: Icons.landscape_rounded,
                 iconColor: const Color(0xFF64748B),
-                label: 'Elevación',
+                label: AppStrings.get('elevacion'),
                 value: elevationStr,
               ),
             ),
@@ -736,7 +757,7 @@ class _MapSummaryMetricsCard extends StatelessWidget {
                 icon: Icons.circle,
                 iconColor: categoryColor,
                 iconSize: 10,
-                label: 'Clima',
+                label: AppStrings.get('clima'),
                 value: flightCategory,
                 valueColor: categoryColor,
               ),
@@ -746,7 +767,7 @@ class _MapSummaryMetricsCard extends StatelessWidget {
               child: _MetricItem(
                 icon: Icons.air_rounded,
                 iconColor: const Color(0xFF0EA5E9),
-                label: 'Viento',
+                label: AppStrings.get('viento'),
                 value: windSpeedStr,
                 subValue: windDirectionStr,
               ),
@@ -875,12 +896,12 @@ class _AirspaceLayerCard extends StatelessWidget {
                   size: 20,
                 ),
               ),
-              title: const Text(
-                'Espacios aéreos OpenAIP',
+              title: Text(
+                AppStrings.get('espacios_openaip'),
                 style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14),
               ),
-              subtitle: const Text(
-                'Capa informativa, no oficial.',
+              subtitle: Text(
+                AppStrings.get('capa_informativa'),
                 style: TextStyle(fontSize: 11),
               ),
             ),
@@ -894,7 +915,7 @@ class _AirspaceLayerCard extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Text(
-                  'No se pudo cargar espacios aéreos. Verifica tu conexión.',
+                  AppStrings.get('error_espacios'),
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.error,
                     fontSize: 12,
@@ -903,10 +924,10 @@ class _AirspaceLayerCard extends StatelessWidget {
                 ),
               )
             else if (state is AirspaceEmptyState)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Text(
-                  'No hay espacios aéreos en el radio configurado.',
+                  AppStrings.get('sin_espacios'),
                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
                 ),
               )
@@ -954,7 +975,7 @@ class _AirspaceLayerCard extends StatelessWidget {
               }),
             const SizedBox(height: 8),
             Text(
-              'Datos cortesía de OpenAIP. Verifica siempre con autoridades oficiales.',
+              AppStrings.get('atribucion_openaip'),
               style: TextStyle(
                 fontSize: 9,
                 fontWeight: FontWeight.w700,
@@ -1003,8 +1024,7 @@ class _MapTipCard extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'El radio guía indica distancias desde la ubicación seleccionada. '
-                'Verifica las condiciones antes de operar.',
+                AppStrings.get('radio_explicacion'),
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
@@ -1014,14 +1034,6 @@ class _MapTipCard extends StatelessWidget {
                   height: 1.3,
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: isDark
-                  ? const Color(0xFF0284C7).withValues(alpha: 0.6)
-                  : const Color(0xFF0284C7),
-              size: 20,
             ),
           ],
         ),
@@ -1076,7 +1088,7 @@ class _AddLocationDialogState extends State<_AddLocationDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Buscar ciudad'),
+      title: Text(AppStrings.get('buscar_ciudad')),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1084,7 +1096,7 @@ class _AddLocationDialogState extends State<_AddLocationDialog> {
             TextField(
               controller: _controller,
               decoration: InputDecoration(
-                hintText: 'Escribe nombre de ciudad...',
+                hintText: AppStrings.get('escribe_nombre_ciudad'),
                 prefixIcon: const Icon(Icons.search),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -1097,25 +1109,29 @@ class _AddLocationDialogState extends State<_AddLocationDialog> {
               height: 300,
               width: double.maxFinite,
               child: _searchFuture == null
-                  ? const Center(child: Text('Escribe para buscar ciudades'))
+                  ? Center(
+                      child: Text(AppStrings.get('escribe_buscar_ciudades')),
+                    )
                   : FutureBuilder<List<FlightLocation>>(
                       future: _searchFuture,
                       builder: (context, snapshot) {
                         if (snapshot.connectionState ==
                             ConnectionState.waiting) {
-                          return const Center(
-                            child: CircularProgressIndicator(),
-                          );
+                          return Center(child: CircularProgressIndicator());
                         }
                         if (snapshot.hasError) {
                           return Center(
-                            child: Text('Error: ${snapshot.error}'),
+                            child: Text(
+                              '${AppStrings.get('error')}: ${snapshot.error}',
+                            ),
                           );
                         }
                         final locations = snapshot.data ?? [];
                         if (locations.isEmpty) {
-                          return const Center(
-                            child: Text('No se encontraron ciudades'),
+                          return Center(
+                            child: Text(
+                              AppStrings.get('sin_resultados_ciudades'),
+                            ),
                           );
                         }
                         return ListView.builder(
@@ -1142,7 +1158,7 @@ class _AddLocationDialogState extends State<_AddLocationDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cerrar'),
+          child: Text(AppStrings.get('cerrar')),
         ),
       ],
     );

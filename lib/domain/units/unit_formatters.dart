@@ -2,6 +2,45 @@ import 'unit_preferences.dart';
 import 'unit_converters.dart';
 
 class UnitFormatters {
+  static String formatSpeedValue(
+    double? value,
+    UnitPreferences units, {
+    int decimals = 1,
+  }) {
+    if (value == null) return '—';
+    return UnitConverters.convertSpeed(
+      value,
+      SpeedUnit.kmh,
+      units.speed,
+    ).toStringAsFixed(decimals);
+  }
+
+  static String formatAltitudeValue(
+    double? value,
+    UnitPreferences units, {
+    int decimals = 0,
+  }) {
+    if (value == null) return '—';
+    return UnitConverters.convertAltitude(
+      value,
+      AltitudeUnit.m,
+      units.altitude,
+    ).toStringAsFixed(decimals);
+  }
+
+  static String formatTemperatureValue(
+    double? value,
+    UnitPreferences units, {
+    int decimals = 1,
+  }) {
+    if (value == null) return '—';
+    return UnitConverters.convertTemperature(
+      value,
+      TemperatureUnit.c,
+      units.temperature,
+    ).toStringAsFixed(decimals);
+  }
+
   // Format a speed value according to preferences
   static String formatSpeed(
     double? value,

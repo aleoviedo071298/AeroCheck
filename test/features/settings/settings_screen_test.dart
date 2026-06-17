@@ -28,7 +28,12 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(body: SettingsScreen(session: session)),
+        home: Scaffold(
+          body: SettingsScreen(
+            session: session,
+            resetNotifier: ValueNotifier<int>(0),
+          ),
+        ),
       ),
     );
 
@@ -66,7 +71,12 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(body: SettingsScreen(session: session)),
+        home: Scaffold(
+          body: SettingsScreen(
+            session: session,
+            resetNotifier: ValueNotifier<int>(0),
+          ),
+        ),
       ),
     );
 

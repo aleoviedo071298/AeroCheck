@@ -8,6 +8,7 @@ import '../../data/location/flight_location.dart';
 import '../../domain/entities/flight_readiness_report.dart';
 import '../../domain/entities/flight_rule_result.dart';
 import '../../domain/entities/weather_snapshot.dart';
+import '../../domain/i18n/app_strings.dart';
 import '../../domain/rules/flight_readiness_status.dart';
 import '../../domain/rules/rule_severity.dart';
 import '../../data/mock/mock_flight_data.dart';
@@ -15,9 +16,14 @@ import '../../domain/units/unit_formatters.dart';
 import '../../domain/units/unit_preferences.dart';
 
 class ConditionsScreen extends StatelessWidget {
-  const ConditionsScreen({super.key, required this.session});
+  const ConditionsScreen({
+    super.key,
+    required this.session,
+    this.onNavigateToForecast,
+  });
 
   final WeatherSession session;
+  final VoidCallback? onNavigateToForecast;
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +35,7 @@ class ConditionsScreen extends StatelessWidget {
     return AnimatedBuilder(
       animation: session,
       builder: (context, _) {
+        AppStrings.currentLanguage = session.preferences.language;
         final report = session.currentReport;
         final weather = report?.weather;
 
@@ -72,7 +79,10 @@ class ConditionsScreen extends StatelessWidget {
                         const _StaticLoadingCard()
                       else if (weather != null) ...[
                         // 3. Status dial panel
-                        _RedesignedStatusPanel(report: report),
+                        _RedesignedStatusPanel(
+                          report: report,
+                          onNavigateToForecast: onNavigateToForecast,
+                        ),
                         const SizedBox(height: 12),
 
                         // 4. Reasons list
@@ -91,7 +101,10 @@ class ConditionsScreen extends StatelessWidget {
                         const SizedBox(height: 12),
 
                         // 7. Profile strip
-                        _ProfileStrip(report: report),
+                        _ProfileStrip(
+                          report: report,
+                          units: session.preferences.units,
+                        ),
                       ],
                     ],
                   ),
@@ -174,7 +187,7 @@ class _CollapsibleLocationCardState extends State<_CollapsibleLocationCard> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Lat: ${location.latitude.toStringAsFixed(4)} · Lon: ${location.longitude.toStringAsFixed(4)} · Elev. ${location.elevation} m',
+                          'Lat: ${location.latitude.toStringAsFixed(4)} · Lon: ${location.longitude.toStringAsFixed(4)} · Elev. ${UnitFormatters.formatAltitude(location.elevation.toDouble(), widget.session.preferences.units, decimals: 0)}',
                           style: TextStyle(
                             fontSize: 12,
                             color: isDark
@@ -202,7 +215,7 @@ class _CollapsibleLocationCardState extends State<_CollapsibleLocationCard> {
                 Row(
                   children: [
                     Text(
-                      'Cambiar Ubicación',
+                      AppStrings.get('cambiar_ubicacion'),
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -214,7 +227,7 @@ class _CollapsibleLocationCardState extends State<_CollapsibleLocationCard> {
                       key: const ValueKey('gps-location-button'),
                       icon: const Icon(Icons.my_location_rounded),
                       iconSize: 20,
-                      tooltip: 'Mi ubicación (GPS)',
+                      tooltip: AppStrings.get('mi_ubicacion_gps'),
                       onPressed: () {
                         widget.session.setLocationToCurrentGPS();
                         setState(() {
@@ -245,7 +258,7 @@ class _CollapsibleLocationCardState extends State<_CollapsibleLocationCard> {
                     }),
                     ActionChip(
                       key: const ValueKey('add-location-button'),
-                      label: const Text('Buscar'),
+                      label: Text(AppStrings.get('buscar')),
                       avatar: const Icon(Icons.search_rounded, size: 16),
                       onPressed: () {
                         _showAddLocationDialog();
@@ -267,7 +280,7 @@ class _CollapsibleLocationCardState extends State<_CollapsibleLocationCard> {
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
-            title: const Text('Buscar ciudad'),
+            title: Text(AppStrings.get('buscar_ciudad')),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -275,7 +288,7 @@ class _CollapsibleLocationCardState extends State<_CollapsibleLocationCard> {
                   TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
-                      hintText: 'Escribe nombre de ciudad...',
+                      hintText: AppStrings.get('escribe_nombre_ciudad'),
                       prefixIcon: const Icon(Icons.search),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -298,27 +311,33 @@ class _CollapsibleLocationCardState extends State<_CollapsibleLocationCard> {
                     height: 300,
                     width: double.maxFinite,
                     child: _searchFuture == null
-                        ? const Center(
-                            child: Text('Escribe para buscar ciudades'),
+                        ? Center(
+                            child: Text(
+                              AppStrings.get('escribe_buscar_ciudades'),
+                            ),
                           )
                         : FutureBuilder<List<FlightLocation>>(
                             future: _searchFuture,
                             builder: (context, snapshot) {
                               if (snapshot.connectionState ==
                                   ConnectionState.waiting) {
-                                return const Center(
+                                return Center(
                                   child: CircularProgressIndicator(),
                                 );
                               }
                               if (snapshot.hasError) {
                                 return Center(
-                                  child: Text('Error: ${snapshot.error}'),
+                                  child: Text(
+                                    '${AppStrings.get('error')}: ${snapshot.error}',
+                                  ),
                                 );
                               }
                               final locations = snapshot.data ?? [];
                               if (locations.isEmpty) {
-                                return const Center(
-                                  child: Text('No se encontraron ciudades'),
+                                return Center(
+                                  child: Text(
+                                    AppStrings.get('sin_resultados_ciudades'),
+                                  ),
                                 );
                               }
                               return ListView.builder(
@@ -361,7 +380,7 @@ class _CollapsibleLocationCardState extends State<_CollapsibleLocationCard> {
                     _searchFuture = null;
                   });
                 },
-                child: const Text('Cerrar'),
+                child: Text(AppStrings.get('cerrar')),
               ),
             ],
           );
@@ -381,9 +400,7 @@ class _ProviderRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isReal = session.dataSource == WeatherDataSource.real;
-    final providerName = isReal
-        ? (session.realBundle?.providerName ?? 'Open-Meteo')
-        : 'Mock Data';
+    final providerName = session.realBundle?.providerName ?? 'Open-Meteo';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
@@ -399,7 +416,9 @@ class _ProviderRow extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            isReal ? 'Clima real | $providerName' : 'Clima simulado (Mock)',
+            isReal
+                ? '${AppStrings.get('clima_real')} | $providerName'
+                : AppStrings.get('clima_simulado'),
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
@@ -449,9 +468,13 @@ class _ProviderRow extends StatelessWidget {
 }
 
 class _RedesignedStatusPanel extends StatelessWidget {
-  const _RedesignedStatusPanel({required this.report});
+  const _RedesignedStatusPanel({
+    required this.report,
+    this.onNavigateToForecast,
+  });
 
   final FlightReadinessReport report;
+  final VoidCallback? onNavigateToForecast;
 
   @override
   Widget build(BuildContext context) {
@@ -509,7 +532,10 @@ class _RedesignedStatusPanel extends StatelessWidget {
             const SizedBox(height: 16),
             const Divider(height: 1),
             const SizedBox(height: 12),
-            _EmbeddedBestWindowPill(report: report),
+            _EmbeddedBestWindowPill(
+              report: report,
+              onTap: onNavigateToForecast,
+            ),
           ],
         ),
       ),
@@ -574,7 +600,7 @@ class _ScoreDialRing extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(
-          'ÍNDICE DE VUELO',
+          AppStrings.get('indice_vuelo').toUpperCase(),
           style: TextStyle(
             fontSize: 9,
             fontWeight: FontWeight.w800,
@@ -588,9 +614,10 @@ class _ScoreDialRing extends StatelessWidget {
 }
 
 class _EmbeddedBestWindowPill extends StatelessWidget {
-  const _EmbeddedBestWindowPill({required this.report});
+  const _EmbeddedBestWindowPill({required this.report, this.onTap});
 
   final FlightReadinessReport report;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -599,59 +626,66 @@ class _EmbeddedBestWindowPill extends StatelessWidget {
     final windowPassed = window.end.isBefore(now);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: isDark
-            ? const Color(0xFF0F172A).withValues(alpha: 0.5)
-            : const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: isDark
+              ? const Color(0xFF0F172A).withValues(alpha: 0.5)
+              : const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+          ),
         ),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.calendar_month_rounded,
-            color: Color(0xFF0D9488),
-            size: 22,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  windowPassed
-                      ? 'PRÓXIMA VENTANA DISPONIBLE'
-                      : 'MEJOR VENTANA DISPONIBLE',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.5,
-                    color: isDark
-                        ? const Color(0xFF94A3B8)
-                        : const Color(0xFF64748B),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${_time(window.start)} - ${_time(window.end)}',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF0F766E),
-                  ),
-                ),
-              ],
+        child: Row(
+          children: [
+            const Icon(
+              Icons.calendar_month_rounded,
+              color: Color(0xFF0D9488),
+              size: 22,
             ),
-          ),
-          Icon(
-            Icons.chevron_right_rounded,
-            color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-          ),
-        ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    windowPassed
+                        ? AppStrings.get(
+                            'proxima_ventana_disponible',
+                          ).toUpperCase()
+                        : AppStrings.get(
+                            'mejora_ventana_disponible',
+                          ).toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.5,
+                      color: isDark
+                          ? const Color(0xFF94A3B8)
+                          : const Color(0xFF64748B),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${_time(window.start)} - ${_time(window.end)}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF0F766E),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -684,7 +718,10 @@ class _RedesignedReasonList extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              isBlocked ? 'RAZONES DE RECHAZO' : 'RECOMENDACIONES DE VUELO',
+              (isBlocked
+                      ? AppStrings.get('razones_de_rechazo')
+                      : AppStrings.get('recomendaciones_vuelo'))
+                  .toUpperCase(),
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w900,
@@ -703,62 +740,106 @@ class _RedesignedReasonList extends StatelessWidget {
   }
 }
 
-class _RedesignedReasonTile extends StatelessWidget {
+class _RedesignedReasonTile extends StatefulWidget {
   const _RedesignedReasonTile({required this.rule});
 
   final FlightRuleResult rule;
 
   @override
+  State<_RedesignedReasonTile> createState() => _RedesignedReasonTileState();
+}
+
+class _RedesignedReasonTileState extends State<_RedesignedReasonTile> {
+  bool _expanded = false;
+
+  @override
   Widget build(BuildContext context) {
+    final rule = widget.rule;
     final color = _severityColor(rule.severity);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Circular colored icon container
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            child: Icon(_ruleIcon(rule.code), color: Colors.white, size: 20),
-          ),
-          const SizedBox(width: 12),
-
-          // Rule Details
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: GestureDetector(
+        onTap: () => setState(() => _expanded = !_expanded),
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text(
-                  rule.title,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    _ruleIcon(rule.code),
+                    color: Colors.white,
+                    size: 20,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        rule.title,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      if (!_expanded) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          rule.details,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark
+                                ? const Color(0xFF94A3B8)
+                                : const Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(
+                  _expanded
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.keyboard_arrow_down_rounded,
+                  color: isDark
+                      ? const Color(0xFF64748B)
+                      : const Color(0xFF94A3B8),
+                  size: 22,
+                ),
+              ],
+            ),
+            if (_expanded) ...[
+              Padding(
+                padding: const EdgeInsets.only(left: 48, top: 6),
+                child: Text(
                   rule.details,
                   style: TextStyle(
                     fontSize: 12,
+                    height: 1.4,
                     color: isDark
                         ? const Color(0xFF94A3B8)
                         : const Color(0xFF64748B),
                   ),
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Icon(
-            Icons.chevron_right_rounded,
-            color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-            size: 22,
-          ),
-        ],
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -794,13 +875,16 @@ class _ReworkedMetricsGrid extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // Calculate dew point estimate if temperature and humidity exist
-    String dewPointStr = '9°';
+    String dewPointStr = AppStrings.get('sin_dato');
     if (weather.temperatureC != null &&
         weather.relativeHumidityPercent != null) {
       final t = weather.temperatureC!;
       final rh = weather.relativeHumidityPercent!;
       final dp = t - ((100 - rh) / 5.0); // Simple dew point approximation
-      dewPointStr = '${_fmt(dp)}°';
+      dewPointStr = UnitFormatters.formatTemperature(
+        dp,
+        session.preferences.units,
+      );
     }
 
     return Column(
@@ -818,7 +902,7 @@ class _ReworkedMetricsGrid extends StatelessWidget {
           ),
           children: [
             _MetricCard(
-              label: 'VIENTO',
+              label: AppStrings.get('viento').toUpperCase(),
               value: UnitFormatters.formatSpeed(
                 weather.windKmh,
                 session.preferences.units,
@@ -829,7 +913,7 @@ class _ReworkedMetricsGrid extends StatelessWidget {
               accentColor: const Color(0xFF0EA5E9), // Cyan bottom line
             ),
             _MetricCard(
-              label: 'RÁFAGAS',
+              label: AppStrings.get('rafagas').toUpperCase(),
               value: UnitFormatters.formatSpeed(
                 weather.gustKmh,
                 session.preferences.units,
@@ -839,7 +923,7 @@ class _ReworkedMetricsGrid extends StatelessWidget {
               accentColor: const Color(0xFFD97706), // Orange bottom line
             ),
             _MetricCard(
-              label: 'TEMP.',
+              label: AppStrings.get('temp').toUpperCase(),
               value: UnitFormatters.formatTemperature(
                 weather.temperatureC,
                 session.preferences.units,
@@ -849,11 +933,13 @@ class _ReworkedMetricsGrid extends StatelessWidget {
               accentColor: const Color(0xFF3B82F6), // Blue bottom line
             ),
             _MetricCard(
-              label: 'HUMEDAD',
+              label: AppStrings.get('humedad').toUpperCase(),
               value: weather.relativeHumidityPercent == null
-                  ? 'Sin dato'
-                  : '${_fmt(weather.relativeHumidityPercent!)} %',
-              subValue: 'Punto rocío $dewPointStr',
+                  ? AppStrings.get('sin_dato')
+                  : UnitFormatters.formatPercentage(
+                      weather.relativeHumidityPercent,
+                    ),
+              subValue: '${AppStrings.get('punto_rocio')} $dewPointStr',
               icon: Icons.opacity_rounded,
               accentColor: const Color(0xFF6366F1), // Indigo bottom line
             ),
@@ -873,27 +959,30 @@ class _ReworkedMetricsGrid extends StatelessWidget {
                 Expanded(
                   child: _MiniMetricCol(
                     icon: Icons.cloud_rounded,
-                    label: 'NUBOSIDAD',
-                    value: _cloudCoverValue(weather),
+                    label: AppStrings.get('nubosidad').toUpperCase(),
+                    value: _cloudCoverValue(weather, session.preferences.units),
                   ),
                 ),
                 _vDivider(isDark),
                 Expanded(
                   child: _MiniMetricCol(
                     icon: Icons.visibility_rounded,
-                    label: 'VISIBILIDAD',
+                    label: AppStrings.get('visibilidad').toUpperCase(),
                     value: weather.visibilityKm == null
-                        ? 'Sin dato'
-                        : '${_fmt(weather.visibilityKm!)} km',
+                        ? AppStrings.get('sin_dato')
+                        : UnitFormatters.formatDistance(
+                            weather.visibilityKm,
+                            session.preferences.units,
+                          ),
                   ),
                 ),
                 _vDivider(isDark),
                 Expanded(
                   child: _MiniMetricCol(
                     icon: Icons.sensors_rounded,
-                    label: 'ÍNDICE KP',
+                    label: AppStrings.get('indice_kp').toUpperCase(),
                     value: weather.kpIndex == null
-                        ? 'Sin dato'
+                        ? AppStrings.get('sin_dato')
                         : _fmt(weather.kpIndex!),
                   ),
                 ),
@@ -901,7 +990,7 @@ class _ReworkedMetricsGrid extends StatelessWidget {
                 Expanded(
                   child: _MiniMetricCol(
                     icon: Icons.water_drop_rounded,
-                    label: 'PRECIP.',
+                    label: AppStrings.get('precip').toUpperCase(),
                     value: weather.precipitationProbability == null
                         ? '0%'
                         : '${_fmt(weather.precipitationProbability!)}%',
@@ -928,40 +1017,29 @@ class _ReworkedMetricsGrid extends StatelessWidget {
     return '$okta/8';
   }
 
-  String _cloudCoverValue(WeatherSnapshot weather) {
-    if (weather.cloudCoverPercent == null) return 'Sin dato';
+  String _cloudCoverValue(WeatherSnapshot weather, UnitPreferences units) {
+    if (weather.cloudCoverPercent == null) {
+      return AppStrings.get('sin_dato');
+    }
     final fraction = _cloudCoverFraction(weather.cloudCoverPercent!);
     final pct = '${_fmt(weather.cloudCoverPercent!)}%';
     if (weather.cloudBaseMeters != null) {
-      final feet = (weather.cloudBaseMeters! * 3.28084).round();
-      return '$fraction ($pct)\n(${_formatThousands(feet)} ft)';
+      final cloudBase = UnitFormatters.formatAltitude(
+        weather.cloudBaseMeters,
+        units,
+      );
+      return '$fraction ($pct)\n($cloudBase)';
     }
     return '$fraction ($pct)';
-  }
-
-  String _formatThousands(int value) {
-    final str = value.toString();
-    if (str.length <= 3) return str;
-    final buffer = StringBuffer();
-    int count = 0;
-    for (int i = str.length - 1; i >= 0; i--) {
-      buffer.write(str[i]);
-      count++;
-      if (count % 3 == 0 && i > 0) {
-        buffer.write('.');
-      }
-    }
-    return buffer.toString().split('').reversed.join('');
   }
 
   String _formatGustDelta(WeatherSnapshot weather, WeatherSession session) {
     if (weather.gustKmh != null && weather.windKmh != null) {
       final delta = weather.gustKmh! - weather.windKmh!;
       if (delta > 0) {
-        final unitName = session.preferences.units.speed.displayName;
-        return 'Δ ${_fmt(delta)} $unitName';
+        return 'Δ ${UnitFormatters.formatSpeed(delta, session.preferences.units)}';
       }
-      return 'Sin ráfagas';
+      return AppStrings.get('sin_rafagas');
     }
     return '';
   }
@@ -971,9 +1049,9 @@ class _ReworkedMetricsGrid extends StatelessWidget {
         ? (weather.temperatureC! - 2.0)
         : null;
     if (sensation != null) {
-      return 'Sensación ${UnitFormatters.formatTemperature(sensation, session.preferences.units)}';
+      return '${AppStrings.get('sensacion')} ${UnitFormatters.formatTemperature(sensation, session.preferences.units)}';
     }
-    return 'Sin dato';
+    return AppStrings.get('sin_dato');
   }
 }
 
@@ -1154,7 +1232,7 @@ class _HourlyTimelineWidget extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'PRÓXIMAS HORAS (hora local)',
+              AppStrings.get('proximas_horas').toUpperCase(),
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w900,
@@ -1174,7 +1252,10 @@ class _HourlyTimelineWidget extends StatelessWidget {
                 itemCount: rows.length,
                 itemBuilder: (context, index) {
                   final row = rows[index];
-                  return _TimelineColumn(row: row);
+                  return _TimelineColumn(
+                    row: row,
+                    units: session.preferences.units,
+                  );
                 },
               ),
             ),
@@ -1194,7 +1275,7 @@ class _HourlyTimelineWidget extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Ventana óptima: menor viento y ráfagas más estables.',
+                    AppStrings.get('ventana_optima_tip'),
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -1203,13 +1284,6 @@ class _HourlyTimelineWidget extends StatelessWidget {
                           : const Color(0xFF475569),
                     ),
                   ),
-                ),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  color: isDark
-                      ? const Color(0xFF64748B)
-                      : const Color(0xFF94A3B8),
-                  size: 20,
                 ),
               ],
             ),
@@ -1221,9 +1295,10 @@ class _HourlyTimelineWidget extends StatelessWidget {
 }
 
 class _TimelineColumn extends StatelessWidget {
-  const _TimelineColumn({required this.row});
+  const _TimelineColumn({required this.row, required this.units});
 
   final ForecastRow row;
+  final UnitPreferences units;
 
   @override
   Widget build(BuildContext context) {
@@ -1288,7 +1363,11 @@ class _TimelineColumn extends StatelessWidget {
               ),
               const SizedBox(width: 3),
               Text(
-                _fmt(row.windKmh),
+                UnitFormatters.formatSpeedValue(
+                  row.windKmh,
+                  units,
+                  decimals: 0,
+                ),
                 style: const TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
@@ -1299,7 +1378,7 @@ class _TimelineColumn extends StatelessWidget {
 
           // Gust speed
           Text(
-            _fmt(row.gustKmh),
+            UnitFormatters.formatSpeedValue(row.gustKmh, units, decimals: 0),
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
@@ -1319,9 +1398,10 @@ class _TimelineColumn extends StatelessWidget {
 }
 
 class _ProfileStrip extends StatelessWidget {
-  const _ProfileStrip({required this.report});
+  const _ProfileStrip({required this.report, required this.units});
 
   final FlightReadinessReport report;
+  final UnitPreferences units;
 
   @override
   Widget build(BuildContext context) {
@@ -1341,7 +1421,7 @@ class _ProfileStrip extends StatelessWidget {
                 const Icon(Icons.flight_takeoff_rounded),
                 const SizedBox(width: 12),
                 Text(
-                  'OPERACIÓN CONFIGURADA',
+                  AppStrings.get('operacion_configurada_mayus').toUpperCase(),
                   style: Theme.of(
                     context,
                   ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w900),
@@ -1357,7 +1437,7 @@ class _ProfileStrip extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Dron',
+                        AppStrings.get('dron'),
                         style: Theme.of(
                           context,
                         ).textTheme.labelSmall?.copyWith(color: Colors.grey),
@@ -1374,7 +1454,7 @@ class _ProfileStrip extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Misión',
+                        AppStrings.get('mision'),
                         style: Theme.of(
                           context,
                         ).textTheme.labelSmall?.copyWith(color: Colors.grey),
@@ -1391,13 +1471,18 @@ class _ProfileStrip extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Altitud',
+                        AppStrings.get('altitud'),
                         style: Theme.of(
                           context,
                         ).textTheme.labelSmall?.copyWith(color: Colors.grey),
                       ),
                       Text(
-                        '${report.droneProfile.preferredAltitudeMeters} m',
+                        UnitFormatters.formatAltitude(
+                          report.droneProfile.preferredAltitudeMeters
+                              .toDouble(),
+                          units,
+                          decimals: 0,
+                        ),
                         style: const TextStyle(fontWeight: FontWeight.w800),
                       ),
                     ],
@@ -1421,20 +1506,20 @@ class _RealWeatherLoadingCard extends StatelessWidget {
     return Card(
       margin: EdgeInsets.zero,
       color: isDark ? const Color(0xFF1E293B) : Colors.white,
-      child: const Padding(
-        padding: EdgeInsets.all(18),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
         child: Row(
           children: [
-            SizedBox(
+            const SizedBox(
               width: 22,
               height: 22,
               child: CircularProgressIndicator(strokeWidth: 3),
             ),
-            SizedBox(width: 14),
+            const SizedBox(width: 14),
             Expanded(
               child: Text(
-                'Obteniendo clima real de Open-Meteo...',
-                style: TextStyle(fontWeight: FontWeight.w800),
+                AppStrings.get('obteniendo_clima'),
+                style: const TextStyle(fontWeight: FontWeight.w800),
               ),
             ),
           ],
@@ -1467,21 +1552,21 @@ class _RealWeatherErrorCard extends StatelessWidget {
                   color: _severityColor(RuleSeverity.blocked),
                 ),
                 const SizedBox(width: 10),
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'No se pudo obtener clima real.',
+                    AppStrings.get('error_clima'),
                     style: TextStyle(fontWeight: FontWeight.w900),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            const Text('Reintentar o volver a datos mock.'),
+            Text(AppStrings.get('reintentar_mock')),
             const SizedBox(height: 12),
             FilledButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Reintentar'),
+              label: Text(AppStrings.get('reintentar')),
             ),
           ],
         ),
@@ -1499,12 +1584,12 @@ class _StaticLoadingCard extends StatelessWidget {
     return Card(
       margin: EdgeInsets.zero,
       color: isDark ? const Color(0xFF1E293B) : Colors.white,
-      child: const Padding(
-        padding: EdgeInsets.all(20),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
         child: Center(
           child: Text(
-            'Cargando datos de vuelo...',
-            style: TextStyle(fontWeight: FontWeight.bold),
+            AppStrings.get('cargando_datos'),
+            style: const TextStyle(fontWeight: FontWeight.bold),
           ),
         ),
       ),

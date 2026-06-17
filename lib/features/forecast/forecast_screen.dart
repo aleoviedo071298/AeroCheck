@@ -7,7 +7,10 @@ import '../../app/weather_session.dart';
 import '../../data/location/flight_location.dart';
 import '../../data/mock/mock_flight_data.dart';
 import '../../domain/entities/flight_readiness_report.dart';
+import '../../domain/i18n/app_strings.dart';
 import '../../domain/rules/rule_severity.dart';
+import '../../domain/units/unit_formatters.dart';
+import '../../domain/units/unit_preferences.dart';
 
 class ForecastScreen extends StatelessWidget {
   const ForecastScreen({super.key, required this.session});
@@ -24,6 +27,7 @@ class ForecastScreen extends StatelessWidget {
     return AnimatedBuilder(
       animation: session,
       builder: (context, _) {
+        AppStrings.currentLanguage = session.preferences.language;
         final report = session.currentReport;
         final rows = session.forecastRows;
         final location = session.selectedLocation;
@@ -62,7 +66,7 @@ class ForecastScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Forecast horario',
+                              AppStrings.get('forecast_horario'),
                               style: Theme.of(context).textTheme.headlineSmall
                                   ?.copyWith(fontWeight: FontWeight.w900),
                             ),
@@ -95,12 +99,15 @@ class ForecastScreen extends StatelessWidget {
                         const SizedBox(height: 16),
 
                         // 3. Forecast Table Header
-                        const _ForecastTableHeader(),
+                        _ForecastTableHeader(units: session.preferences.units),
                         const SizedBox(height: 4),
 
                         // 4. Forecast Rows List
                         ...rows.map(
-                          (row) => _RedesignedForecastRowTile(row: row),
+                          (row) => _RedesignedForecastRowTile(
+                            row: row,
+                            units: session.preferences.units,
+                          ),
                         ),
                         const SizedBox(height: 16),
 
@@ -124,11 +131,11 @@ class ForecastScreen extends StatelessWidget {
 
   String _descriptionFor(WeatherSession session, FlightLocation location) {
     final isReal = session.dataSource == WeatherDataSource.real;
-    final providerName = isReal
-        ? (session.realBundle?.providerName ?? 'Open-Meteo')
-        : 'Mock Data';
-    final sourceText = isReal ? 'clima real de $providerName' : 'datos mock';
-    return '${location.name}, ${location.region} · $sourceText evaluado con AeroCheck.';
+    final providerName = session.realBundle?.providerName ?? 'Open-Meteo';
+    final sourceText = isReal
+        ? '${AppStrings.get('clima_real')} · $providerName'
+        : AppStrings.get('datos_mock');
+    return '${location.name}, ${location.region} · $sourceText · ${AppStrings.get('evaluado_aerocheck')}.';
   }
 }
 
@@ -201,7 +208,7 @@ class _CollapsibleLocationCardState extends State<_CollapsibleLocationCard> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Lat: ${location.latitude.toStringAsFixed(4)} · Lon: ${location.longitude.toStringAsFixed(4)} · Elev. ${location.elevation} m',
+                          'Lat: ${location.latitude.toStringAsFixed(4)} · Lon: ${location.longitude.toStringAsFixed(4)} · Elev. ${UnitFormatters.formatAltitude(location.elevation.toDouble(), widget.session.preferences.units, decimals: 0)}',
                           style: TextStyle(
                             fontSize: 12,
                             color: isDark
@@ -229,7 +236,7 @@ class _CollapsibleLocationCardState extends State<_CollapsibleLocationCard> {
                 Row(
                   children: [
                     Text(
-                      'Cambiar Ubicación',
+                      AppStrings.get('cambiar_ubicacion'),
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -241,7 +248,7 @@ class _CollapsibleLocationCardState extends State<_CollapsibleLocationCard> {
                       key: const ValueKey('gps-location-button'),
                       icon: const Icon(Icons.my_location_rounded),
                       iconSize: 20,
-                      tooltip: 'Mi ubicación (GPS)',
+                      tooltip: AppStrings.get('mi_ubicacion_gps'),
                       onPressed: () {
                         widget.session.setLocationToCurrentGPS();
                         setState(() {
@@ -272,7 +279,7 @@ class _CollapsibleLocationCardState extends State<_CollapsibleLocationCard> {
                     }),
                     ActionChip(
                       key: const ValueKey('add-location-button'),
-                      label: const Text('Buscar'),
+                      label: Text(AppStrings.get('buscar')),
                       avatar: const Icon(Icons.search_rounded, size: 16),
                       onPressed: () {
                         _showAddLocationDialog();
@@ -294,7 +301,7 @@ class _CollapsibleLocationCardState extends State<_CollapsibleLocationCard> {
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
-            title: const Text('Buscar ciudad'),
+            title: Text(AppStrings.get('buscar_ciudad')),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -302,7 +309,7 @@ class _CollapsibleLocationCardState extends State<_CollapsibleLocationCard> {
                   TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
-                      hintText: 'Escribe nombre de ciudad...',
+                      hintText: AppStrings.get('escribe_nombre_ciudad'),
                       prefixIcon: const Icon(Icons.search),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -325,8 +332,10 @@ class _CollapsibleLocationCardState extends State<_CollapsibleLocationCard> {
                     height: 300,
                     width: double.maxFinite,
                     child: _searchFuture == null
-                        ? const Center(
-                            child: Text('Escribe para buscar ciudades'),
+                        ? Center(
+                            child: Text(
+                              AppStrings.get('escribe_buscar_ciudades'),
+                            ),
                           )
                         : FutureBuilder<List<FlightLocation>>(
                             future: _searchFuture,
@@ -339,13 +348,17 @@ class _CollapsibleLocationCardState extends State<_CollapsibleLocationCard> {
                               }
                               if (snapshot.hasError) {
                                 return Center(
-                                  child: Text('Error: ${snapshot.error}'),
+                                  child: Text(
+                                    '${AppStrings.get('error')}: ${snapshot.error}',
+                                  ),
                                 );
                               }
                               final locations = snapshot.data ?? [];
                               if (locations.isEmpty) {
-                                return const Center(
-                                  child: Text('No se encontraron ciudades'),
+                                return Center(
+                                  child: Text(
+                                    AppStrings.get('sin_resultados_ciudades'),
+                                  ),
                                 );
                               }
                               return ListView.builder(
@@ -388,7 +401,7 @@ class _CollapsibleLocationCardState extends State<_CollapsibleLocationCard> {
                     _searchFuture = null;
                   });
                 },
-                child: const Text('Cerrar'),
+                child: Text(AppStrings.get('cerrar')),
               ),
             ],
           );
@@ -459,32 +472,19 @@ class _ForecastWindowStatsCard extends StatelessWidget {
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
         child: Row(
           children: [
-            // Left calendar icon
-            Container(
-              width: 36,
-              height: 36,
-              decoration: const BoxDecoration(
-                color: Color(0xFF0F766E),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.calendar_month_rounded,
-                color: Colors.white,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 12),
-
             // Ventana Seleccionada
             Expanded(
               flex: 3,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('VENTANA SELECCIONADA', style: textStyleLabel),
+                  Text(
+                    AppStrings.get('ventana_seleccionada').toUpperCase(),
+                    style: textStyleLabel,
+                  ),
                   const SizedBox(height: 2),
                   Text(
                     '${_time(start)} - ${_time(end)}',
@@ -492,7 +492,7 @@ class _ForecastWindowStatsCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 1),
                   Text(
-                    '$durationHours horas',
+                    '$durationHours ${AppStrings.get('horas')}',
                     style: TextStyle(
                       fontSize: 11,
                       color: isDark
@@ -512,7 +512,10 @@ class _ForecastWindowStatsCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Text('MEJOR HORA', style: textStyleLabel),
+                  Text(
+                    AppStrings.get('mejor_hora').toUpperCase(),
+                    style: textStyleLabel,
+                  ),
                   const SizedBox(height: 2),
                   Text(
                     _time(start),
@@ -532,7 +535,10 @@ class _ForecastWindowStatsCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Text('APTO', style: textStyleLabel),
+                  Text(
+                    AppStrings.get('apto').toUpperCase(),
+                    style: textStyleLabel,
+                  ),
                   const SizedBox(height: 2),
                   Text('$aptoHours h', style: textStyleValue),
                 ],
@@ -547,7 +553,10 @@ class _ForecastWindowStatsCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Text('NO APTO', style: textStyleLabel),
+                  Text(
+                    AppStrings.get('no_apto').toUpperCase(),
+                    style: textStyleLabel,
+                  ),
                   const SizedBox(height: 2),
                   Text('$noAptoHours h', style: textStyleValue),
                 ],
@@ -559,31 +568,30 @@ class _ForecastWindowStatsCard extends StatelessWidget {
             // Lluvia en Ventana
             Expanded(
               flex: 2,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Flexible(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'LLUVIA EN VENTANA',
-                          style: textStyleLabel,
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                        Text('${_fmt(maxRainPercent)}%', style: textStyleValue),
-                      ],
-                    ),
+                  Text(
+                    AppStrings.get('lluvia_en_ventana').toUpperCase(),
+                    style: textStyleLabel,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(width: 4),
-                  const Icon(
-                    Icons.opacity_rounded,
-                    color: Color(0xFF3B82F6),
-                    size: 16,
+                  const SizedBox(height: 2),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.opacity_rounded,
+                        color: Color(0xFF3B82F6),
+                        size: 14,
+                      ),
+                      const SizedBox(width: 3),
+                      Text('${_fmt(maxRainPercent)}%', style: textStyleValue),
+                    ],
                   ),
                 ],
               ),
@@ -613,7 +621,9 @@ class _ForecastWindowStatsCard extends StatelessWidget {
 }
 
 class _ForecastTableHeader extends StatelessWidget {
-  const _ForecastTableHeader();
+  const _ForecastTableHeader({required this.units});
+
+  final UnitPreferences units;
 
   @override
   Widget build(BuildContext context) {
@@ -630,14 +640,23 @@ class _ForecastTableHeader extends StatelessWidget {
       child: Row(
         children: [
           // Hora
-          SizedBox(width: 46, child: Text('HORA', style: labelStyle)),
+          SizedBox(
+            width: 46,
+            child: Text(
+              AppStrings.get('hora').toUpperCase(),
+              style: labelStyle,
+            ),
+          ),
           // Estado / Razón Principal
           Expanded(
             child: Row(
               children: [
-                Text('ESTADO', style: labelStyle),
+                Text(AppStrings.get('estado').toUpperCase(), style: labelStyle),
                 const SizedBox(width: 8),
-                Text('RAZÓN PRINCIPAL', style: labelStyle),
+                Text(
+                  AppStrings.get('razon_principal').toUpperCase(),
+                  style: labelStyle,
+                ),
               ],
             ),
           ),
@@ -647,9 +666,9 @@ class _ForecastTableHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text('VIENTO', style: labelStyle),
+                Text(AppStrings.get('viento').toUpperCase(), style: labelStyle),
                 Text(
-                  'km/h',
+                  units.speed.shortName,
                   style: labelStyle.copyWith(
                     fontSize: 8,
                     fontWeight: FontWeight.normal,
@@ -664,9 +683,12 @@ class _ForecastTableHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text('RÁFAGAS', style: labelStyle),
                 Text(
-                  'km/h',
+                  AppStrings.get('rafagas').toUpperCase(),
+                  style: labelStyle,
+                ),
+                Text(
+                  units.speed.shortName,
                   style: labelStyle.copyWith(
                     fontSize: 8,
                     fontWeight: FontWeight.normal,
@@ -681,7 +703,7 @@ class _ForecastTableHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text('LLUVIA', style: labelStyle),
+                Text(AppStrings.get('lluvia').toUpperCase(), style: labelStyle),
                 Text(
                   '%',
                   style: labelStyle.copyWith(
@@ -701,9 +723,10 @@ class _ForecastTableHeader extends StatelessWidget {
 }
 
 class _RedesignedForecastRowTile extends StatefulWidget {
-  const _RedesignedForecastRowTile({required this.row});
+  const _RedesignedForecastRowTile({required this.row, required this.units});
 
   final ForecastRow row;
+  final UnitPreferences units;
 
   @override
   State<_RedesignedForecastRowTile> createState() =>
@@ -838,7 +861,11 @@ class _RedesignedForecastRowTileState
                               ),
                             const SizedBox(width: 3),
                             Text(
-                              _fmt(row.windKmh),
+                              UnitFormatters.formatSpeedValue(
+                                row.windKmh,
+                                widget.units,
+                                decimals: 0,
+                              ),
                               style: const TextStyle(
                                 fontWeight: FontWeight.w900,
                                 fontSize: 13,
@@ -867,7 +894,11 @@ class _RedesignedForecastRowTileState
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          _fmt(row.gustKmh),
+                          UnitFormatters.formatSpeedValue(
+                            row.gustKmh,
+                            widget.units,
+                            decimals: 0,
+                          ),
                           style: const TextStyle(
                             fontWeight: FontWeight.w900,
                             fontSize: 13,
@@ -876,7 +907,7 @@ class _RedesignedForecastRowTileState
                         const SizedBox(height: 2),
                         if (row.gustKmh - row.windKmh > 0)
                           Text(
-                            'Δ ${_fmt(row.gustKmh - row.windKmh)}',
+                            'Δ ${UnitFormatters.formatSpeedValue(row.gustKmh - row.windKmh, widget.units, decimals: 0)}',
                             style: const TextStyle(
                               fontSize: 10,
                               color: Color(0xFFF59E0B),
@@ -885,7 +916,7 @@ class _RedesignedForecastRowTileState
                           )
                         else
                           Text(
-                            'sin ráfagas',
+                            AppStrings.get('sin_rafagas'),
                             style: TextStyle(
                               fontSize: 10,
                               color: isDark
@@ -923,7 +954,9 @@ class _RedesignedForecastRowTileState
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          row.rainPercent > 0 ? 'con lluvia' : 'sin lluvia',
+                          row.rainPercent > 0
+                              ? AppStrings.get('con_lluvia')
+                              : AppStrings.get('sin_lluvia'),
                           style: TextStyle(
                             fontSize: 10,
                             color: isDark
@@ -1004,9 +1037,9 @@ class _BestWindowPill extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: color.withValues(alpha: 0.26)),
       ),
-      child: const Text(
-        'Mejor hora',
-        style: TextStyle(
+      child: Text(
+        AppStrings.get('mejor_hora'),
+        style: const TextStyle(
           color: color,
           fontSize: 9,
           fontWeight: FontWeight.w900,
@@ -1094,7 +1127,7 @@ class _HourlyScoreTimeline extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'ÍNDICE POR HORA',
+          AppStrings.get('indice_por_hora').toUpperCase(),
           style: TextStyle(
             fontSize: 10,
             fontWeight: FontWeight.w900,
@@ -1242,7 +1275,7 @@ class _ForecastTipCard extends StatelessWidget {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                'Ventana óptima: menor viento y ráfagas más estables.',
+                AppStrings.get('ventana_optima_tip'),
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
@@ -1251,11 +1284,6 @@ class _ForecastTipCard extends StatelessWidget {
                       : const Color(0xFF475569),
                 ),
               ),
-            ),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-              size: 20,
             ),
           ],
         ),
@@ -1273,20 +1301,20 @@ class _RealWeatherLoadingCard extends StatelessWidget {
     return Card(
       margin: EdgeInsets.zero,
       color: isDark ? const Color(0xFF1E293B) : Colors.white,
-      child: const Padding(
-        padding: EdgeInsets.all(18),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
         child: Row(
           children: [
-            SizedBox(
+            const SizedBox(
               width: 22,
               height: 22,
               child: CircularProgressIndicator(strokeWidth: 3),
             ),
-            SizedBox(width: 14),
+            const SizedBox(width: 14),
             Expanded(
               child: Text(
-                'Obteniendo clima real de Open-Meteo...',
-                style: TextStyle(fontWeight: FontWeight.w800),
+                AppStrings.get('obteniendo_clima'),
+                style: const TextStyle(fontWeight: FontWeight.w800),
               ),
             ),
           ],
@@ -1319,21 +1347,21 @@ class _RealWeatherErrorCard extends StatelessWidget {
                   color: _severityColor(RuleSeverity.blocked),
                 ),
                 const SizedBox(width: 10),
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'No se pudo obtener clima real.',
+                    AppStrings.get('error_clima'),
                     style: TextStyle(fontWeight: FontWeight.w900),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            const Text('Reintentar o volver a datos mock.'),
+            Text(AppStrings.get('reintentar_mock')),
             const SizedBox(height: 12),
             FilledButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Reintentar'),
+              label: Text(AppStrings.get('reintentar')),
             ),
           ],
         ),
@@ -1351,12 +1379,12 @@ class _StaticLoadingCard extends StatelessWidget {
     return Card(
       margin: EdgeInsets.zero,
       color: isDark ? const Color(0xFF1E293B) : Colors.white,
-      child: const Padding(
-        padding: EdgeInsets.all(20),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
         child: Center(
           child: Text(
-            'Cargando datos de vuelo...',
-            style: TextStyle(fontWeight: FontWeight.bold),
+            AppStrings.get('cargando_datos'),
+            style: const TextStyle(fontWeight: FontWeight.bold),
           ),
         ),
       ),

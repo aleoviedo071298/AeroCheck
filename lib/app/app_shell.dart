@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../domain/i18n/app_strings.dart';
 import '../features/conditions/conditions_screen.dart';
 import '../features/forecast/forecast_screen.dart';
 import '../features/map/map_screen.dart';
@@ -18,6 +19,7 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   late final WeatherSession _weatherSession;
+  final _settingsResetNotifier = ValueNotifier<int>(0);
   var _index = 0;
 
   @override
@@ -29,6 +31,7 @@ class _AppShellState extends State<AppShell> {
 
   @override
   void dispose() {
+    _settingsResetNotifier.dispose();
     _weatherSession.dispose();
     super.dispose();
   }
@@ -36,21 +39,28 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     final screens = [
-      ConditionsScreen(session: _weatherSession),
+      ConditionsScreen(
+        session: _weatherSession,
+        onNavigateToForecast: () => setState(() => _index = 1),
+      ),
       ForecastScreen(session: _weatherSession),
       WindScreen(session: _weatherSession),
       MapScreen(session: _weatherSession),
-      SettingsScreen(session: _weatherSession),
+      SettingsScreen(
+        session: _weatherSession,
+        resetNotifier: _settingsResetNotifier,
+      ),
     ];
 
     return AnimatedBuilder(
       animation: _weatherSession,
       builder: (context, _) {
+        AppStrings.currentLanguage = _weatherSession.preferences.language;
         String updateTimeText = '';
         if (_weatherSession.realBundle != null) {
           final time = _weatherSession.realBundle!.current.time;
           updateTimeText =
-              'Actualizado ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+              '${AppStrings.get('actualizado')} ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
         }
 
         return Scaffold(
@@ -92,13 +102,13 @@ class _AppShellState extends State<AppShell> {
                   ),
                 ),
                 IconButton(
-                  tooltip: 'Refrescar clima',
+                  tooltip: AppStrings.get('refrescar_clima'),
                   icon: const Icon(Icons.refresh_rounded, size: 20),
                   onPressed: () => _weatherSession.loadRealWeather(),
                 ),
               ],
               IconButton(
-                tooltip: 'Compartir',
+                tooltip: AppStrings.get('compartir'),
                 onPressed: () {},
                 icon: const Icon(Icons.ios_share_rounded),
               ),
@@ -107,31 +117,36 @@ class _AppShellState extends State<AppShell> {
           body: IndexedStack(index: _index, children: screens),
           bottomNavigationBar: NavigationBar(
             selectedIndex: _index,
-            onDestinationSelected: (value) => setState(() => _index = value),
-            destinations: const [
+            onDestinationSelected: (value) {
+              if (value == 4 && _index == 4) {
+                _settingsResetNotifier.value++;
+              }
+              setState(() => _index = value);
+            },
+            destinations: [
               NavigationDestination(
-                icon: Icon(Icons.speed_rounded),
-                label: 'Estado',
+                icon: const Icon(Icons.speed_rounded),
+                label: AppStrings.get('estado'),
               ),
               NavigationDestination(
-                icon: Icon(Icons.calendar_month_outlined),
-                selectedIcon: Icon(Icons.calendar_month_rounded),
-                label: 'Forecast',
+                icon: const Icon(Icons.calendar_month_outlined),
+                selectedIcon: const Icon(Icons.calendar_month_rounded),
+                label: AppStrings.get('forecast'),
               ),
               NavigationDestination(
-                icon: Icon(Icons.air_rounded),
-                selectedIcon: Icon(Icons.air_rounded),
-                label: 'Viento',
+                icon: const Icon(Icons.air_rounded),
+                selectedIcon: const Icon(Icons.air_rounded),
+                label: AppStrings.get('viento'),
               ),
               NavigationDestination(
-                icon: Icon(Icons.map_outlined),
-                selectedIcon: Icon(Icons.map_rounded),
-                label: 'Mapa',
+                icon: const Icon(Icons.map_outlined),
+                selectedIcon: const Icon(Icons.map_rounded),
+                label: AppStrings.get('mapa'),
               ),
               NavigationDestination(
-                icon: Icon(Icons.settings_outlined),
-                selectedIcon: Icon(Icons.settings_rounded),
-                label: 'Ajustes',
+                icon: const Icon(Icons.settings_outlined),
+                selectedIcon: const Icon(Icons.settings_rounded),
+                label: AppStrings.get('ajustes'),
               ),
             ],
           ),
