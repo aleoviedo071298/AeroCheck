@@ -13,6 +13,7 @@ import '../../domain/rules/rule_severity.dart';
 import '../../data/mock/mock_flight_data.dart';
 import '../../domain/units/unit_formatters.dart';
 import '../../domain/units/unit_preferences.dart';
+import '../shared/screen_layout.dart';
 
 class ConditionsScreen extends StatelessWidget {
   const ConditionsScreen({super.key, required this.session});
@@ -21,84 +22,53 @@ class ConditionsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final contentBg = isDark
-        ? const Color(0xFF0F172A)
-        : const Color(0xFFF1F5F9);
-
     return AnimatedBuilder(
       animation: session,
       builder: (context, _) {
         final report = session.currentReport;
         final weather = report?.weather;
 
-        return Column(
-          children: [
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: contentBg,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
-                  ),
-                ),
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
-                  ),
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-                    children: [
-                      // 1. Collapsible Location Card
-                      _CollapsibleLocationCard(
-                        session: session,
-                        report: report,
-                      ),
-                      const SizedBox(height: 12),
+        return ScreenLayout(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+            children: [
+              // 1. Collapsible Location Card
+              _CollapsibleLocationCard(session: session, report: report),
+              const SizedBox(height: 12),
 
-                      // 2. Weather provider row
-                      _ProviderRow(session: session, report: report),
-                      const SizedBox(height: 12),
+              // 2. Weather provider row
+              _ProviderRow(session: session, report: report),
+              const SizedBox(height: 12),
 
-                      if (session.isLoadingReal)
-                        const _RealWeatherLoadingCard()
-                      else if (session.dataSource == WeatherDataSource.real &&
-                          session.realError != null)
-                        _RealWeatherErrorCard(onRetry: session.loadRealWeather)
-                      else if (report == null)
-                        const _StaticLoadingCard()
-                      else if (weather != null) ...[
-                        // 3. Status dial panel
-                        _RedesignedStatusPanel(report: report),
-                        const SizedBox(height: 12),
+              if (session.isLoadingReal)
+                const _RealWeatherLoadingCard()
+              else if (session.dataSource == WeatherDataSource.real &&
+                  session.realError != null)
+                _RealWeatherErrorCard(onRetry: session.loadRealWeather)
+              else if (report == null)
+                const _StaticLoadingCard()
+              else if (weather != null) ...[
+                // 3. Status dial panel
+                _RedesignedStatusPanel(report: report),
+                const SizedBox(height: 12),
 
-                        // 4. Reasons list
-                        _RedesignedReasonList(rules: report.rules),
-                        const SizedBox(height: 12),
+                // 4. Reasons list
+                _RedesignedReasonList(rules: report.rules),
+                const SizedBox(height: 12),
 
-                        // 5. Reworked metrics grid (2x2 + 1x4 secondary)
-                        _ReworkedMetricsGrid(
-                          weather: weather,
-                          session: session,
-                        ),
-                        const SizedBox(height: 16),
+                // 5. Reworked metrics grid (2x2 + 1x4 secondary)
+                _ReworkedMetricsGrid(weather: weather, session: session),
+                const SizedBox(height: 16),
 
-                        // 6. Hourly timeline table
-                        _HourlyTimelineWidget(session: session),
-                        const SizedBox(height: 12),
+                // 6. Hourly timeline table
+                _HourlyTimelineWidget(session: session),
+                const SizedBox(height: 12),
 
-                        // 7. Profile strip
-                        _ProfileStrip(report: report),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
+                // 7. Profile strip
+                _ProfileStrip(report: report),
+              ],
+            ],
+          ),
         );
       },
     );

@@ -7,6 +7,7 @@ import '../features/forecast/forecast_screen.dart';
 import '../features/map/map_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/wind/wind_screen.dart';
+import '../features/shared/screen_layout.dart';
 import 'weather_session.dart';
 
 class AppShell extends StatefulWidget {
@@ -104,7 +105,9 @@ class _AppShellState extends State<AppShell> {
               ),
             ],
           ),
-          body: IndexedStack(index: _index, children: screens),
+          body: ScreenLayout(
+            child: IndexedStack(index: _index, children: screens),
+          ),
           bottomNavigationBar: NavigationBar(
             selectedIndex: _index,
             onDestinationSelected: (value) => setState(() => _index = value),
