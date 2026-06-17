@@ -9,6 +9,8 @@ AeroCheck is a planned cross-platform mobile app for drone pilots. The goal is t
 - [Flutter MVP prototype spec](./docs/spec_flutter_mvp_prototype.md)
 - [Weather provider MVP spec](./docs/spec_weather_provider_mvp.md)
 - [Agent workflow](./docs/agent_workflow.md)
+- [Claude handoff](./docs/project_handoff_claude.md)
+- [Claude continuation prompt](./docs/claude_continuation_prompt.md)
 - Competitive reference screenshots are stored in `competencia/`.
 
 ## Proposed Stack
