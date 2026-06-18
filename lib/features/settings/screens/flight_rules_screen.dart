@@ -179,6 +179,27 @@ class _FlightRulesScreenState extends State<FlightRulesScreen> {
                 onChanged: (v) => _set((c) =>
                     c.copyWith(targetAltitudeMeters: _altToMetric(v).round())),
               ),
+              _stepperSingle(
+                label:
+                    '${_t('margen_base_nubes')} · ${_t('precaucion')}',
+                unit: altUnit,
+                decimals: 0,
+                step: 10,
+                field: 'cloudBaseWarningMarginMeters',
+                value: _alt(config.cloudBaseWarningMarginMeters.toDouble()),
+                onChanged: (v) => _set((c) => c.copyWith(
+                    cloudBaseWarningMarginMeters: _altToMetric(v).round())),
+              ),
+              _stepperSingle(
+                label: '${_t('margen_base_nubes')} · ${_t('bloqueo')}',
+                unit: altUnit,
+                decimals: 0,
+                step: 10,
+                field: 'cloudBaseBlockedMarginMeters',
+                value: _alt(config.cloudBaseBlockedMarginMeters.toDouble()),
+                onChanged: (v) => _set((c) => c.copyWith(
+                    cloudBaseBlockedMarginMeters: _altToMetric(v).round())),
+              ),
 
               _section(_t('ambientales')),
               _stepperPair(
@@ -210,7 +231,7 @@ class _FlightRulesScreenState extends State<FlightRulesScreen> {
                     (c) => c.copyWith(temperatureMaxBlockedC: _tempToMetric(v))),
               ),
               _stepperPair(
-                label: _t('indice_kp'),
+                label: _t('indice_kp_regla'),
                 unit: '',
                 decimals: 1,
                 step: 0.5,
@@ -422,12 +443,12 @@ class _StepperRow extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            child: Text(AppStrings.get('cancelar')),
           ),
           TextButton(
             onPressed: () =>
                 Navigator.pop(ctx, double.tryParse(controller.text)),
-            child: const Text('OK'),
+            child: Text(AppStrings.get('aceptar')),
           ),
         ],
       ),
