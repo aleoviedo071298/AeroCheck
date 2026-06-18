@@ -120,4 +120,56 @@ void main() {
       RuleSeverity.blocked,
     );
   });
+
+  test('returns notReady when gust exceeds the configured block', () {
+    final report = evaluator.evaluate(
+      weather: baseWeather(gustKmh: 46),
+      config: config,
+      bestWindow: bestWindow,
+    );
+    expect(report.status, FlightReadinessStatus.notReady);
+    expect(
+      report.rules.singleWhere((r) => r.code == 'WIND_GUST').severity,
+      RuleSeverity.blocked,
+    );
+  });
+
+  test('returns notReady when precipitation intensity blocks flight', () {
+    final report = evaluator.evaluate(
+      weather: baseWeather(precipitationMmPerHour: 0.8),
+      config: config,
+      bestWindow: bestWindow,
+    );
+    expect(report.status, FlightReadinessStatus.notReady);
+    expect(
+      report.rules.singleWhere((r) => r.code == 'PRECIP_INTENSITY').severity,
+      RuleSeverity.blocked,
+    );
+  });
+
+  test('returns notReady when inside a restricted area', () {
+    final report = evaluator.evaluate(
+      weather: baseWeather(isInsideRestrictedArea: true),
+      config: config,
+      bestWindow: bestWindow,
+    );
+    expect(report.status, FlightReadinessStatus.notReady);
+    expect(
+      report.rules.singleWhere((r) => r.code == 'RESTRICTED_AREA').severity,
+      RuleSeverity.blocked,
+    );
+  });
+
+  test('returns caution when near a restricted area', () {
+    final report = evaluator.evaluate(
+      weather: baseWeather(isNearRestrictedArea: true),
+      config: config,
+      bestWindow: bestWindow,
+    );
+    expect(report.status, FlightReadinessStatus.caution);
+    expect(
+      report.rules.singleWhere((r) => r.code == 'RESTRICTED_AREA').severity,
+      RuleSeverity.warning,
+    );
+  });
 }
