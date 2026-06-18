@@ -13,7 +13,7 @@ class AppStrings {
       'ajustes': 'Ajustes',
 
       // Settings
-      'ajustes_mvp': 'Ajustes MVP',
+      'ajustes_mvp': 'Ajustes',
       'config_local_mvp':
           'Configuración local para validar la experiencia antes de perfiles editables.',
       'ubicacion': 'Ubicación',
@@ -128,7 +128,7 @@ class AppStrings {
       'clima_simulado': 'Clima simulado (Mock)',
       'datos_mock': 'datos mock',
       'evaluado_aerocheck': 'evaluado con AeroCheck',
-      'ventana_seleccionada': 'Ventana seleccionada',
+      'ventana_seleccionada': 'Horario óptimo',
       'mejor_hora': 'Mejor hora',
       'horas': 'horas',
       'lluvia_en_ventana': 'Lluvia en ventana',
@@ -215,6 +215,15 @@ class AppStrings {
       'mision': 'Misión',
       'obteniendo_clima': 'Obteniendo clima real de Open-Meteo...',
       'error_clima': 'No se pudo obtener clima real.',
+      'altitud_maxima': 'Altitud máxima',
+      'categoria_abierta': 'Categoría Abierta',
+      'sin_motivos_activos': 'Sin motivos activos para esta hora.',
+      'condiciones_dentro_limites':
+          'Condiciones principales dentro de tus límites.',
+      'viento_bajo_buena_visibilidad':
+          'Mejor ventana por viento bajo y buena visibilidad.',
+      'mejor_hora_real_estimada':
+          'Mejor hora real estimada por clima disponible.',
     },
     'en': {
       // Navigation
@@ -225,7 +234,7 @@ class AppStrings {
       'ajustes': 'Settings',
 
       // Settings
-      'ajustes_mvp': 'MVP Settings',
+      'ajustes_mvp': 'Settings',
       'config_local_mvp':
           'Local configuration to validate the experience before editable profiles.',
       'ubicacion': 'Location',
@@ -339,7 +348,7 @@ class AppStrings {
       'clima_simulado': 'Simulated weather (Mock)',
       'datos_mock': 'mock data',
       'evaluado_aerocheck': 'evaluated with AeroCheck',
-      'ventana_seleccionada': 'Selected window',
+      'ventana_seleccionada': 'Optimal schedule',
       'mejor_hora': 'Best hour',
       'horas': 'hours',
       'lluvia_en_ventana': 'Rain in window',
@@ -424,6 +433,14 @@ class AppStrings {
       'mision': 'Mission',
       'obteniendo_clima': 'Fetching real weather from Open-Meteo...',
       'error_clima': 'Real weather could not be loaded.',
+      'altitud_maxima': 'Maximum altitude',
+      'categoria_abierta': 'Open Category',
+      'sin_motivos_activos': 'No active reasons for this hour.',
+      'condiciones_dentro_limites': 'Main conditions within your limits.',
+      'viento_bajo_buena_visibilidad':
+          'Best window due to low wind and good visibility.',
+      'mejor_hora_real_estimada':
+          'Best real hour estimated by available weather.',
     },
   };
 

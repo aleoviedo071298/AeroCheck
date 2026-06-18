@@ -421,7 +421,7 @@ class WeatherSession extends ChangeNotifier {
     return ForecastRow(
       time: weather.time,
       hour: _time(weather.time),
-      status: report.status.label,
+      status: report.status,
       primaryReason: reasons.first.title,
       reasons: reasons,
       isBestWindow: _containsBestWindowStart(weather.time, bestWindow.start),
@@ -444,6 +444,9 @@ class WeatherSession extends ChangeNotifier {
           title: report.summary,
           details: 'Sin motivos activos para esta hora.',
           severity: RuleSeverity.ok,
+          code: null,
+          measuredValue: null,
+          threshold: null,
         ),
       ];
     }
@@ -453,6 +456,9 @@ class WeatherSession extends ChangeNotifier {
             title: rule.title,
             details: rule.details,
             severity: rule.severity,
+            code: rule.code,
+            measuredValue: rule.measuredValue,
+            threshold: rule.threshold,
           ),
         )
         .toList();

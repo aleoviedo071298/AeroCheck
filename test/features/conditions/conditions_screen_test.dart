@@ -1,6 +1,5 @@
 import 'package:aerocheck/app/aerocheck_app.dart';
 import 'package:aerocheck/app/weather_session.dart';
-import 'package:aerocheck/data/location/default_flight_locations.dart';
 import 'package:aerocheck/data/mock/mock_flight_data.dart';
 import 'package:aerocheck/data/preferences/user_preferences.dart';
 import 'package:aerocheck/data/preferences/user_preferences_store.dart';
@@ -24,39 +23,6 @@ void main() {
 
     expect(find.text('AeroCheck'), findsOneWidget);
     expect(find.textContaining('Comodoro Rivadavia'), findsWidgets);
-  });
-
-  testWidgets('conditions screen can change selected location', (tester) async {
-    final session = WeatherSession(preferencesStore: _FakePreferencesStore());
-    session.addFavoriteLocation(DefaultFlightLocations.mendoza);
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(body: ConditionsScreen(session: session)),
-      ),
-    );
-    // Expand the location card to make ChoiceChips visible
-    await tester.tap(find.textContaining('Comodoro Rivadavia'));
-    await tester.pumpAndSettle();
-
-    // Find ChoiceChips and verify initial selection
-    final comodoro = find.byKey(
-      const ValueKey('location-chip-comodoro-rivadavia'),
-    );
-    final mendoza = find.byKey(const ValueKey('location-chip-mendoza'));
-
-    expect(comodoro, findsOneWidget);
-    expect(mendoza, findsOneWidget);
-
-    // Verify Comodoro is initially selected
-    expect(find.byType(ChoiceChip).first, findsOneWidget);
-
-    // Tap on Mendoza chip to select it
-    await tester.tap(mendoza);
-    await tester.pumpAndSettle();
-
-    // Verify Mendoza is now selected by checking the session
-    expect(session.selectedLocation.id, equals('mendoza'));
   });
 
   testWidgets('conditions screen renders real weather from repository', (

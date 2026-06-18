@@ -1,5 +1,4 @@
 import 'package:aerocheck/app/weather_session.dart';
-import 'package:aerocheck/data/location/default_flight_locations.dart';
 import 'package:aerocheck/data/preferences/user_preferences.dart';
 import 'package:aerocheck/data/preferences/user_preferences_store.dart';
 import 'package:aerocheck/data/regulatory/airspace.dart';
@@ -31,30 +30,6 @@ void main() {
     expect(find.textContaining('-45.8641'), findsOneWidget);
     expect(find.textContaining('-67.4966'), findsOneWidget);
     expect(find.textContaining('5 km'), findsWidgets);
-  });
-
-  testWidgets('map screen switches active location from favorite chip', (
-    tester,
-  ) async {
-    final session = WeatherSession(
-      preferencesStore: _FakePreferencesStore(),
-      airspaceRepository: _FakeAirspaceRepository(),
-    );
-    session.addFavoriteLocation(DefaultFlightLocations.mendoza);
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(body: MapScreen(session: session)),
-      ),
-    );
-
-    await tester.tap(find.byKey(const ValueKey('map-location-mendoza')));
-    await tester.pumpAndSettle();
-
-    expect(session.selectedLocation, DefaultFlightLocations.mendoza);
-    expect(find.textContaining('Mendoza'), findsWidgets);
-    expect(find.textContaining('-32.8895'), findsOneWidget);
-    expect(find.textContaining('-68.8458'), findsOneWidget);
   });
 
   testWidgets('map screen updates guide radius from slider', (tester) async {

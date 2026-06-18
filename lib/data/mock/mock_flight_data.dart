@@ -194,7 +194,7 @@ class ForecastRow {
   });
 
   final String hour;
-  final String status;
+  final FlightReadinessStatus status;
   final String primaryReason;
   final List<ForecastReason> reasons;
   final bool isBestWindow;
@@ -212,11 +212,17 @@ class ForecastReason {
     required this.title,
     required this.details,
     required this.severity,
+    this.code,
+    this.measuredValue,
+    this.threshold,
   });
 
   final String title;
   final String details;
   final RuleSeverity severity;
+  final String? code;
+  final double? measuredValue;
+  final double? threshold;
 }
 
 class WindProfileRow {
