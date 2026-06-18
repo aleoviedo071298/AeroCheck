@@ -224,6 +224,28 @@ class AppStrings {
           'Mejor ventana por viento bajo y buena visibilidad.',
       'mejor_hora_real_estimada':
           'Mejor hora real estimada por clima disponible.',
+
+      // Flight Rules Screen
+      'reglas_de_vuelo': 'Reglas de vuelo',
+      'reglas_subtitulo':
+          'Personalizá los umbrales que deciden APTO, PRECAUCIÓN y NO APTO.',
+      'viento_sostenido': 'Viento sostenido',
+      'dif_rafaga_viento': 'Diferencia ráfaga-viento',
+      'prob_lluvia': 'Probabilidad de lluvia',
+      'intensidad_lluvia': 'Intensidad de lluvia',
+      'altitud_objetivo_regla': 'Altitud objetivo',
+      'margen_base_nubes': 'Margen base de nubes',
+      'temp_minima': 'Temperatura mínima',
+      'temp_maxima': 'Temperatura máxima',
+      'indice_kp_regla': 'Índice Kp (GPS)',
+      'permitir_nocturno': 'Permitir vuelo nocturno',
+      'visibilidad_nubes': 'Visibilidad y nubes',
+      'ambientales': 'Ambientales',
+      'operativas': 'Operativas',
+      'bloqueo': 'Bloqueo',
+      'restaurar_defaults': 'Restaurar valores por defecto',
+      'aviso_no_oficial':
+          'AeroCheck ayuda a planificar. No es autorización oficial de vuelo.',
     },
     'en': {
       // Navigation
@@ -441,6 +463,28 @@ class AppStrings {
           'Best window due to low wind and good visibility.',
       'mejor_hora_real_estimada':
           'Best real hour estimated by available weather.',
+
+      // Flight Rules Screen
+      'reglas_de_vuelo': 'Flight rules',
+      'reglas_subtitulo':
+          'Customize the thresholds that decide SUITABLE, CAUTION and NOT SUITABLE.',
+      'viento_sostenido': 'Sustained wind',
+      'dif_rafaga_viento': 'Gust-wind spread',
+      'prob_lluvia': 'Rain probability',
+      'intensidad_lluvia': 'Rain intensity',
+      'altitud_objetivo_regla': 'Target altitude',
+      'margen_base_nubes': 'Cloud base margin',
+      'temp_minima': 'Minimum temperature',
+      'temp_maxima': 'Maximum temperature',
+      'indice_kp_regla': 'Kp index (GPS)',
+      'permitir_nocturno': 'Allow night flight',
+      'visibilidad_nubes': 'Visibility & clouds',
+      'ambientales': 'Environmental',
+      'operativas': 'Operational',
+      'bloqueo': 'Block',
+      'restaurar_defaults': 'Restore defaults',
+      'aviso_no_oficial':
+          'AeroCheck helps you plan. It is not official flight authorization.',
     },
   };
 

@@ -9,9 +9,10 @@ import '../../domain/units/unit_preferences.dart';
 import 'screens/alerts_screen.dart';
 import 'screens/data_sources_screen.dart';
 import 'screens/language_screen.dart';
+import 'screens/flight_rules_screen.dart';
 import 'screens/units_screen.dart';
 
-enum _SettingsView { main, datos, unidades, idioma, alertas }
+enum _SettingsView { main, datos, unidades, idioma, alertas, reglas }
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({
@@ -108,6 +109,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
       case _SettingsView.alertas:
         return AlertsScreen(language: session.preferences.language);
+      case _SettingsView.reglas:
+        return FlightRulesScreen(
+          initialConfig: session.preferences.rulesConfig,
+          units: session.preferences.units,
+          language: session.preferences.language,
+          onSave: (config) async {
+            await session.updateRulesConfig(config);
+            _goBack();
+          },
+          onBack: _goBack,
+        );
       case _SettingsView.main:
         return AnimatedBuilder(
           animation: session,
@@ -426,6 +438,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   onTap: () {
                     setState(() => _activeView = _SettingsView.alertas);
+                  },
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Divider(
+                    height: 1,
+                    color: isDark
+                        ? const Color(0xFF334155)
+                        : const Color(0xFFF1F5F9),
+                  ),
+                ),
+                ListTile(
+                  leading: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? const Color(0xFF334155)
+                          : const Color(0xFFF1F5F9),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.tune_rounded,
+                      color: Color(0xFF0F766E),
+                      size: 20,
+                    ),
+                  ),
+                  title: Text(
+                    AppStrings.get('reglas_de_vuelo'),
+                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14),
+                  ),
+                  subtitle: Text(
+                    AppStrings.get('reglas_subtitulo'),
+                    style: const TextStyle(fontSize: 11),
+                  ),
+                  trailing: Icon(
+                    Icons.chevron_right_rounded,
+                    color: isDark
+                        ? const Color(0xFF64748B)
+                        : const Color(0xFF94A3B8),
+                  ),
+                  onTap: () {
+                    setState(() => _activeView = _SettingsView.reglas);
                   },
                 ),
               ],
