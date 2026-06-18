@@ -142,7 +142,10 @@ class WindScreen extends StatelessWidget {
                                     index: index,
                                     isTarget:
                                         _altitudeMeters(row.altitude) ==
-                                        session.preferences.rulesConfig.targetAltitudeMeters,
+                                        session
+                                            .preferences
+                                            .rulesConfig
+                                            .targetAltitudeMeters,
                                     isBestWind:
                                         row.altitude == bestWindRow.altitude,
                                     units: units,

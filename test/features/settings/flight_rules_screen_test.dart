@@ -29,7 +29,9 @@ void main() {
     expect(find.text('Viento'), findsWidgets);
   });
 
-  testWidgets('increment then save returns a higher wind block', (tester) async {
+  testWidgets('increment then save returns a higher wind block', (
+    tester,
+  ) async {
     FlightRulesConfig? saved;
     await tester.pumpWidget(host(onSave: (c) => saved = c));
 

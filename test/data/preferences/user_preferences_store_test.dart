@@ -9,7 +9,9 @@ void main() {
 
   test('saves and restores a custom rulesConfig', () async {
     final store = SharedPreferencesUserPreferencesStore();
-    final config = const FlightRulesConfig.defaults().copyWith(windBlockedKmh: 33);
+    final config = const FlightRulesConfig.defaults().copyWith(
+      windBlockedKmh: 33,
+    );
     await store.save(const UserPreferences().copyWith(rulesConfig: config));
 
     final restored = await store.load();

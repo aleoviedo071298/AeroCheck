@@ -19,37 +19,45 @@ class FlightReadinessEvaluator {
     rules.add(_missingData(weather));
 
     if (weather.windKmh != null) {
-      rules.add(_thresholdRule(
-        code: 'WIND_SPEED',
-        value: weather.windKmh!,
-        warning: config.windWarningKmh,
-        blocked: config.windBlockedKmh,
-        okTitle: 'Viento dentro del limite',
-        warningTitle: 'Viento cerca del limite',
-        blockedTitle: 'Viento sobre el limite',
-        unit: 'km/h',
-      ));
+      rules.add(
+        _thresholdRule(
+          code: 'WIND_SPEED',
+          value: weather.windKmh!,
+          warning: config.windWarningKmh,
+          blocked: config.windBlockedKmh,
+          okTitle: 'Viento dentro del limite',
+          warningTitle: 'Viento cerca del limite',
+          blockedTitle: 'Viento sobre el limite',
+          unit: 'km/h',
+        ),
+      );
     }
     if (weather.gustKmh != null) {
-      rules.add(_thresholdRule(
-        code: 'WIND_GUST',
-        value: weather.gustKmh!,
-        warning: config.gustWarningKmh,
-        blocked: config.gustBlockedKmh,
-        okTitle: 'Rafagas dentro del limite',
-        warningTitle: 'Rafagas cerca del limite',
-        blockedTitle: 'Rafagas sobre el limite',
-        unit: 'km/h',
-      ));
+      rules.add(
+        _thresholdRule(
+          code: 'WIND_GUST',
+          value: weather.gustKmh!,
+          warning: config.gustWarningKmh,
+          blocked: config.gustBlockedKmh,
+          okTitle: 'Rafagas dentro del limite',
+          warningTitle: 'Rafagas cerca del limite',
+          blockedTitle: 'Rafagas sobre el limite',
+          unit: 'km/h',
+        ),
+      );
     }
     if (weather.windKmh != null && weather.gustKmh != null) {
       rules.add(_gustSpread(weather.gustKmh! - weather.windKmh!, config));
     }
     if (weather.precipitationProbability != null) {
-      rules.add(_precipitationProbability(weather.precipitationProbability!, config));
+      rules.add(
+        _precipitationProbability(weather.precipitationProbability!, config),
+      );
     }
     if (weather.precipitationMmPerHour != null) {
-      rules.add(_precipitationIntensity(weather.precipitationMmPerHour!, config));
+      rules.add(
+        _precipitationIntensity(weather.precipitationMmPerHour!, config),
+      );
     }
     if (weather.visibilityKm != null) {
       rules.add(_visibility(weather.visibilityKm!, config));
@@ -132,8 +140,8 @@ class FlightReadinessEvaluator {
     final severity = value > blocked
         ? RuleSeverity.blocked
         : value > warning
-            ? RuleSeverity.warning
-            : RuleSeverity.ok;
+        ? RuleSeverity.warning
+        : RuleSeverity.ok;
     final title = switch (severity) {
       RuleSeverity.ok => okTitle,
       RuleSeverity.warning => warningTitle,
@@ -153,8 +161,8 @@ class FlightReadinessEvaluator {
     final severity = spread > config.gustSpreadBlockedKmh
         ? RuleSeverity.blocked
         : spread > config.gustSpreadWarningKmh
-            ? RuleSeverity.warning
-            : RuleSeverity.ok;
+        ? RuleSeverity.warning
+        : RuleSeverity.ok;
     return FlightRuleResult(
       code: 'GUST_SPREAD',
       severity: severity,
@@ -169,12 +177,15 @@ class FlightReadinessEvaluator {
     );
   }
 
-  FlightRuleResult _precipitationProbability(double probability, FlightRulesConfig config) {
+  FlightRuleResult _precipitationProbability(
+    double probability,
+    FlightRulesConfig config,
+  ) {
     final severity = probability >= config.precipProbabilityBlockedPercent
         ? RuleSeverity.blocked
         : probability >= config.precipProbabilityWarningPercent
-            ? RuleSeverity.warning
-            : RuleSeverity.ok;
+        ? RuleSeverity.warning
+        : RuleSeverity.ok;
     return FlightRuleResult(
       code: 'PRECIP_PROBABILITY',
       severity: severity,
@@ -189,12 +200,15 @@ class FlightReadinessEvaluator {
     );
   }
 
-  FlightRuleResult _precipitationIntensity(double intensity, FlightRulesConfig config) {
+  FlightRuleResult _precipitationIntensity(
+    double intensity,
+    FlightRulesConfig config,
+  ) {
     final severity = intensity > config.precipIntensityBlockedMmPerHour
         ? RuleSeverity.blocked
         : intensity > config.precipIntensityWarningMmPerHour
-            ? RuleSeverity.warning
-            : RuleSeverity.ok;
+        ? RuleSeverity.warning
+        : RuleSeverity.ok;
     return FlightRuleResult(
       code: 'PRECIP_INTENSITY',
       severity: severity,
@@ -213,8 +227,8 @@ class FlightReadinessEvaluator {
     final severity = visibility < config.visibilityBlockedKm
         ? RuleSeverity.blocked
         : visibility < config.visibilityWarningKm
-            ? RuleSeverity.warning
-            : RuleSeverity.ok;
+        ? RuleSeverity.warning
+        : RuleSeverity.ok;
     return FlightRuleResult(
       code: 'VISIBILITY',
       severity: severity,
@@ -231,13 +245,15 @@ class FlightReadinessEvaluator {
   }
 
   FlightRuleResult _cloudBase(double cloudBase, FlightRulesConfig config) {
-    final okThreshold = config.targetAltitudeMeters + config.cloudBaseWarningMarginMeters;
-    final blockedThreshold = config.targetAltitudeMeters + config.cloudBaseBlockedMarginMeters;
+    final okThreshold =
+        config.targetAltitudeMeters + config.cloudBaseWarningMarginMeters;
+    final blockedThreshold =
+        config.targetAltitudeMeters + config.cloudBaseBlockedMarginMeters;
     final severity = cloudBase < blockedThreshold
         ? RuleSeverity.blocked
         : cloudBase < okThreshold
-            ? RuleSeverity.warning
-            : RuleSeverity.ok;
+        ? RuleSeverity.warning
+        : RuleSeverity.ok;
     return FlightRuleResult(
       code: 'CLOUD_BASE',
       severity: severity,
@@ -254,13 +270,14 @@ class FlightReadinessEvaluator {
   }
 
   FlightRuleResult _temperature(double temperature, FlightRulesConfig config) {
-    final severity = temperature < config.temperatureMinBlockedC ||
+    final severity =
+        temperature < config.temperatureMinBlockedC ||
             temperature > config.temperatureMaxBlockedC
         ? RuleSeverity.blocked
         : temperature < config.temperatureMinWarningC ||
-                temperature > config.temperatureMaxWarningC
-            ? RuleSeverity.warning
-            : RuleSeverity.ok;
+              temperature > config.temperatureMaxWarningC
+        ? RuleSeverity.warning
+        : RuleSeverity.ok;
     return FlightRuleResult(
       code: 'TEMPERATURE',
       severity: severity,
@@ -278,8 +295,8 @@ class FlightReadinessEvaluator {
     final severity = kp >= config.kpBlocked
         ? RuleSeverity.blocked
         : kp >= config.kpWarning
-            ? RuleSeverity.warning
-            : RuleSeverity.ok;
+        ? RuleSeverity.warning
+        : RuleSeverity.ok;
     return FlightRuleResult(
       code: 'KP_INDEX',
       severity: severity,
@@ -302,13 +319,13 @@ class FlightReadinessEvaluator {
       title: isDaylight
           ? 'Luz diurna disponible'
           : ok
-              ? 'Vuelo nocturno habilitado'
-              : 'Vuelo nocturno no habilitado',
+          ? 'Vuelo nocturno habilitado'
+          : 'Vuelo nocturno no habilitado',
       details: isDaylight
           ? 'La ventana esta dentro de horario diurno.'
           : ok
-              ? 'Activaste vuelo nocturno en tus reglas. Verifica permisos.'
-              : 'Activa vuelo nocturno solo si corresponde y tenes permiso.',
+          ? 'Activaste vuelo nocturno en tus reglas. Verifica permisos.'
+          : 'Activa vuelo nocturno solo si corresponde y tenes permiso.',
     );
   }
 
@@ -316,8 +333,8 @@ class FlightReadinessEvaluator {
     final severity = weather.isInsideRestrictedArea
         ? RuleSeverity.blocked
         : weather.isNearRestrictedArea
-            ? RuleSeverity.warning
-            : RuleSeverity.ok;
+        ? RuleSeverity.warning
+        : RuleSeverity.ok;
 
     return FlightRuleResult(
       code: 'RESTRICTED_AREA',

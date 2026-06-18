@@ -82,13 +82,17 @@ class FlightRulesConfig {
       gustSpreadWarningKmh: gustSpreadWarningKmh ?? this.gustSpreadWarningKmh,
       gustSpreadBlockedKmh: gustSpreadBlockedKmh ?? this.gustSpreadBlockedKmh,
       precipProbabilityWarningPercent:
-          precipProbabilityWarningPercent ?? this.precipProbabilityWarningPercent,
+          precipProbabilityWarningPercent ??
+          this.precipProbabilityWarningPercent,
       precipProbabilityBlockedPercent:
-          precipProbabilityBlockedPercent ?? this.precipProbabilityBlockedPercent,
+          precipProbabilityBlockedPercent ??
+          this.precipProbabilityBlockedPercent,
       precipIntensityWarningMmPerHour:
-          precipIntensityWarningMmPerHour ?? this.precipIntensityWarningMmPerHour,
+          precipIntensityWarningMmPerHour ??
+          this.precipIntensityWarningMmPerHour,
       precipIntensityBlockedMmPerHour:
-          precipIntensityBlockedMmPerHour ?? this.precipIntensityBlockedMmPerHour,
+          precipIntensityBlockedMmPerHour ??
+          this.precipIntensityBlockedMmPerHour,
       visibilityWarningKm: visibilityWarningKm ?? this.visibilityWarningKm,
       visibilityBlockedKm: visibilityBlockedKm ?? this.visibilityBlockedKm,
       targetAltitudeMeters: targetAltitudeMeters ?? this.targetAltitudeMeters,
@@ -96,10 +100,14 @@ class FlightRulesConfig {
           cloudBaseWarningMarginMeters ?? this.cloudBaseWarningMarginMeters,
       cloudBaseBlockedMarginMeters:
           cloudBaseBlockedMarginMeters ?? this.cloudBaseBlockedMarginMeters,
-      temperatureMinWarningC: temperatureMinWarningC ?? this.temperatureMinWarningC,
-      temperatureMinBlockedC: temperatureMinBlockedC ?? this.temperatureMinBlockedC,
-      temperatureMaxWarningC: temperatureMaxWarningC ?? this.temperatureMaxWarningC,
-      temperatureMaxBlockedC: temperatureMaxBlockedC ?? this.temperatureMaxBlockedC,
+      temperatureMinWarningC:
+          temperatureMinWarningC ?? this.temperatureMinWarningC,
+      temperatureMinBlockedC:
+          temperatureMinBlockedC ?? this.temperatureMinBlockedC,
+      temperatureMaxWarningC:
+          temperatureMaxWarningC ?? this.temperatureMaxWarningC,
+      temperatureMaxBlockedC:
+          temperatureMaxBlockedC ?? this.temperatureMaxBlockedC,
       kpWarning: kpWarning ?? this.kpWarning,
       kpBlocked: kpBlocked ?? this.kpBlocked,
       allowNightFlight: allowNightFlight ?? this.allowNightFlight,
@@ -146,28 +154,56 @@ class FlightRulesConfig {
       gustBlockedKmh: dbl('gustBlockedKmh', d.gustBlockedKmh),
       gustSpreadWarningKmh: dbl('gustSpreadWarningKmh', d.gustSpreadWarningKmh),
       gustSpreadBlockedKmh: dbl('gustSpreadBlockedKmh', d.gustSpreadBlockedKmh),
-      precipProbabilityWarningPercent:
-          dbl('precipProbabilityWarningPercent', d.precipProbabilityWarningPercent),
-      precipProbabilityBlockedPercent:
-          dbl('precipProbabilityBlockedPercent', d.precipProbabilityBlockedPercent),
-      precipIntensityWarningMmPerHour:
-          dbl('precipIntensityWarningMmPerHour', d.precipIntensityWarningMmPerHour),
-      precipIntensityBlockedMmPerHour:
-          dbl('precipIntensityBlockedMmPerHour', d.precipIntensityBlockedMmPerHour),
+      precipProbabilityWarningPercent: dbl(
+        'precipProbabilityWarningPercent',
+        d.precipProbabilityWarningPercent,
+      ),
+      precipProbabilityBlockedPercent: dbl(
+        'precipProbabilityBlockedPercent',
+        d.precipProbabilityBlockedPercent,
+      ),
+      precipIntensityWarningMmPerHour: dbl(
+        'precipIntensityWarningMmPerHour',
+        d.precipIntensityWarningMmPerHour,
+      ),
+      precipIntensityBlockedMmPerHour: dbl(
+        'precipIntensityBlockedMmPerHour',
+        d.precipIntensityBlockedMmPerHour,
+      ),
       visibilityWarningKm: dbl('visibilityWarningKm', d.visibilityWarningKm),
       visibilityBlockedKm: dbl('visibilityBlockedKm', d.visibilityBlockedKm),
-      targetAltitudeMeters: integer('targetAltitudeMeters', d.targetAltitudeMeters),
-      cloudBaseWarningMarginMeters:
-          integer('cloudBaseWarningMarginMeters', d.cloudBaseWarningMarginMeters),
-      cloudBaseBlockedMarginMeters:
-          integer('cloudBaseBlockedMarginMeters', d.cloudBaseBlockedMarginMeters),
-      temperatureMinWarningC: dbl('temperatureMinWarningC', d.temperatureMinWarningC),
-      temperatureMinBlockedC: dbl('temperatureMinBlockedC', d.temperatureMinBlockedC),
-      temperatureMaxWarningC: dbl('temperatureMaxWarningC', d.temperatureMaxWarningC),
-      temperatureMaxBlockedC: dbl('temperatureMaxBlockedC', d.temperatureMaxBlockedC),
+      targetAltitudeMeters: integer(
+        'targetAltitudeMeters',
+        d.targetAltitudeMeters,
+      ),
+      cloudBaseWarningMarginMeters: integer(
+        'cloudBaseWarningMarginMeters',
+        d.cloudBaseWarningMarginMeters,
+      ),
+      cloudBaseBlockedMarginMeters: integer(
+        'cloudBaseBlockedMarginMeters',
+        d.cloudBaseBlockedMarginMeters,
+      ),
+      temperatureMinWarningC: dbl(
+        'temperatureMinWarningC',
+        d.temperatureMinWarningC,
+      ),
+      temperatureMinBlockedC: dbl(
+        'temperatureMinBlockedC',
+        d.temperatureMinBlockedC,
+      ),
+      temperatureMaxWarningC: dbl(
+        'temperatureMaxWarningC',
+        d.temperatureMaxWarningC,
+      ),
+      temperatureMaxBlockedC: dbl(
+        'temperatureMaxBlockedC',
+        d.temperatureMaxBlockedC,
+      ),
       kpWarning: dbl('kpWarning', d.kpWarning),
       kpBlocked: dbl('kpBlocked', d.kpBlocked),
-      allowNightFlight: (json['allowNightFlight'] as bool?) ?? d.allowNightFlight,
+      allowNightFlight:
+          (json['allowNightFlight'] as bool?) ?? d.allowNightFlight,
     );
   }
 
@@ -180,10 +216,14 @@ class FlightRulesConfig {
       other.gustBlockedKmh == gustBlockedKmh &&
       other.gustSpreadWarningKmh == gustSpreadWarningKmh &&
       other.gustSpreadBlockedKmh == gustSpreadBlockedKmh &&
-      other.precipProbabilityWarningPercent == precipProbabilityWarningPercent &&
-      other.precipProbabilityBlockedPercent == precipProbabilityBlockedPercent &&
-      other.precipIntensityWarningMmPerHour == precipIntensityWarningMmPerHour &&
-      other.precipIntensityBlockedMmPerHour == precipIntensityBlockedMmPerHour &&
+      other.precipProbabilityWarningPercent ==
+          precipProbabilityWarningPercent &&
+      other.precipProbabilityBlockedPercent ==
+          precipProbabilityBlockedPercent &&
+      other.precipIntensityWarningMmPerHour ==
+          precipIntensityWarningMmPerHour &&
+      other.precipIntensityBlockedMmPerHour ==
+          precipIntensityBlockedMmPerHour &&
       other.visibilityWarningKm == visibilityWarningKm &&
       other.visibilityBlockedKm == visibilityBlockedKm &&
       other.targetAltitudeMeters == targetAltitudeMeters &&
@@ -199,14 +239,27 @@ class FlightRulesConfig {
 
   @override
   int get hashCode => Object.hashAll([
-        windWarningKmh, windBlockedKmh, gustWarningKmh, gustBlockedKmh,
-        gustSpreadWarningKmh, gustSpreadBlockedKmh,
-        precipProbabilityWarningPercent, precipProbabilityBlockedPercent,
-        precipIntensityWarningMmPerHour, precipIntensityBlockedMmPerHour,
-        visibilityWarningKm, visibilityBlockedKm, targetAltitudeMeters,
-        cloudBaseWarningMarginMeters, cloudBaseBlockedMarginMeters,
-        temperatureMinWarningC, temperatureMinBlockedC,
-        temperatureMaxWarningC, temperatureMaxBlockedC,
-        kpWarning, kpBlocked, allowNightFlight,
-      ]);
+    windWarningKmh,
+    windBlockedKmh,
+    gustWarningKmh,
+    gustBlockedKmh,
+    gustSpreadWarningKmh,
+    gustSpreadBlockedKmh,
+    precipProbabilityWarningPercent,
+    precipProbabilityBlockedPercent,
+    precipIntensityWarningMmPerHour,
+    precipIntensityBlockedMmPerHour,
+    visibilityWarningKm,
+    visibilityBlockedKm,
+    targetAltitudeMeters,
+    cloudBaseWarningMarginMeters,
+    cloudBaseBlockedMarginMeters,
+    temperatureMinWarningC,
+    temperatureMinBlockedC,
+    temperatureMaxWarningC,
+    temperatureMaxBlockedC,
+    kpWarning,
+    kpBlocked,
+    allowNightFlight,
+  ]);
 }

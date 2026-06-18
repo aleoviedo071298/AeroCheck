@@ -500,8 +500,9 @@ class WeatherSession extends ChangeNotifier {
   void _persistPreferences() {
     _userPreferences = _userPreferences.copyWith(
       selectedLocationId: _selectedLocation.id,
-      favoriteLocationsJson:
-          _favoriteLocations.map((location) => location.toJson()).toList(),
+      favoriteLocationsJson: _favoriteLocations
+          .map((location) => location.toJson())
+          .toList(),
       guideRadiusKm: _guideRadiusKm,
       dataSourceName: _dataSource.name,
     );

@@ -12,7 +12,9 @@ void main() {
     var notified = 0;
     session.addListener(() => notified++);
 
-    final config = const FlightRulesConfig.defaults().copyWith(windBlockedKmh: 31);
+    final config = const FlightRulesConfig.defaults().copyWith(
+      windBlockedKmh: 31,
+    );
     await session.updateRulesConfig(config);
 
     expect(session.preferences.rulesConfig.windBlockedKmh, 31);
