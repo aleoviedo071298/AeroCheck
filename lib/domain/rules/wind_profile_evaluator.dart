@@ -1,6 +1,5 @@
 import '../../data/mock/mock_flight_data.dart';
-import '../entities/drone_profile.dart';
-import '../entities/mission_profile.dart';
+import 'flight_rules_config.dart';
 
 class EvaluatedWindProfileRow {
   const EvaluatedWindProfileRow({
@@ -31,37 +30,28 @@ class EvaluatedWindProfileRow {
 }
 
 class WindProfileEvaluator {
-  const WindProfileEvaluator({
-    required this.droneProfile,
-    required this.missionProfile,
-  });
+  const WindProfileEvaluator({required this.config});
 
-  final DroneProfile droneProfile;
-  final MissionProfile missionProfile;
+  final FlightRulesConfig config;
 
   List<EvaluatedWindProfileRow> evaluateProfile(List<WindProfileRow> rows) {
     return rows.map(evaluateRow).toList();
   }
 
   EvaluatedWindProfileRow evaluateRow(WindProfileRow row) {
-    final effectiveMaxWind =
-        droneProfile.maxWindKmh * missionProfile.windModifier;
-    final effectiveMaxGust =
-        droneProfile.maxGustKmh * missionProfile.gustModifier;
-
     String status = 'ok';
     String? limitExceededAt;
 
-    if (row.windKmh > effectiveMaxWind) {
+    if (row.windKmh > config.windBlockedKmh) {
       status = 'blocked';
       limitExceededAt = 'wind';
-    } else if (row.gustKmh > effectiveMaxGust) {
+    } else if (row.gustKmh > config.gustBlockedKmh) {
       status = 'blocked';
       limitExceededAt = 'gust';
-    } else if (row.windKmh > effectiveMaxWind * 0.8) {
+    } else if (row.windKmh > config.windWarningKmh) {
       status = 'warning';
       limitExceededAt = 'wind';
-    } else if (row.gustKmh > effectiveMaxGust * 0.8) {
+    } else if (row.gustKmh > config.gustWarningKmh) {
       status = 'warning';
       limitExceededAt = 'gust';
     }

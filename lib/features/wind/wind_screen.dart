@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../app/weather_session.dart';
-import '../../data/mock/mock_flight_data.dart';
 import '../../domain/i18n/app_strings.dart';
 import '../../domain/i18n/language.dart';
 import '../../domain/rules/rule_severity.dart';
@@ -30,8 +29,7 @@ class WindScreen extends StatelessWidget {
         final rows = session.windProfileRows;
 
         final evaluator = WindProfileEvaluator(
-          droneProfile: MockFlightData.droneProfile,
-          missionProfile: MockFlightData.missionProfile,
+          config: session.preferences.rulesConfig,
         );
 
         final evaluatedRows = evaluator.evaluateProfile(rows);
@@ -144,9 +142,7 @@ class WindScreen extends StatelessWidget {
                                     index: index,
                                     isTarget:
                                         _altitudeMeters(row.altitude) ==
-                                        MockFlightData
-                                            .droneProfile
-                                            .preferredAltitudeMeters,
+                                        session.preferences.rulesConfig.targetAltitudeMeters,
                                     isBestWind:
                                         row.altitude == bestWindRow.altitude,
                                     units: units,
