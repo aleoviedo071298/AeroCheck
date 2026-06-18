@@ -44,6 +44,31 @@ void main() {
     expect(saved!.windBlockedKmh, greaterThan(28));
   });
 
+  testWidgets('temperature min block can go below zero', (tester) async {
+    FlightRulesConfig? saved;
+    await tester.pumpWidget(host(onSave: (c) => saved = c));
+
+    // Scroll until the minus button for temperatureMinBlockedC is visible.
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('minus-temperatureMinBlockedC')),
+      100,
+    );
+    await tester.pump();
+
+    // Default temperatureMinBlockedC is -5; tap minus 3 times → should reach -8.
+    await tester.tap(find.byKey(const ValueKey('minus-temperatureMinBlockedC')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('minus-temperatureMinBlockedC')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('minus-temperatureMinBlockedC')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('flight-rules-save')));
+    await tester.pump();
+
+    expect(saved, isNotNull);
+    expect(saved!.temperatureMinBlockedC, lessThan(-5));
+  });
+
   testWidgets('restore defaults reverts edits', (tester) async {
     FlightRulesConfig? saved;
     await tester.pumpWidget(host(onSave: (c) => saved = c));

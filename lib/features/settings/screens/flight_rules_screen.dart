@@ -245,6 +245,7 @@ class _FlightRulesScreenState extends State<FlightRulesScreen> {
                 onBlock: (v) => _set(
                   (c) => c.copyWith(temperatureMinBlockedC: _tempToMetric(v)),
                 ),
+                allowNegative: true,
               ),
               _stepperPair(
                 label: _t('temp_maxima'),
@@ -261,6 +262,7 @@ class _FlightRulesScreenState extends State<FlightRulesScreen> {
                 onBlock: (v) => _set(
                   (c) => c.copyWith(temperatureMaxBlockedC: _tempToMetric(v)),
                 ),
+                allowNegative: true,
               ),
               _stepperPair(
                 label: _t('indice_kp_regla'),
@@ -356,6 +358,7 @@ class _FlightRulesScreenState extends State<FlightRulesScreen> {
     required String field,
     required double value,
     required ValueChanged<double> onChanged,
+    bool allowNegative = false,
   }) {
     return _StepperRow(
       label: label,
@@ -366,6 +369,8 @@ class _FlightRulesScreenState extends State<FlightRulesScreen> {
       field: field,
       value: value,
       onChanged: onChanged,
+      language: widget.language,
+      allowNegative: allowNegative,
     );
   }
 
@@ -380,6 +385,7 @@ class _FlightRulesScreenState extends State<FlightRulesScreen> {
     required double block,
     required ValueChanged<double> onWarn,
     required ValueChanged<double> onBlock,
+    bool allowNegative = false,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -400,6 +406,8 @@ class _FlightRulesScreenState extends State<FlightRulesScreen> {
           field: warnField,
           value: warn,
           onChanged: onWarn,
+          language: widget.language,
+          allowNegative: allowNegative,
         ),
         _StepperRow(
           label: _t('bloqueo'),
@@ -410,6 +418,8 @@ class _FlightRulesScreenState extends State<FlightRulesScreen> {
           field: blockField,
           value: block,
           onChanged: onBlock,
+          language: widget.language,
+          allowNegative: allowNegative,
         ),
       ],
     );
@@ -426,6 +436,8 @@ class _StepperRow extends StatelessWidget {
     required this.field,
     required this.value,
     required this.onChanged,
+    required this.language,
+    this.allowNegative = false,
   });
 
   final String label;
@@ -436,6 +448,8 @@ class _StepperRow extends StatelessWidget {
   final String field;
   final double value;
   final ValueChanged<double> onChanged;
+  final Language language;
+  final bool allowNegative;
 
   String get _shown => decimals == 0
       ? value.round().toString()
@@ -478,7 +492,7 @@ class _StepperRow extends StatelessWidget {
     );
   }
 
-  double _clampStep(double v) => v < 0 ? 0 : v;
+  double _clampStep(double v) => (!allowNegative && v < 0) ? 0 : v;
 
   Future<void> _editExact(BuildContext context) async {
     final controller = TextEditingController(text: _shown);
@@ -488,20 +502,25 @@ class _StepperRow extends StatelessWidget {
         content: TextField(
           controller: controller,
           autofocus: true,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          keyboardType: TextInputType.numberWithOptions(
+            decimal: true,
+            signed: allowNegative,
+          ),
           inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+            FilteringTextInputFormatter.allow(
+              allowNegative ? RegExp(r'[0-9.\-]') : RegExp(r'[0-9.]'),
+            ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text(AppStrings.get('cancelar')),
+            child: Text(AppStrings.get('cancelar', language: language)),
           ),
           TextButton(
             onPressed: () =>
                 Navigator.pop(ctx, double.tryParse(controller.text)),
-            child: Text(AppStrings.get('aceptar')),
+            child: Text(AppStrings.get('aceptar', language: language)),
           ),
         ],
       ),
