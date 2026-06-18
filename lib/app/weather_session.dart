@@ -363,8 +363,7 @@ class WeatherSession extends ChangeNotifier {
       final weather = _withOperationalContext(snapshot);
       final report = _evaluator.evaluate(
         weather: weather,
-        droneProfile: MockFlightData.droneProfile,
-        missionProfile: MockFlightData.missionProfile,
+        config: _userPreferences.rulesConfig,
         bestWindow: defaultWindow,
       );
       if (bestReport == null || report.score > bestReport.score) {
@@ -388,8 +387,7 @@ class WeatherSession extends ChangeNotifier {
   ) {
     return _evaluator.evaluate(
       weather: weather,
-      droneProfile: MockFlightData.droneProfile,
-      missionProfile: MockFlightData.missionProfile,
+      config: _userPreferences.rulesConfig,
       bestWindow: bestWindow,
     );
   }
@@ -412,8 +410,7 @@ class WeatherSession extends ChangeNotifier {
     final weather = _withOperationalContext(snapshot);
     final report = _evaluator.evaluate(
       weather: weather,
-      droneProfile: MockFlightData.droneProfile,
-      missionProfile: MockFlightData.missionProfile,
+      config: _userPreferences.rulesConfig,
       bestWindow: bestWindow,
     );
     final reasons = _reasonsFor(report);
