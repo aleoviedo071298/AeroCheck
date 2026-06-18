@@ -29,6 +29,7 @@ import '../domain/entities/flight_window_recommendation.dart';
 import '../domain/entities/weather_snapshot.dart';
 import '../domain/rules/flight_readiness_evaluator.dart';
 import '../domain/rules/flight_readiness_status.dart';
+import '../domain/rules/flight_rules_config.dart';
 import '../domain/rules/rule_severity.dart';
 import 'airspace_geom_helper.dart';
 import 'airspace_state.dart';
@@ -229,6 +230,15 @@ class WeatherSession extends ChangeNotifier {
     }
 
     _userPreferences = _userPreferences.copyWith(units: units);
+    await _preferencesStore.save(_userPreferences);
+    notifyListeners();
+  }
+
+  Future<void> updateRulesConfig(FlightRulesConfig config) async {
+    if (_userPreferences.rulesConfig == config) {
+      return;
+    }
+    _userPreferences = _userPreferences.copyWith(rulesConfig: config);
     await _preferencesStore.save(_userPreferences);
     notifyListeners();
   }
