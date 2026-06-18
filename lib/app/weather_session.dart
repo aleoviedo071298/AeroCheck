@@ -491,20 +491,14 @@ class WeatherSession extends ChangeNotifier {
   }
 
   void _persistPreferences() {
-    unawaited(
-      _preferencesStore
-          .save(
-            UserPreferences(
-              selectedLocationId: _selectedLocation.id,
-              favoriteLocationsJson: _favoriteLocations
-                  .map((location) => location.toJson())
-                  .toList(),
-              guideRadiusKm: _guideRadiusKm,
-              dataSourceName: _dataSource.name,
-            ),
-          )
-          .catchError((_) {}),
+    _userPreferences = _userPreferences.copyWith(
+      selectedLocationId: _selectedLocation.id,
+      favoriteLocationsJson:
+          _favoriteLocations.map((location) => location.toJson()).toList(),
+      guideRadiusKm: _guideRadiusKm,
+      dataSourceName: _dataSource.name,
     );
+    unawaited(_preferencesStore.save(_userPreferences).catchError((_) {}));
   }
 
   bool _isFavoriteLocation(String id) {

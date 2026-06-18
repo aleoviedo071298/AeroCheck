@@ -1,5 +1,6 @@
-import '../../domain/units/unit_preferences.dart';
 import '../../domain/i18n/language.dart';
+import '../../domain/rules/flight_rules_config.dart';
+import '../../domain/units/unit_preferences.dart';
 
 class UserPreferences {
   const UserPreferences({
@@ -9,6 +10,7 @@ class UserPreferences {
     this.dataSourceName,
     this.language = Language.es,
     this.units = const UnitPreferences(),
+    this.rulesConfig = const FlightRulesConfig.defaults(),
   });
 
   final String? selectedLocationId;
@@ -17,6 +19,7 @@ class UserPreferences {
   final String? dataSourceName;
   final Language language;
   final UnitPreferences units;
+  final FlightRulesConfig rulesConfig;
 
   UserPreferences copyWith({
     String? selectedLocationId,
@@ -25,6 +28,7 @@ class UserPreferences {
     String? dataSourceName,
     Language? language,
     UnitPreferences? units,
+    FlightRulesConfig? rulesConfig,
   }) {
     return UserPreferences(
       selectedLocationId: selectedLocationId ?? this.selectedLocationId,
@@ -34,6 +38,7 @@ class UserPreferences {
       dataSourceName: dataSourceName ?? this.dataSourceName,
       language: language ?? this.language,
       units: units ?? this.units,
+      rulesConfig: rulesConfig ?? this.rulesConfig,
     );
   }
 }
