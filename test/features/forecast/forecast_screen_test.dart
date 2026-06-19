@@ -75,6 +75,68 @@ void main() {
     expect(find.text('mph'), findsWidgets);
     expect(find.text('km/h'), findsNothing);
   });
+
+  testWidgets('forecast shows the focused hour hero and a draggable scrubber', (
+    tester,
+  ) async {
+    final session = WeatherSession(
+      weatherRepository: _FakeWeatherRepository(),
+      preferencesStore: _FakePreferencesStore(),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: ForecastScreen(session: session)),
+      ),
+    );
+    await session.loadRealWeather();
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('focused-hour-time')), findsOneWidget);
+    expect(find.byKey(const ValueKey('scrubber-track')), findsOneWidget);
+
+    // Scroll to make list toggle visible
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('forecast-list-toggle')),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.byKey(const ValueKey('forecast-list-toggle')), findsOneWidget);
+  });
+
+  testWidgets('tapping the list toggle reveals the hourly rows', (
+    tester,
+  ) async {
+    final session = WeatherSession(
+      weatherRepository: _FakeWeatherRepository(),
+      preferencesStore: _FakePreferencesStore(),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: ForecastScreen(session: session)),
+      ),
+    );
+    await session.loadRealWeather();
+    await tester.pumpAndSettle();
+
+    // Scroll to make toggle visible
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('forecast-list-toggle')),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.byKey(const ValueKey('forecast-list')), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('forecast-list-toggle')));
+    await tester.pumpAndSettle();
+
+    // Scroll further to see the expanded list
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('forecast-list')),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.byKey(const ValueKey('forecast-list')), findsOneWidget);
+  });
 }
 
 class _FakePreferencesStore implements UserPreferencesStore {

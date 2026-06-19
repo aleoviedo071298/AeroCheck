@@ -11,11 +11,45 @@ import '../../domain/rules/flight_readiness_status.dart';
 import '../../domain/rules/rule_severity.dart';
 import '../../domain/units/unit_formatters.dart';
 import '../../domain/units/unit_preferences.dart';
+import 'forecast_day_grouping.dart';
+import 'widgets/focused_hour_card.dart';
+import 'widgets/hour_scrubber.dart';
 
-class ForecastScreen extends StatelessWidget {
+class ForecastScreen extends StatefulWidget {
   const ForecastScreen({super.key, required this.session});
 
   final WeatherSession session;
+
+  @override
+  State<ForecastScreen> createState() => _ForecastScreenState();
+}
+
+class _ForecastScreenState extends State<ForecastScreen> {
+  DateTime? _selectedDate;
+  DateTime? _selectedHour;
+  bool _listExpanded = false;
+
+  WeatherSession get session => widget.session;
+
+  void _syncSelection(List<ForecastDay> days) {
+    if (days.isEmpty) {
+      _selectedDate = null;
+      _selectedHour = null;
+      return;
+    }
+    final hasDate = days.any((d) => d.date == _selectedDate);
+    if (!hasDate) {
+      final first = days.first;
+      _selectedDate = first.date;
+      _selectedHour = first.bestHour?.time ?? first.rows.first.time;
+      return;
+    }
+    final day = days.firstWhere((d) => d.date == _selectedDate);
+    final hasHour = day.rows.any((r) => r.time == _selectedHour);
+    if (!hasHour) {
+      _selectedHour = day.bestHour?.time ?? day.rows.first.time;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,8 +62,12 @@ class ForecastScreen extends StatelessWidget {
       animation: session,
       builder: (context, _) {
         AppStrings.currentLanguage = session.preferences.language;
+        final language = session.preferences.language;
+        final units = session.preferences.units;
         final report = session.currentReport;
         final rows = session.forecastRows;
+        final days = groupForecastByDay(rows);
+        _syncSelection(days);
 
         return Column(
           children: [
@@ -51,46 +89,20 @@ class ForecastScreen extends StatelessWidget {
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
                     children: [
-                      // 1. Screen Header
                       _ScreenHeader(
                         title: AppStrings.get('forecast_horario'),
                         session: session,
                       ),
                       const SizedBox(height: 14),
-
                       if (session.isLoadingReal)
                         const _RealWeatherLoadingCard()
                       else if (session.dataSource == WeatherDataSource.real &&
                           session.realError != null)
                         _RealWeatherErrorCard(onRetry: session.loadRealWeather)
-                      else if (report == null)
+                      else if (report == null || days.isEmpty)
                         const _StaticLoadingCard()
                       else ...[
-                        // 2. Selected Window Card
-                        _ForecastWindowStatsCard(session: session),
-                        const SizedBox(height: 16),
-
-                        // 3. Forecast Table Header
-                        _ForecastTableHeader(units: session.preferences.units),
-                        const SizedBox(height: 4),
-
-                        // 4. Forecast Rows List
-                        ...rows.map(
-                          (row) => _RedesignedForecastRowTile(
-                            row: row,
-                            units: session.preferences.units,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // 5. Timeline Index Chart
-                        _HourlyScoreTimeline(rows: rows),
-                        const SizedBox(height: 16),
-
-                        // 6. Bottom optimal window tip
-                        _ForecastTipCard(
-                          language: session.preferences.language,
-                        ),
+                        ..._buildFocusedSection(days, units, language),
                       ],
                     ],
                   ),
@@ -100,6 +112,107 @@ class ForecastScreen extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+
+  List<Widget> _buildFocusedSection(
+    List<ForecastDay> days,
+    UnitPreferences units,
+    Language language,
+  ) {
+    final today = DateTime.now();
+    final activeDay = days.firstWhere(
+      (d) => d.date == _selectedDate,
+      orElse: () => days.first,
+    );
+    final selectedRow = activeDay.rows.firstWhere(
+      (r) => r.time == _selectedHour,
+      orElse: () => activeDay.bestHour ?? activeDay.rows.first,
+    );
+    final bestTime = activeDay.bestHour?.time;
+
+    return [
+      FocusedHourCard(
+        row: selectedRow,
+        units: units,
+        language: language,
+        isBestHour: selectedRow.time == bestTime,
+        dayLabel: forecastDayLabel(activeDay.date, today, language),
+      ),
+      const SizedBox(height: 14),
+      HourScrubber(
+        days: days,
+        selectedDate: activeDay.date,
+        selectedHour: selectedRow.time ?? activeDay.rows.first.time!,
+        today: today,
+        language: language,
+        onHourSelected: (t) => setState(() => _selectedHour = t),
+        onDaySelected: (date) => setState(() {
+          _selectedDate = date;
+          final day = days.firstWhere((d) => d.date == date);
+          _selectedHour = day.bestHour?.time ?? day.rows.first.time;
+        }),
+        onGoToBest: () => setState(() {
+          _selectedHour = activeDay.bestHour?.time;
+        }),
+      ),
+      const SizedBox(height: 14),
+      _ForecastTableHeader(units: units),
+      const SizedBox(height: 4),
+      _ListToggle(
+        expanded: _listExpanded,
+        language: language,
+        onTap: () => setState(() => _listExpanded = !_listExpanded),
+      ),
+      if (_listExpanded)
+        Column(
+          key: const ValueKey('forecast-list'),
+          children: [
+            const SizedBox(height: 8),
+            for (final row in activeDay.rows)
+              _RedesignedForecastRowTile(row: row, units: units),
+          ],
+        ),
+      const SizedBox(height: 16),
+      _ForecastTipCard(language: language),
+    ];
+  }
+}
+
+class _ListToggle extends StatelessWidget {
+  const _ListToggle({
+    required this.expanded,
+    required this.language,
+    required this.onTap,
+  });
+
+  final bool expanded;
+  final Language language;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final color = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    return Center(
+      child: TextButton.icon(
+        key: const ValueKey('forecast-list-toggle'),
+        onPressed: onTap,
+        style: TextButton.styleFrom(foregroundColor: color),
+        icon: Icon(
+          expanded
+              ? Icons.keyboard_arrow_up_rounded
+              : Icons.keyboard_arrow_down_rounded,
+          size: 18,
+        ),
+        label: Text(
+          AppStrings.get(
+            expanded ? 'ocultar_lista' : 'ver_lista_completa',
+            language: language,
+          ),
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+        ),
+      ),
     );
   }
 }
@@ -147,159 +260,6 @@ class _ScreenHeader extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-class _ForecastWindowStatsCard extends StatelessWidget {
-  const _ForecastWindowStatsCard({required this.session});
-
-  final WeatherSession session;
-
-  @override
-  Widget build(BuildContext context) {
-    final report = session.currentReport;
-    if (report == null) return const SizedBox.shrink();
-
-    final window = report.bestWindow;
-    final start = window.start;
-    final end = window.end;
-
-    // Filter forecast rows that fall within the best window
-    final windowRows = session.forecastRows.where((row) {
-      if (row.time == null) return false;
-      return !row.time!.isBefore(start) && row.time!.isBefore(end);
-    }).toList();
-    double maxRainPercent = 0.0;
-
-    for (final r in windowRows) {
-      if (r.rainPercent > maxRainPercent) {
-        maxRainPercent = r.rainPercent;
-      }
-    }
-
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textStyleValue = const TextStyle(
-      fontSize: 16,
-      fontWeight: FontWeight.w900,
-      height: 1.2,
-    );
-    final textStyleLabel = TextStyle(
-      fontSize: 9,
-      fontWeight: FontWeight.w900,
-      letterSpacing: 0.5,
-      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-    );
-
-    return Card(
-      margin: EdgeInsets.zero,
-      elevation: 0,
-      color: isDark ? const Color(0xFF1E293B) : Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
-        child: Row(
-          children: [
-            // Ventana Seleccionada
-            Expanded(
-              flex: 3,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    AppStrings.get('ventana_seleccionada').toUpperCase(),
-                    style: textStyleLabel,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${_time(start)} - ${_time(end)}',
-                    style: textStyleValue.copyWith(fontSize: 14),
-                  ),
-                ],
-              ),
-            ),
-
-            _vDivider(isDark),
-
-            // Mejor Hora
-            Expanded(
-              flex: 2,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Text(
-                    AppStrings.get('mejor_hora').toUpperCase(),
-                    style: textStyleLabel,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    _time(start),
-                    style: textStyleValue.copyWith(
-                      color: const Color(0xFF0D9488),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            _vDivider(isDark),
-
-            // Lluvia en Ventana
-            Expanded(
-              flex: 2,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    AppStrings.get('lluvia_en_ventana').toUpperCase(),
-                    style: textStyleLabel,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.opacity_rounded,
-                        color: Color(0xFF3B82F6),
-                        size: 14,
-                      ),
-                      const SizedBox(width: 3),
-                      Text('${_fmt(maxRainPercent)}%', style: textStyleValue),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _vDivider(bool isDark) {
-    return Container(
-      width: 1,
-      height: 32,
-      color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-    );
-  }
-
-  String _time(DateTime value) {
-    return '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
-  }
-
-  String _fmt(num value) {
-    if (value == value.roundToDouble()) return value.toStringAsFixed(0);
-    return value.toStringAsFixed(1);
   }
 }
 
@@ -804,143 +764,6 @@ class _ForecastReasonLine extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-class _HourlyScoreTimeline extends StatelessWidget {
-  const _HourlyScoreTimeline({required this.rows});
-
-  final List<ForecastRow> rows;
-
-  @override
-  Widget build(BuildContext context) {
-    if (rows.isEmpty) return const SizedBox.shrink();
-
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDark
-        ? const Color(0xFF94A3B8)
-        : const Color(0xFF64748B);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          AppStrings.get('indice_por_hora').toUpperCase(),
-          style: TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 0.5,
-            color: textColor,
-          ),
-        ),
-        const SizedBox(height: 12),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            child: Row(
-              children: List.generate(rows.length, (index) {
-                final row = rows[index];
-                final hourStr = row.hour.split(':').first;
-                final scoreColor = _indexColor(row.score);
-
-                return SizedBox(
-                  width: 50,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Hour text
-                      Text(
-                        hourStr,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: row.isBestWindow
-                              ? FontWeight.w900
-                              : FontWeight.w700,
-                          color: row.isBestWindow
-                              ? const Color(0xFF16A34A)
-                              : textColor,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      // Dot and connecting lines
-                      Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          // Left connecting line
-                          if (index > 0)
-                            Positioned(
-                              left: 0,
-                              right: 25,
-                              child: Container(
-                                height: 2,
-                                color: _lineColor(
-                                  rows[index - 1].score,
-                                  row.score,
-                                ),
-                              ),
-                            ),
-                          // Right connecting line
-                          if (index < rows.length - 1)
-                            Positioned(
-                              left: 25,
-                              right: 0,
-                              child: Container(
-                                height: 2,
-                                color: _lineColor(
-                                  row.score,
-                                  rows[index + 1].score,
-                                ),
-                              ),
-                            ),
-                          // The Dot
-                          Container(
-                            width: row.isBestWindow ? 16 : 8,
-                            height: row.isBestWindow ? 16 : 8,
-                            decoration: BoxDecoration(
-                              color: scoreColor,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: isDark
-                                    ? const Color(0xFF0F172A)
-                                    : Colors.white,
-                                width: row.isBestWindow ? 3 : 1.5,
-                              ),
-                              boxShadow: row.isBestWindow
-                                  ? [
-                                      BoxShadow(
-                                        color: scoreColor.withValues(
-                                          alpha: 0.4,
-                                        ),
-                                        blurRadius: 4,
-                                        spreadRadius: 1,
-                                      ),
-                                    ]
-                                  : null,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                );
-              }),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Color _indexColor(int score) {
-    if (score >= 80) return const Color(0xFF16A34A);
-    if (score >= 40) return const Color(0xFFF59E0B);
-    return const Color(0xFFDC2626);
-  }
-
-  Color _lineColor(int score1, int score2) {
-    final avg = (score1 + score2) / 2.0;
-    return _indexColor(avg.round());
   }
 }
 
