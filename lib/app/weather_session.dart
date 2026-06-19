@@ -205,7 +205,7 @@ class WeatherSession extends ChangeNotifier {
 
       notifyListeners();
       await Future.wait([
-        _loadNearbyAirspaces(),
+        loadNearbyAirspaces(),
         loadRealWeather(),
       ]);
     } catch (_) {
@@ -213,7 +213,7 @@ class WeatherSession extends ChangeNotifier {
       _userPreferences = const UserPreferences();
       _dataSource = WeatherDataSource.real;
       await Future.wait([
-        _loadNearbyAirspaces(),
+        loadNearbyAirspaces(),
         loadRealWeather(),
       ]);
     } finally {
@@ -231,7 +231,6 @@ class WeatherSession extends ChangeNotifier {
     _guideRadiusKm = nextRadius;
     notifyListeners();
     _persistPreferences();
-    _loadNearbyAirspaces();
   }
 
   Future<void> updateLanguage(Language language) async {
@@ -292,8 +291,11 @@ class WeatherSession extends ChangeNotifier {
     notifyListeners();
     _persistPreferences();
 
-    if (removedSelected && _dataSource == WeatherDataSource.real) {
-      loadRealWeather();
+    if (removedSelected) {
+      if (_dataSource == WeatherDataSource.real) {
+        loadRealWeather();
+      }
+      loadNearbyAirspaces();
     }
   }
 
@@ -312,7 +314,7 @@ class WeatherSession extends ChangeNotifier {
     if (_dataSource == WeatherDataSource.real) {
       loadRealWeather();
     }
-    _loadNearbyAirspaces();
+    loadNearbyAirspaces();
   }
 
   void setDataSource(WeatherDataSource source) {
@@ -538,7 +540,7 @@ class WeatherSession extends ChangeNotifier {
     return radiusKm.clamp(minGuideRadiusKm, maxGuideRadiusKm).toDouble();
   }
 
-  Future<void> _loadNearbyAirspaces() async {
+  Future<void> loadNearbyAirspaces() async {
     final airspaceRepo = _airspaceRepository;
     final airportRepo = _airportRepository;
 
@@ -712,7 +714,7 @@ class WeatherSession extends ChangeNotifier {
       if (_dataSource == WeatherDataSource.real) {
         await loadRealWeather();
       }
-      _loadNearbyAirspaces();
+      loadNearbyAirspaces();
     } catch (error) {
       developer.log('GPS error: $error', name: 'AeroCheck.GPS');
     }

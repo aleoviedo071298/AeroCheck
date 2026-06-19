@@ -166,7 +166,7 @@ void main() {
   });
 
   test(
-    'loads nearby airspaces with selected location and guide radius',
+    'loads nearby airspaces with selected location',
     () async {
       final repository = _FakeAirspaceRepository();
       final session = WeatherSession(
@@ -175,8 +175,7 @@ void main() {
         airspaceRepository: repository,
       );
 
-      session.setGuideRadiusKm(7);
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+      await session.loadNearbyAirspaces();
 
       expect(
         repository.lastLatitude,
@@ -200,10 +199,9 @@ void main() {
       airspaceRepository: repository,
     );
 
+    final loadFuture = session.loadNearbyAirspaces();
     expect(session.airspaceState, isA<AirspaceLoadingState>());
-
-    session.setGuideRadiusKm(7);
-    await Future<void>.delayed(const Duration(milliseconds: 10));
+    await loadFuture;
 
     expect(session.airspaceState, isA<AirspaceLoadedState>());
     final loadedState = session.airspaceState as AirspaceLoadedState;
@@ -218,8 +216,7 @@ void main() {
       airspaceRepository: repository,
     );
 
-    session.setGuideRadiusKm(7);
-    await Future<void>.delayed(const Duration(milliseconds: 10));
+    await session.loadNearbyAirspaces();
 
     expect(session.airspaceState, isA<AirspaceErrorState>());
   });
@@ -232,8 +229,7 @@ void main() {
       airspaceRepository: repository,
     );
 
-    session.setGuideRadiusKm(7);
-    await Future<void>.delayed(const Duration(milliseconds: 10));
+    await session.loadNearbyAirspaces();
 
     expect(session.airspaceState, isA<AirspaceEmptyState>());
   });
@@ -254,7 +250,7 @@ void main() {
     expect(repository.lastLongitude, _testMendoza.longitude);
   });
 
-  test('reloads airspaces when guide radius changes', () async {
+  test('does not reload airspaces when guide radius changes', () async {
     final repository = _FakeAirspaceRepository();
     final session = WeatherSession(
       weatherRepository: _FakeWeatherRepository(),
@@ -262,14 +258,12 @@ void main() {
       airspaceRepository: repository,
     );
 
-    session.setGuideRadiusKm(3);
-    await Future<void>.delayed(const Duration(milliseconds: 10));
+    await session.loadNearbyAirspaces();
     expect(repository.callCount, 1);
 
     session.setGuideRadiusKm(8);
     await Future<void>.delayed(const Duration(milliseconds: 10));
-    expect(repository.callCount, 2);
-    expect(repository.lastRadiusKm, 30.0);
+    expect(repository.callCount, 1);
   });
 
   test('OpenAIP inside airspace changes flight readiness to NO_APTO', () async {
@@ -301,8 +295,7 @@ void main() {
     );
 
     await session.loadRealWeather();
-    session.setGuideRadiusKm(7);
-    await Future<void>.delayed(const Duration(milliseconds: 10));
+    await session.loadNearbyAirspaces();
 
     final report = session.currentReport!;
     expect(report.status, FlightReadinessStatus.notReady);
@@ -337,8 +330,7 @@ void main() {
     );
 
     await session.loadRealWeather();
-    session.setGuideRadiusKm(7);
-    await Future<void>.delayed(const Duration(milliseconds: 10));
+    await session.loadNearbyAirspaces();
 
     final report = session.currentReport!;
     // Just verify that airspace is detected and included in the rules
@@ -365,8 +357,7 @@ void main() {
       );
 
       await session.loadRealWeather();
-      session.setGuideRadiusKm(7);
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+      await session.loadNearbyAirspaces();
 
       final report = session.currentReport!;
       expect(report.status, FlightReadinessStatus.notReady);
@@ -393,8 +384,7 @@ void main() {
     );
 
     await session.loadRealWeather();
-    session.setGuideRadiusKm(7);
-    await Future<void>.delayed(const Duration(milliseconds: 10));
+    await session.loadNearbyAirspaces();
 
     final report = session.currentReport!;
     expect(report.status, FlightReadinessStatus.caution);
