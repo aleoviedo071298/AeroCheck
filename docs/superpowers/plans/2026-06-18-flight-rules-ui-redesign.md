@@ -1,3 +1,100 @@
+# Flight Rules Screen UI Redesign Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Restyle the "Reglas de vuelo" settings screen into Units-style section cards with severity badges, and add a Precaución ≤ Bloqueo coherence guard — without touching the config, evaluators, persistence, or decision logic.
+
+**Architecture:** Presentational refactor of a single file, `lib/features/settings/screens/flight_rules_screen.dart`. The flat list becomes one `Card` per category (`_sectionCard`) with an icon header; each two-cutoff parameter (`_thresholdParam`) renders its name plus two stepper rows whose left label is a colored severity badge (`_severityBadge`). The existing `_StepperRow` keeps the `−`/`+` and tap-to-type mechanics; its `label` becomes a `Widget`. A polarity-aware soft clamp (`_clampWarn`/`_clampBlock`) keeps warning and block thresholds coherent.
+
+**Tech Stack:** Flutter, Dart, existing `UnitConverters`/`AppStrings`. No new dependencies.
+
+## Global Constraints
+
+- No changes to `FlightRulesConfig`, `FlightReadinessEvaluator`, `WindProfileEvaluator`, persistence, or `WeatherSession`. Presentational only.
+- All thresholds stored in METRIC; convert for display, convert back on input. Coherence clamp runs in metric.
+- Preserve widget keys verbatim: `plus-<field>`, `minus-<field>`, `value-<field>`, `flight-rules-save`, `flight-rules-restore`, `toggle-allowNightFlight`.
+- Badge colors — Precaución (amber): light bg `0xFFFAEEDA` / text `0xFF633806`; Bloqueo (red): light bg `0xFFFCEBEB` / text `0xFF791F1F`. Dark variants required (translucent tint + light text).
+- Section card palette mirrors `units_screen.dart`: dark card `0xFF1E293B`, dark border `0xFF334155`; light card `Colors.white`, light border `0xFFE2E8F0`. Teal accent `0xFF0F766E`.
+- Coherence polarity — Precaución ≤ Bloqueo for: wind, gusts, gust spread, rain probability, rain intensity, max temperature, Kp. Precaución ≥ Bloqueo (inverted) for: visibility, min temperature, cloud-base margin.
+- All user-facing strings via `AppStrings.get(key, language:)`; new keys (if any) added to both `es` and `en`. No new keys are expected.
+- Run before commit: `dart format lib test`, `flutter test`, `flutter analyze`.
+
+---
+
+### Task 1: Redesign the screen (section cards + badges + coherence guard)
+
+**Files:**
+- Modify (full rewrite): `lib/features/settings/screens/flight_rules_screen.dart`
+- Test: `test/features/settings/flight_rules_screen_test.dart` (add 3 tests; keep the existing 4)
+
+**Interfaces:**
+- Consumes: `FlightRulesConfig` (all existing fields + `copyWith`), `UnitConverters`, `AppStrings`, `Language`, `UnitPreferences`. Screen constructor unchanged: `FlightRulesScreen({required FlightRulesConfig initialConfig, required UnitPreferences units, required Language language, required void Function(FlightRulesConfig) onSave, required VoidCallback onBack})`.
+- Produces: same public widget + same widget keys. New private helpers `_sectionCard`, `_severityBadge`, `_thresholdParam`, `_singleParam`, `_clampWarn`, `_clampBlock`; `_StepperRow.label` is now `Widget`.
+
+- [ ] **Step 1: Add the 3 new tests (RED)**
+
+Append these inside `main()` in `test/features/settings/flight_rules_screen_test.dart` (keep the existing 4 tests unchanged):
+
+```dart
+  testWidgets('renders severity badges for parameters', (tester) async {
+    await tester.pumpWidget(host(onSave: (_) {}));
+    expect(find.text('Precaución'), findsWidgets);
+    expect(find.text('Bloqueo'), findsWidgets);
+  });
+
+  testWidgets('warning cannot exceed block (direct polarity)', (tester) async {
+    FlightRulesConfig? saved;
+    await tester.pumpWidget(host(onSave: (c) => saved = c));
+
+    // Default wind warning 22, block 28. Raising warning past block clamps it.
+    for (var i = 0; i < 12; i++) {
+      await tester.tap(find.byKey(const ValueKey('plus-windWarningKmh')));
+      await tester.pump();
+    }
+    await tester.tap(find.byKey(const ValueKey('flight-rules-save')));
+    await tester.pump();
+
+    expect(saved, isNotNull);
+    expect(saved!.windWarningKmh, lessThanOrEqualTo(saved!.windBlockedKmh));
+  });
+
+  testWidgets('warning cannot drop below block (inverted polarity)', (
+    tester,
+  ) async {
+    FlightRulesConfig? saved;
+    await tester.pumpWidget(host(onSave: (c) => saved = c));
+
+    // Visibility is inverted: warning (4 km) must stay >= block (2.8 km).
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('minus-visibilityWarningKm')),
+      100,
+    );
+    await tester.pump();
+    for (var i = 0; i < 8; i++) {
+      await tester.tap(find.byKey(const ValueKey('minus-visibilityWarningKm')));
+      await tester.pump();
+    }
+    await tester.tap(find.byKey(const ValueKey('flight-rules-save')));
+    await tester.pump();
+
+    expect(saved, isNotNull);
+    expect(
+      saved!.visibilityWarningKm,
+      greaterThanOrEqualTo(saved!.visibilityBlockedKm),
+    );
+  });
+```
+
+- [ ] **Step 2: Run the tests to verify the new ones fail**
+
+Run: `flutter test test/features/settings/flight_rules_screen_test.dart`
+Expected: the 3 new tests FAIL — badges not found yet; `plus-windWarningKmh` is currently keyed but raising it past block is not clamped (warning would exceed block); visibility warning not clamped. The existing 4 still pass.
+
+- [ ] **Step 3: Rewrite the screen file**
+
+Replace the entire contents of `lib/features/settings/screens/flight_rules_screen.dart` with:
+
+```dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -304,9 +401,8 @@ class _FlightRulesScreenState extends State<FlightRulesScreen> {
                     field: 'targetAltitudeMeters',
                     value: _alt(config.targetAltitudeMeters.toDouble()),
                     onChanged: (v) => _set(
-                      (c) => c.copyWith(
-                        targetAltitudeMeters: _altToMetric(v).round(),
-                      ),
+                      (c) =>
+                          c.copyWith(targetAltitudeMeters: _altToMetric(v).round()),
                     ),
                   ),
                   _divider(),
@@ -417,14 +513,12 @@ class _FlightRulesScreenState extends State<FlightRulesScreen> {
                     warn: config.kpWarning,
                     block: config.kpBlocked,
                     onWarn: (v) => _set(
-                      (c) => c.copyWith(
-                        kpWarning: _clampWarn(v, c.kpBlocked, false),
-                      ),
+                      (c) =>
+                          c.copyWith(kpWarning: _clampWarn(v, c.kpBlocked, false)),
                     ),
                     onBlock: (v) => _set(
-                      (c) => c.copyWith(
-                        kpBlocked: _clampBlock(v, c.kpWarning, false),
-                      ),
+                      (c) =>
+                          c.copyWith(kpBlocked: _clampBlock(v, c.kpWarning, false)),
                     ),
                   ),
                 ],
@@ -437,7 +531,7 @@ class _FlightRulesScreenState extends State<FlightRulesScreen> {
                   SwitchListTile(
                     key: const ValueKey('toggle-allowNightFlight'),
                     contentPadding: EdgeInsets.zero,
-                    activeThumbColor: const Color(0xFF0F766E),
+                    activeColor: const Color(0xFF0F766E),
                     title: Text(
                       _t('permitir_nocturno'),
                       style: const TextStyle(
@@ -446,8 +540,7 @@ class _FlightRulesScreenState extends State<FlightRulesScreen> {
                       ),
                     ),
                     value: config.allowNightFlight,
-                    onChanged: (v) =>
-                        _set((c) => c.copyWith(allowNightFlight: v)),
+                    onChanged: (v) => _set((c) => c.copyWith(allowNightFlight: v)),
                   ),
                 ],
               ),
@@ -477,16 +570,7 @@ class _FlightRulesScreenState extends State<FlightRulesScreen> {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: widget.onBack,
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(
-                        _t('cancelar'),
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
+                      child: Text(_t('cancelar')),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -495,16 +579,9 @@ class _FlightRulesScreenState extends State<FlightRulesScreen> {
                       key: const ValueKey('flight-rules-save'),
                       style: FilledButton.styleFrom(
                         backgroundColor: const Color(0xFF0F766E),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
                       ),
                       onPressed: () => widget.onSave(config),
-                      child: Text(
-                        _t('guardar'),
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
+                      child: Text(_t('guardar')),
                     ),
                   ),
                 ],
@@ -789,3 +866,72 @@ class _StepperRow extends StatelessWidget {
     if (result != null) onChanged(_clampStep(result));
   }
 }
+```
+
+- [ ] **Step 4: Run the full screen test file (GREEN)**
+
+Run: `flutter test test/features/settings/flight_rules_screen_test.dart`
+Expected: PASS — all 7 tests (4 existing + 3 new). If `warning cannot exceed block` still fails, confirm the `onWarn` closures route through `_clampWarn`; if the inverted test fails, confirm visibility/temp-min/cloud-margin pass `inverted: true` and their closures use `true`.
+
+- [ ] **Step 5: Run the full suite + analyze**
+
+Run: `flutter test && flutter analyze`
+Expected: full suite PASS (1 pre-existing skip), analyzer clean. The Settings wiring (`settings_screen.dart`) constructs `FlightRulesScreen` with the same constructor, so it is unaffected.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add lib/features/settings/screens/flight_rules_screen.dart test/features/settings/flight_rules_screen_test.dart
+git commit -m "feat: redesign flight rules screen with section cards, badges and coherence guard"
+```
+(End the commit message with the trailer: `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`.)
+
+---
+
+### Task 2: Format, verify, and visual check
+
+**Files:** none (verification only).
+
+- [ ] **Step 1: Format**
+
+Run: `dart format lib test`
+Expected: only `flight_rules_screen.dart` (and possibly the test) reformatted.
+
+- [ ] **Step 2: Full suite + analyze**
+
+Run: `flutter test && flutter analyze`
+Expected: all tests PASS (1 pre-existing skip); analyzer reports no issues.
+
+- [ ] **Step 3: Visual check (light and dark)**
+
+Run the app (or rebuild the APK) and open Ajustes → Reglas de vuelo. Confirm:
+- Each category is a card with an icon header (Viento/Precipitación/Visibilidad y nubes/Ambientales/Operativas).
+- Each parameter shows its name with amber "Precaución" and red "Bloqueo" badges next to the steppers.
+- "Altitud objetivo" is a single row (no badge); "Margen base de nubes" shows the two badges.
+- The night-flight toggle, Restaurar / Cancelar / Guardar, and the safety note are present.
+- Tapping `+` past the block (or `−` below it) pins the warning at the block value (coherence guard).
+- Looks correct in both light and dark themes.
+
+Command (release APK with the OpenAIP key, using a clean temp dir to avoid the Gradle loopback issue):
+
+```bash
+TMP='C:\gtmp' TEMP='C:\gtmp' JAVA_HOME='C:\Program Files\Java\jdk-17' \
+  flutter build apk --dart-define=OPENAIP_API_KEY=<OPENAIP_KEY>
+```
+
+- [ ] **Step 4: Commit any formatting**
+
+```bash
+git add -A
+git commit -m "style: format flight rules screen redesign"
+```
+(Skip if `git status` is clean after formatting. End any commit with the `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>` trailer.)
+
+---
+
+## Self-Review
+
+- **Spec coverage:** section cards + icons (Task 1 `_sectionCard`), severity badges (`_severityBadge`), two-cutoff params with badges (`_thresholdParam`), single-value altitude row (`_singleParam`), cloud-base margin promoted to a badged pair (Task 1), night toggle in Operativas, dark-mode colors, preserved keys, coherence guard with polarity table (`_clampWarn`/`_clampBlock` + `inverted` on visibility/temp-min/cloud-margin), tests (3 new + 4 existing), format/analyze/visual (Task 2). All spec sections mapped.
+- **Placeholders:** none — full file and full test code provided; `<OPENAIP_KEY>` in Task 2 is an intentional secret placeholder (the key is passed only via `--dart-define`, never written to a file).
+- **Type consistency:** `_StepperRow.label` is `Widget` everywhere it is constructed (`_severityBadge` returns a `Widget`, `_singleParam` passes a `Text`); `_clampWarn(double, double, bool)` / `_clampBlock(double, double, bool)` signatures match every callsite; widget keys (`plus-/minus-/value-<field>`, `flight-rules-save/-restore`, `toggle-allowNightFlight`) are unchanged from the existing file and from the tests. No `FlightRulesConfig` field names changed.
+- **No-domain-change check:** only `flight_rules_screen.dart` and its test are touched; `FlightRulesConfig`, evaluators, persistence, and `WeatherSession` are untouched, satisfying the presentational-only constraint.
