@@ -676,7 +676,7 @@ class _ReworkedMetricsGrid extends StatelessWidget {
                       weather.visibilityKm,
                       session.preferences.units,
                     ),
-              subValue: 'Límite: ${UnitFormatters.formatDistance(session.preferences.rulesConfig.visibilityWarningKm, session.preferences.units, decimals: 0)}',
+              subValue: '',
               icon: Icons.visibility_rounded,
               accentColor: const Color(0xFF10B981), // Emerald bottom line
             ),
@@ -685,7 +685,7 @@ class _ReworkedMetricsGrid extends StatelessWidget {
               value: weather.kpIndex == null
                   ? AppStrings.get('sin_dato')
                   : _fmt(weather.kpIndex!),
-              subValue: 'Límite: Kp ${session.preferences.rulesConfig.kpWarning}',
+              subValue: '',
               icon: Icons.sensors_rounded,
               accentColor: const Color(0xFF8B5CF6), // Violet bottom line
             ),
