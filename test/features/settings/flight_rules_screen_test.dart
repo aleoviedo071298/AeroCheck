@@ -82,4 +82,52 @@ void main() {
 
     expect(saved, const FlightRulesConfig.defaults());
   });
+
+  testWidgets('renders severity badges for parameters', (tester) async {
+    await tester.pumpWidget(host(onSave: (_) {}));
+    expect(find.text('Precaución'), findsWidgets);
+    expect(find.text('Bloqueo'), findsWidgets);
+  });
+
+  testWidgets('warning cannot exceed block (direct polarity)', (tester) async {
+    FlightRulesConfig? saved;
+    await tester.pumpWidget(host(onSave: (c) => saved = c));
+
+    // Default wind warning 22, block 28. Raising warning past block clamps it.
+    for (var i = 0; i < 12; i++) {
+      await tester.tap(find.byKey(const ValueKey('plus-windWarningKmh')));
+      await tester.pump();
+    }
+    await tester.tap(find.byKey(const ValueKey('flight-rules-save')));
+    await tester.pump();
+
+    expect(saved, isNotNull);
+    expect(saved!.windWarningKmh, lessThanOrEqualTo(saved!.windBlockedKmh));
+  });
+
+  testWidgets('warning cannot drop below block (inverted polarity)', (
+    tester,
+  ) async {
+    FlightRulesConfig? saved;
+    await tester.pumpWidget(host(onSave: (c) => saved = c));
+
+    // Visibility is inverted: warning (4 km) must stay >= block (2.8 km).
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('minus-visibilityWarningKm')),
+      100,
+    );
+    await tester.pump();
+    for (var i = 0; i < 8; i++) {
+      await tester.tap(find.byKey(const ValueKey('minus-visibilityWarningKm')));
+      await tester.pump();
+    }
+    await tester.tap(find.byKey(const ValueKey('flight-rules-save')));
+    await tester.pump();
+
+    expect(saved, isNotNull);
+    expect(
+      saved!.visibilityWarningKm,
+      greaterThanOrEqualTo(saved!.visibilityBlockedKm),
+    );
+  });
 }
