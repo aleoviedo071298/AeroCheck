@@ -25,7 +25,7 @@ class OpenMeteoWeatherRepository implements WeatherRepository {
         'latitude': latitude.toString(),
         'longitude': longitude.toString(),
         'timezone': 'auto',
-        'forecast_days': '2',
+        'forecast_days': '7',
         'current': [
           'temperature_2m',
           'relative_humidity_2m',

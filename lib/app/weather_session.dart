@@ -91,6 +91,8 @@ class WeatherSession extends ChangeNotifier {
   List<Airspace> _loadedAirspaces = [];
   List<Airport> _loadedAirports = [];
   UserPreferences _userPreferences = const UserPreferences();
+  WeatherBundle? _cachedRowsBundle;
+  List<ForecastRow>? _cachedRows;
 
   FlightLocation get selectedLocation => _selectedLocation;
   List<FlightLocation> get availableLocations => _favoriteLocations;
@@ -116,21 +118,30 @@ class WeatherSession extends ChangeNotifier {
 
   List<ForecastRow> get forecastRows {
     final bundle = _realBundle;
-    if (bundle != null) {
-      final bestWindow = bestWindowFor(
-        bundle.hourlySnapshots,
-        referenceTime: bundle.current.time,
-      );
-      final now = bundle.current.time;
-      final currentHour = DateTime(now.year, now.month, now.day, now.hour);
-
-      return bundle.hourlySnapshots
-          .where((snapshot) => !snapshot.time.isBefore(currentHour))
-          .take(12)
-          .map((snapshot) => _forecastRowFor(snapshot, bestWindow))
-          .toList();
+    if (bundle == null) {
+      return const [];
     }
-    return [];
+    if (identical(bundle, _cachedRowsBundle) && _cachedRows != null) {
+      return _cachedRows!;
+    }
+    final bestWindow = bestWindowFor(
+      bundle.hourlySnapshots,
+      referenceTime: bundle.current.time,
+    );
+    final now = bundle.current.time;
+    final currentHour = DateTime(now.year, now.month, now.day, now.hour);
+    final rows = bundle.hourlySnapshots
+        .where((snapshot) => !snapshot.time.isBefore(currentHour))
+        .map((snapshot) => _forecastRowFor(snapshot, bestWindow))
+        .toList();
+    _cachedRowsBundle = bundle;
+    _cachedRows = rows;
+    return rows;
+  }
+
+  void _invalidateForecastCache() {
+    _cachedRowsBundle = null;
+    _cachedRows = null;
   }
 
   List<WindProfileRow> get windProfileRows {
@@ -239,6 +250,7 @@ class WeatherSession extends ChangeNotifier {
       return;
     }
     _userPreferences = _userPreferences.copyWith(rulesConfig: config);
+    _invalidateForecastCache();
     await _preferencesStore.save(_userPreferences);
     notifyListeners();
   }
@@ -572,11 +584,13 @@ class WeatherSession extends ChangeNotifier {
           airports: airports,
         );
       }
+      _invalidateForecastCache();
       notifyListeners();
     } catch (error) {
       _loadedAirspaces = [];
       _loadedAirports = [];
       _airspaceState = AirspaceErrorState(error);
+      _invalidateForecastCache();
       notifyListeners();
     }
   }
