@@ -56,11 +56,17 @@ void main() {
     await tester.pump();
 
     // Default temperatureMinBlockedC is -5; tap minus 3 times → should reach -8.
-    await tester.tap(find.byKey(const ValueKey('minus-temperatureMinBlockedC')));
+    await tester.tap(
+      find.byKey(const ValueKey('minus-temperatureMinBlockedC')),
+    );
     await tester.pump();
-    await tester.tap(find.byKey(const ValueKey('minus-temperatureMinBlockedC')));
+    await tester.tap(
+      find.byKey(const ValueKey('minus-temperatureMinBlockedC')),
+    );
     await tester.pump();
-    await tester.tap(find.byKey(const ValueKey('minus-temperatureMinBlockedC')));
+    await tester.tap(
+      find.byKey(const ValueKey('minus-temperatureMinBlockedC')),
+    );
     await tester.pump();
     await tester.tap(find.byKey(const ValueKey('flight-rules-save')));
     await tester.pump();

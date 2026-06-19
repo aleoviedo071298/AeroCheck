@@ -304,8 +304,9 @@ class _FlightRulesScreenState extends State<FlightRulesScreen> {
                     field: 'targetAltitudeMeters',
                     value: _alt(config.targetAltitudeMeters.toDouble()),
                     onChanged: (v) => _set(
-                      (c) =>
-                          c.copyWith(targetAltitudeMeters: _altToMetric(v).round()),
+                      (c) => c.copyWith(
+                        targetAltitudeMeters: _altToMetric(v).round(),
+                      ),
                     ),
                   ),
                   _divider(),
@@ -416,12 +417,14 @@ class _FlightRulesScreenState extends State<FlightRulesScreen> {
                     warn: config.kpWarning,
                     block: config.kpBlocked,
                     onWarn: (v) => _set(
-                      (c) =>
-                          c.copyWith(kpWarning: _clampWarn(v, c.kpBlocked, false)),
+                      (c) => c.copyWith(
+                        kpWarning: _clampWarn(v, c.kpBlocked, false),
+                      ),
                     ),
                     onBlock: (v) => _set(
-                      (c) =>
-                          c.copyWith(kpBlocked: _clampBlock(v, c.kpWarning, false)),
+                      (c) => c.copyWith(
+                        kpBlocked: _clampBlock(v, c.kpWarning, false),
+                      ),
                     ),
                   ),
                 ],
@@ -443,7 +446,8 @@ class _FlightRulesScreenState extends State<FlightRulesScreen> {
                       ),
                     ),
                     value: config.allowNightFlight,
-                    onChanged: (v) => _set((c) => c.copyWith(allowNightFlight: v)),
+                    onChanged: (v) =>
+                        _set((c) => c.copyWith(allowNightFlight: v)),
                   ),
                 ],
               ),
