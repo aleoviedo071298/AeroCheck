@@ -477,7 +477,16 @@ class _FlightRulesScreenState extends State<FlightRulesScreen> {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: widget.onBack,
-                      child: Text(_t('cancelar')),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        _t('cancelar'),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -486,9 +495,16 @@ class _FlightRulesScreenState extends State<FlightRulesScreen> {
                       key: const ValueKey('flight-rules-save'),
                       style: FilledButton.styleFrom(
                         backgroundColor: const Color(0xFF0F766E),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       onPressed: () => widget.onSave(config),
-                      child: Text(_t('guardar')),
+                      child: Text(
+                        _t('guardar'),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
                 ],

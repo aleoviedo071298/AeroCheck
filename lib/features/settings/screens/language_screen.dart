@@ -57,8 +57,15 @@ class _LanguageScreenState extends State<LanguageScreen> {
             Expanded(
               child: OutlinedButton(
                 onPressed: widget.onBack,
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
                 child: Text(
                   AppStrings.get('cancelar', language: selectedLanguage),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -66,8 +73,16 @@ class _LanguageScreenState extends State<LanguageScreen> {
             Expanded(
               child: FilledButton(
                 onPressed: () => widget.onSave(selectedLanguage),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF0F766E),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
                 child: Text(
                   AppStrings.get('guardar', language: selectedLanguage),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
             ),
