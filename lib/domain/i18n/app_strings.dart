@@ -98,6 +98,9 @@ class AppStrings {
 
       // Forecast
       'forecast_horario': 'Forecast horario',
+      'ir_a_mejor_hora': 'Ir a mejor hora',
+      'ver_lista_completa': 'Ver lista completa por hora',
+      'ocultar_lista': 'Ocultar lista',
 
       // Wind
       'perfil_vertical': 'Perfil vertical',
@@ -339,6 +342,9 @@ class AppStrings {
 
       // Forecast
       'forecast_horario': 'Hourly forecast',
+      'ir_a_mejor_hora': 'Go to best hour',
+      'ver_lista_completa': 'See full hourly list',
+      'ocultar_lista': 'Hide list',
 
       // Wind
       'perfil_vertical': 'Vertical profile',
