@@ -29,6 +29,7 @@ import '../domain/entities/flight_window_recommendation.dart';
 import '../domain/entities/weather_snapshot.dart';
 import '../domain/rules/flight_readiness_evaluator.dart';
 import '../domain/rules/flight_readiness_status.dart';
+import '../domain/rules/flight_rules_config.dart';
 import '../domain/rules/rule_severity.dart';
 import 'airspace_geom_helper.dart';
 import 'airspace_state.dart';
@@ -233,6 +234,15 @@ class WeatherSession extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> updateRulesConfig(FlightRulesConfig config) async {
+    if (_userPreferences.rulesConfig == config) {
+      return;
+    }
+    _userPreferences = _userPreferences.copyWith(rulesConfig: config);
+    await _preferencesStore.save(_userPreferences);
+    notifyListeners();
+  }
+
   void addFavoriteLocation(FlightLocation location) {
     if (_isFavoriteLocation(location.id)) {
       return;
@@ -363,8 +373,7 @@ class WeatherSession extends ChangeNotifier {
       final weather = _withOperationalContext(snapshot);
       final report = _evaluator.evaluate(
         weather: weather,
-        droneProfile: MockFlightData.droneProfile,
-        missionProfile: MockFlightData.missionProfile,
+        config: _userPreferences.rulesConfig,
         bestWindow: defaultWindow,
       );
       if (bestReport == null || report.score > bestReport.score) {
@@ -388,8 +397,7 @@ class WeatherSession extends ChangeNotifier {
   ) {
     return _evaluator.evaluate(
       weather: weather,
-      droneProfile: MockFlightData.droneProfile,
-      missionProfile: MockFlightData.missionProfile,
+      config: _userPreferences.rulesConfig,
       bestWindow: bestWindow,
     );
   }
@@ -412,8 +420,7 @@ class WeatherSession extends ChangeNotifier {
     final weather = _withOperationalContext(snapshot);
     final report = _evaluator.evaluate(
       weather: weather,
-      droneProfile: MockFlightData.droneProfile,
-      missionProfile: MockFlightData.missionProfile,
+      config: _userPreferences.rulesConfig,
       bestWindow: bestWindow,
     );
     final reasons = _reasonsFor(report);
@@ -421,7 +428,7 @@ class WeatherSession extends ChangeNotifier {
     return ForecastRow(
       time: weather.time,
       hour: _time(weather.time),
-      status: report.status.label,
+      status: report.status,
       primaryReason: reasons.first.title,
       reasons: reasons,
       isBestWindow: _containsBestWindowStart(weather.time, bestWindow.start),
@@ -444,6 +451,9 @@ class WeatherSession extends ChangeNotifier {
           title: report.summary,
           details: 'Sin motivos activos para esta hora.',
           severity: RuleSeverity.ok,
+          code: null,
+          measuredValue: null,
+          threshold: null,
         ),
       ];
     }
@@ -453,6 +463,9 @@ class WeatherSession extends ChangeNotifier {
             title: rule.title,
             details: rule.details,
             severity: rule.severity,
+            code: rule.code,
+            measuredValue: rule.measuredValue,
+            threshold: rule.threshold,
           ),
         )
         .toList();
@@ -485,20 +498,15 @@ class WeatherSession extends ChangeNotifier {
   }
 
   void _persistPreferences() {
-    unawaited(
-      _preferencesStore
-          .save(
-            UserPreferences(
-              selectedLocationId: _selectedLocation.id,
-              favoriteLocationsJson: _favoriteLocations
-                  .map((location) => location.toJson())
-                  .toList(),
-              guideRadiusKm: _guideRadiusKm,
-              dataSourceName: _dataSource.name,
-            ),
-          )
-          .catchError((_) {}),
+    _userPreferences = _userPreferences.copyWith(
+      selectedLocationId: _selectedLocation.id,
+      favoriteLocationsJson: _favoriteLocations
+          .map((location) => location.toJson())
+          .toList(),
+      guideRadiusKm: _guideRadiusKm,
+      dataSourceName: _dataSource.name,
     );
+    unawaited(_preferencesStore.save(_userPreferences).catchError((_) {}));
   }
 
   bool _isFavoriteLocation(String id) {

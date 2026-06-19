@@ -5,6 +5,7 @@ import '../../domain/entities/mission_profile.dart';
 import '../../domain/entities/weather_snapshot.dart';
 import '../../domain/rules/flight_readiness_evaluator.dart';
 import '../../domain/rules/flight_readiness_status.dart';
+import '../../domain/rules/flight_rules_config.dart';
 import '../../domain/rules/rule_severity.dart';
 
 enum MockFlightScenario { goodToFly, cautionWind, notReadyRainAndRestriction }
@@ -27,6 +28,7 @@ class MockFlightData {
   static const evaluator = FlightReadinessEvaluator();
   static const droneProfile = DroneProfile.standard;
   static const missionProfile = MissionProfile.photoVideo;
+  static const rulesConfig = FlightRulesConfig.defaults();
 
   static final bestWindow = FlightWindowRecommendation(
     start: DateTime(2026, 6, 17, 8, 20),
@@ -105,8 +107,7 @@ class MockFlightData {
   static FlightReadinessReport reportFor(MockFlightScenario scenario) {
     return evaluator.evaluate(
       weather: snapshotFor(scenario),
-      droneProfile: droneProfile,
-      missionProfile: missionProfile,
+      config: rulesConfig,
       bestWindow: bestWindow,
     );
   }
@@ -194,7 +195,7 @@ class ForecastRow {
   });
 
   final String hour;
-  final String status;
+  final FlightReadinessStatus status;
   final String primaryReason;
   final List<ForecastReason> reasons;
   final bool isBestWindow;
@@ -212,11 +213,17 @@ class ForecastReason {
     required this.title,
     required this.details,
     required this.severity,
+    this.code,
+    this.measuredValue,
+    this.threshold,
   });
 
   final String title;
   final String details;
   final RuleSeverity severity;
+  final String? code;
+  final double? measuredValue;
+  final double? threshold;
 }
 
 class WindProfileRow {

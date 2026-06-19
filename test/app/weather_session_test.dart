@@ -162,7 +162,7 @@ void main() {
 
     expect(session.forecastRows, isNotEmpty);
     expect(session.forecastRows.first.hour, isNotEmpty);
-    expect(session.forecastRows.first.status, isNotEmpty);
+    expect(session.forecastRows.first.status, isA<FlightReadinessStatus>());
   });
 
   test(

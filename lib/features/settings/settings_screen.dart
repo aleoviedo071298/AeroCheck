@@ -9,9 +9,10 @@ import '../../domain/units/unit_preferences.dart';
 import 'screens/alerts_screen.dart';
 import 'screens/data_sources_screen.dart';
 import 'screens/language_screen.dart';
+import 'screens/flight_rules_screen.dart';
 import 'screens/units_screen.dart';
 
-enum _SettingsView { main, datos, unidades, idioma, alertas }
+enum _SettingsView { main, datos, unidades, idioma, alertas, reglas }
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({
@@ -108,6 +109,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
       case _SettingsView.alertas:
         return AlertsScreen(language: session.preferences.language);
+      case _SettingsView.reglas:
+        return FlightRulesScreen(
+          initialConfig: session.preferences.rulesConfig,
+          units: session.preferences.units,
+          language: session.preferences.language,
+          onSave: (config) async {
+            await session.updateRulesConfig(config);
+            _goBack();
+          },
+          onBack: _goBack,
+        );
       case _SettingsView.main:
         return AnimatedBuilder(
           animation: session,
@@ -122,10 +134,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     bool isDark,
   ) {
     AppStrings.currentLanguage = session.preferences.language;
-    final count = session.availableLocations.length;
-    final favoritesSub = count == 1
-        ? AppStrings.get('una_guardada')
-        : '$count ${AppStrings.get('guardadas')}';
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
@@ -157,106 +165,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            IconButton(
-              icon: const Icon(Icons.ios_share_rounded),
-              color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
-              onPressed: () {},
-            ),
           ],
-        ),
-        const SizedBox(height: 14),
-
-        // Card 1: Ubicacion & Favoritos
-        Card(
-          margin: EdgeInsets.zero,
-          elevation: 0,
-          color: isDark ? const Color(0xFF1E293B) : Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(
-              color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Column(
-              children: [
-                ListTile(
-                  leading: Container(
-                    width: 38,
-                    height: 38,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF0F766E),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.location_on_rounded,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
-                  title: Text(
-                    AppStrings.get('ubicacion'),
-                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14),
-                  ),
-                  subtitle: Text(
-                    AppStrings.get('guardada_localmente'),
-                    style: TextStyle(fontSize: 11),
-                  ),
-                  trailing: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 160),
-                    child: Text(
-                      '${session.selectedLocation.name}, ${session.selectedLocation.region}',
-                      textAlign: TextAlign.right,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Color(0xFF0D9488),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                        height: 1.2,
-                      ),
-                    ),
-                  ),
-                  onTap: () {},
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Divider(
-                    height: 1,
-                    color: isDark
-                        ? const Color(0xFF334155)
-                        : const Color(0xFFF1F5F9),
-                  ),
-                ),
-                ListTile(
-                  leading: Container(
-                    width: 38,
-                    height: 38,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF0F766E),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.star_rounded,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
-                  title: Text(
-                    AppStrings.get('favoritos'),
-                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14),
-                  ),
-                  subtitle: Text(
-                    favoritesSub,
-                    style: const TextStyle(fontSize: 11),
-                  ),
-                  onTap: () {},
-                ),
-              ],
-            ),
-          ),
         ),
         const SizedBox(height: 14),
 
@@ -529,6 +438,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   onTap: () {
                     setState(() => _activeView = _SettingsView.alertas);
+                  },
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Divider(
+                    height: 1,
+                    color: isDark
+                        ? const Color(0xFF334155)
+                        : const Color(0xFFF1F5F9),
+                  ),
+                ),
+                ListTile(
+                  leading: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? const Color(0xFF334155)
+                          : const Color(0xFFF1F5F9),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.tune_rounded,
+                      color: Color(0xFF0F766E),
+                      size: 20,
+                    ),
+                  ),
+                  title: Text(
+                    AppStrings.get('reglas_de_vuelo'),
+                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14),
+                  ),
+                  subtitle: Text(
+                    AppStrings.get('reglas_subtitulo'),
+                    style: const TextStyle(fontSize: 11),
+                  ),
+                  trailing: Icon(
+                    Icons.chevron_right_rounded,
+                    color: isDark
+                        ? const Color(0xFF64748B)
+                        : const Color(0xFF94A3B8),
+                  ),
+                  onTap: () {
+                    setState(() => _activeView = _SettingsView.reglas);
                   },
                 ),
               ],

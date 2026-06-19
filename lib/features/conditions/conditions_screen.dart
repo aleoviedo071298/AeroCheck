@@ -1,17 +1,16 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
 import '../../app/weather_session.dart';
-import '../../data/location/flight_location.dart';
+import '../../data/mock/mock_flight_data.dart';
 import '../../domain/entities/flight_readiness_report.dart';
 import '../../domain/entities/flight_rule_result.dart';
 import '../../domain/entities/weather_snapshot.dart';
 import '../../domain/i18n/app_strings.dart';
+import '../../domain/i18n/rule_localizer.dart';
 import '../../domain/rules/flight_readiness_status.dart';
 import '../../domain/rules/rule_severity.dart';
-import '../../data/mock/mock_flight_data.dart';
 import '../../domain/units/unit_formatters.dart';
 import '../../domain/units/unit_preferences.dart';
 
@@ -59,12 +58,12 @@ class ConditionsScreen extends StatelessWidget {
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
                     children: [
-                      // 1. Collapsible Location Card
-                      _CollapsibleLocationCard(
+                      // 1. Screen Header
+                      _ScreenHeader(
+                        title: AppStrings.get('condiciones'),
                         session: session,
-                        report: report,
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 14),
 
                       // 2. Weather provider row
                       _ProviderRow(session: session, report: report),
@@ -86,7 +85,10 @@ class ConditionsScreen extends StatelessWidget {
                         const SizedBox(height: 12),
 
                         // 4. Reasons list
-                        _RedesignedReasonList(rules: report.rules),
+                        _RedesignedReasonList(
+                          rules: report.rules,
+                          units: session.preferences.units,
+                        ),
                         const SizedBox(height: 12),
 
                         // 5. Reworked metrics grid (2x2 + 1x4 secondary)
@@ -98,13 +100,6 @@ class ConditionsScreen extends StatelessWidget {
 
                         // 6. Hourly timeline table
                         _HourlyTimelineWidget(session: session),
-                        const SizedBox(height: 12),
-
-                        // 7. Profile strip
-                        _ProfileStrip(
-                          report: report,
-                          units: session.preferences.units,
-                        ),
                       ],
                     ],
                   ),
@@ -118,273 +113,47 @@ class ConditionsScreen extends StatelessWidget {
   }
 }
 
-class _CollapsibleLocationCard extends StatefulWidget {
-  const _CollapsibleLocationCard({required this.session, this.report});
+class _ScreenHeader extends StatelessWidget {
+  const _ScreenHeader({required this.title, required this.session});
 
+  final String title;
   final WeatherSession session;
-  final FlightReadinessReport? report;
-
-  @override
-  State<_CollapsibleLocationCard> createState() =>
-      _CollapsibleLocationCardState();
-}
-
-class _CollapsibleLocationCardState extends State<_CollapsibleLocationCard> {
-  bool _isExpanded = false;
-  final _searchController = TextEditingController();
-  Future<List<FlightLocation>>? _searchFuture;
-  Timer? _debounceTimer;
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    _debounceTimer?.cancel();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
-    final location = widget.session.selectedLocation;
-    final colorScheme = Theme.of(context).colorScheme;
+    final location = session.selectedLocation;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Card(
-      margin: EdgeInsets.zero,
-      elevation: 0,
-      color: isDark ? const Color(0xFF1E293B) : Colors.white,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () {
-          setState(() {
-            _isExpanded = !_isExpanded;
-          });
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.location_on_rounded,
-                    color: colorScheme.primary,
-                    size: 28,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w900,
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          location.label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Lat: ${location.latitude.toStringAsFixed(4)} · Lon: ${location.longitude.toStringAsFixed(4)} · Elev. ${UnitFormatters.formatAltitude(location.elevation.toDouble(), widget.session.preferences.units, decimals: 0)}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDark
-                                ? const Color(0xFF94A3B8)
-                                : const Color(0xFF64748B),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    _isExpanded
-                        ? Icons.keyboard_arrow_up_rounded
-                        : Icons.keyboard_arrow_down_rounded,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${location.label}\nLat: ${location.latitude.toStringAsFixed(4)} · Lon: ${location.longitude.toStringAsFixed(4)} · Elev. ${UnitFormatters.formatAltitude(location.elevation.toDouble(), session.preferences.units, decimals: 0)}',
+                  style: TextStyle(
+                    fontSize: 12,
                     color: isDark
                         ? const Color(0xFF94A3B8)
                         : const Color(0xFF64748B),
+                    height: 1.3,
                   ),
-                ],
-              ),
-              if (_isExpanded) ...[
-                const SizedBox(height: 14),
-                const Divider(height: 1),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Text(
-                      AppStrings.get('cambiar_ubicacion'),
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.primary,
-                      ),
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      key: const ValueKey('gps-location-button'),
-                      icon: const Icon(Icons.my_location_rounded),
-                      iconSize: 20,
-                      tooltip: AppStrings.get('mi_ubicacion_gps'),
-                      onPressed: () {
-                        widget.session.setLocationToCurrentGPS();
-                        setState(() {
-                          _isExpanded = false;
-                        });
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    ...widget.session.availableLocations.map((loc) {
-                      final isSelected = loc.id == location.id;
-                      return ChoiceChip(
-                        key: ValueKey('location-chip-${loc.id}'),
-                        label: Text(loc.name),
-                        selected: isSelected,
-                        onSelected: (_) {
-                          widget.session.setLocation(loc);
-                          setState(() {
-                            _isExpanded = false;
-                          });
-                        },
-                      );
-                    }),
-                    ActionChip(
-                      key: const ValueKey('add-location-button'),
-                      label: Text(AppStrings.get('buscar')),
-                      avatar: const Icon(Icons.search_rounded, size: 16),
-                      onPressed: () {
-                        _showAddLocationDialog();
-                      },
-                    ),
-                  ],
                 ),
               ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showAddLocationDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            title: Text(AppStrings.get('buscar_ciudad')),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: AppStrings.get('escribe_nombre_ciudad'),
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    onChanged: (val) {
-                      _debounceTimer?.cancel();
-                      _debounceTimer = Timer(
-                        const Duration(milliseconds: 300),
-                        () {
-                          setDialogState(() {
-                            _searchFuture = widget.session.searchCities(val);
-                          });
-                        },
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    height: 300,
-                    width: double.maxFinite,
-                    child: _searchFuture == null
-                        ? Center(
-                            child: Text(
-                              AppStrings.get('escribe_buscar_ciudades'),
-                            ),
-                          )
-                        : FutureBuilder<List<FlightLocation>>(
-                            future: _searchFuture,
-                            builder: (context, snapshot) {
-                              if (snapshot.connectionState ==
-                                  ConnectionState.waiting) {
-                                return Center(
-                                  child: CircularProgressIndicator(),
-                                );
-                              }
-                              if (snapshot.hasError) {
-                                return Center(
-                                  child: Text(
-                                    '${AppStrings.get('error')}: ${snapshot.error}',
-                                  ),
-                                );
-                              }
-                              final locations = snapshot.data ?? [];
-                              if (locations.isEmpty) {
-                                return Center(
-                                  child: Text(
-                                    AppStrings.get('sin_resultados_ciudades'),
-                                  ),
-                                );
-                              }
-                              return ListView.builder(
-                                itemCount: locations.length,
-                                itemBuilder: (context, index) {
-                                  final loc = locations[index];
-                                  return ListTile(
-                                    key: ValueKey('search-location-${loc.id}'),
-                                    title: Text(loc.name),
-                                    subtitle: Text(
-                                      '${loc.region}, ${loc.country}',
-                                    ),
-                                    trailing: const Icon(
-                                      Icons.add_circle_outline_rounded,
-                                    ),
-                                    onTap: () {
-                                      widget.session.addFavoriteLocation(loc);
-                                      Navigator.pop(context);
-                                      _searchController.clear();
-                                      setState(() {
-                                        _isExpanded = false;
-                                        _searchFuture = null;
-                                      });
-                                    },
-                                  );
-                                },
-                              );
-                            },
-                          ),
-                  ),
-                ],
-              ),
             ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _searchController.clear();
-                  setState(() {
-                    _searchFuture = null;
-                  });
-                },
-                child: Text(AppStrings.get('cerrar')),
-              ),
-            ],
-          );
-        },
+          ),
+        ],
       ),
     );
   }
@@ -503,7 +272,11 @@ class _RedesignedStatusPanel extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        report.status.label,
+                        report.status
+                            .getLocalizedLabel(
+                              language: AppStrings.currentLanguage,
+                            )
+                            .toUpperCase(),
                         style: TextStyle(
                           color: statusColor,
                           fontSize: 28,
@@ -513,7 +286,10 @@ class _RedesignedStatusPanel extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        report.summary,
+                        RuleLocalizer.getLocalizedSummary(
+                          report,
+                          AppStrings.currentLanguage,
+                        ),
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
@@ -526,15 +302,6 @@ class _RedesignedStatusPanel extends StatelessWidget {
                   ),
                 ),
               ],
-            ),
-
-            // Best flight window row embedded at the bottom of status panel
-            const SizedBox(height: 16),
-            const Divider(height: 1),
-            const SizedBox(height: 12),
-            _EmbeddedBestWindowPill(
-              report: report,
-              onTap: onNavigateToForecast,
             ),
           ],
         ),
@@ -613,88 +380,11 @@ class _ScoreDialRing extends StatelessWidget {
   }
 }
 
-class _EmbeddedBestWindowPill extends StatelessWidget {
-  const _EmbeddedBestWindowPill({required this.report, this.onTap});
-
-  final FlightReadinessReport report;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final window = report.bestWindow;
-    final now = DateTime.now();
-    final windowPassed = window.end.isBefore(now);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: isDark
-              ? const Color(0xFF0F172A).withValues(alpha: 0.5)
-              : const Color(0xFFF8FAFC),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-          ),
-        ),
-        child: Row(
-          children: [
-            const Icon(
-              Icons.calendar_month_rounded,
-              color: Color(0xFF0D9488),
-              size: 22,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    windowPassed
-                        ? AppStrings.get(
-                            'proxima_ventana_disponible',
-                          ).toUpperCase()
-                        : AppStrings.get(
-                            'mejora_ventana_disponible',
-                          ).toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0.5,
-                      color: isDark
-                          ? const Color(0xFF94A3B8)
-                          : const Color(0xFF64748B),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${_time(window.start)} - ${_time(window.end)}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF0F766E),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _RedesignedReasonList extends StatelessWidget {
-  const _RedesignedReasonList({required this.rules});
+  const _RedesignedReasonList({required this.rules, required this.units});
 
   final List<FlightRuleResult> rules;
+  final UnitPreferences units;
 
   @override
   Widget build(BuildContext context) {
@@ -732,7 +422,9 @@ class _RedesignedReasonList extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            ...activeRules.map((rule) => _RedesignedReasonTile(rule: rule)),
+            ...activeRules.map(
+              (rule) => _RedesignedReasonTile(rule: rule, units: units),
+            ),
           ],
         ),
       ),
@@ -741,9 +433,10 @@ class _RedesignedReasonList extends StatelessWidget {
 }
 
 class _RedesignedReasonTile extends StatefulWidget {
-  const _RedesignedReasonTile({required this.rule});
+  const _RedesignedReasonTile({required this.rule, required this.units});
 
   final FlightRuleResult rule;
+  final UnitPreferences units;
 
   @override
   State<_RedesignedReasonTile> createState() => _RedesignedReasonTileState();
@@ -788,7 +481,7 @@ class _RedesignedReasonTileState extends State<_RedesignedReasonTile> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        rule.title,
+                        rule.localizedTitle(AppStrings.currentLanguage),
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w800,
@@ -797,7 +490,10 @@ class _RedesignedReasonTileState extends State<_RedesignedReasonTile> {
                       if (!_expanded) ...[
                         const SizedBox(height: 2),
                         Text(
-                          rule.details,
+                          rule.localizedDetails(
+                            AppStrings.currentLanguage,
+                            widget.units,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -827,7 +523,10 @@ class _RedesignedReasonTileState extends State<_RedesignedReasonTile> {
               Padding(
                 padding: const EdgeInsets.only(left: 48, top: 6),
                 child: Text(
-                  rule.details,
+                  rule.localizedDetails(
+                    AppStrings.currentLanguage,
+                    widget.units,
+                  ),
                   style: TextStyle(
                     fontSize: 12,
                     height: 1.4,
@@ -1397,106 +1096,6 @@ class _TimelineColumn extends StatelessWidget {
   }
 }
 
-class _ProfileStrip extends StatelessWidget {
-  const _ProfileStrip({required this.report, required this.units});
-
-  final FlightReadinessReport report;
-  final UnitPreferences units;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Card(
-      margin: EdgeInsets.zero,
-      elevation: 0,
-      color: isDark ? const Color(0xFF1E293B) : Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.flight_takeoff_rounded),
-                const SizedBox(width: 12),
-                Text(
-                  AppStrings.get('operacion_configurada_mayus').toUpperCase(),
-                  style: Theme.of(
-                    context,
-                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w900),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        AppStrings.get('dron'),
-                        style: Theme.of(
-                          context,
-                        ).textTheme.labelSmall?.copyWith(color: Colors.grey),
-                      ),
-                      Text(
-                        report.droneProfile.name,
-                        style: const TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        AppStrings.get('mision'),
-                        style: Theme.of(
-                          context,
-                        ).textTheme.labelSmall?.copyWith(color: Colors.grey),
-                      ),
-                      Text(
-                        report.missionProfile.name,
-                        style: const TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        AppStrings.get('altitud'),
-                        style: Theme.of(
-                          context,
-                        ).textTheme.labelSmall?.copyWith(color: Colors.grey),
-                      ),
-                      Text(
-                        UnitFormatters.formatAltitude(
-                          report.droneProfile.preferredAltitudeMeters
-                              .toDouble(),
-                          units,
-                          decimals: 0,
-                        ),
-                        style: const TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _RealWeatherLoadingCard extends StatelessWidget {
   const _RealWeatherLoadingCard();
 
@@ -1617,8 +1216,4 @@ String _fmt(num? value) {
   if (value == null) return '-';
   if (value == value.roundToDouble()) return value.toStringAsFixed(0);
   return value.toStringAsFixed(1);
-}
-
-String _time(DateTime value) {
-  return '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
 }

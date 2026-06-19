@@ -1,10 +1,9 @@
-import '../entities/drone_profile.dart';
 import '../entities/flight_readiness_report.dart';
 import '../entities/flight_rule_result.dart';
 import '../entities/flight_window_recommendation.dart';
-import '../entities/mission_profile.dart';
 import '../entities/weather_snapshot.dart';
 import 'flight_readiness_status.dart';
+import 'flight_rules_config.dart';
 import 'rule_severity.dart';
 
 class FlightReadinessEvaluator {
@@ -12,15 +11,10 @@ class FlightReadinessEvaluator {
 
   FlightReadinessReport evaluate({
     required WeatherSnapshot weather,
-    required DroneProfile droneProfile,
-    required MissionProfile missionProfile,
+    required FlightRulesConfig config,
     required FlightWindowRecommendation bestWindow,
   }) {
     final rules = <FlightRuleResult>[];
-    final effectiveMaxWind =
-        droneProfile.maxWindKmh * missionProfile.windModifier;
-    final effectiveMaxGust =
-        droneProfile.maxGustKmh * missionProfile.gustModifier;
 
     rules.add(_missingData(weather));
 
@@ -29,7 +23,8 @@ class FlightReadinessEvaluator {
         _thresholdRule(
           code: 'WIND_SPEED',
           value: weather.windKmh!,
-          threshold: effectiveMaxWind,
+          warning: config.windWarningKmh,
+          blocked: config.windBlockedKmh,
           okTitle: 'Viento dentro del limite',
           warningTitle: 'Viento cerca del limite',
           blockedTitle: 'Viento sobre el limite',
@@ -37,13 +32,13 @@ class FlightReadinessEvaluator {
         ),
       );
     }
-
     if (weather.gustKmh != null) {
       rules.add(
         _thresholdRule(
           code: 'WIND_GUST',
           value: weather.gustKmh!,
-          threshold: effectiveMaxGust,
+          warning: config.gustWarningKmh,
+          blocked: config.gustBlockedKmh,
           okTitle: 'Rafagas dentro del limite',
           warningTitle: 'Rafagas cerca del limite',
           blockedTitle: 'Rafagas sobre el limite',
@@ -51,44 +46,33 @@ class FlightReadinessEvaluator {
         ),
       );
     }
-
     if (weather.windKmh != null && weather.gustKmh != null) {
-      final spread = weather.gustKmh! - weather.windKmh!;
-      rules.add(_gustSpread(spread));
+      rules.add(_gustSpread(weather.gustKmh! - weather.windKmh!, config));
     }
-
     if (weather.precipitationProbability != null) {
-      rules.add(_precipitationProbability(weather.precipitationProbability!));
+      rules.add(
+        _precipitationProbability(weather.precipitationProbability!, config),
+      );
     }
-
     if (weather.precipitationMmPerHour != null) {
-      rules.add(_precipitationIntensity(weather.precipitationMmPerHour!));
+      rules.add(
+        _precipitationIntensity(weather.precipitationMmPerHour!, config),
+      );
     }
-
     if (weather.visibilityKm != null) {
-      rules.add(
-        _visibility(weather.visibilityKm!, droneProfile.minVisibilityKm),
-      );
+      rules.add(_visibility(weather.visibilityKm!, config));
     }
-
     if (weather.cloudBaseMeters != null) {
-      rules.add(
-        _cloudBase(
-          weather.cloudBaseMeters!,
-          droneProfile.preferredAltitudeMeters,
-        ),
-      );
+      rules.add(_cloudBase(weather.cloudBaseMeters!, config));
     }
-
     if (weather.temperatureC != null) {
-      rules.add(_temperature(weather.temperatureC!));
+      rules.add(_temperature(weather.temperatureC!, config));
     }
-
     if (weather.kpIndex != null) {
-      rules.add(_kpIndex(weather.kpIndex!));
+      rules.add(_kpIndex(weather.kpIndex!, config));
     }
 
-    rules.add(_daylight(weather.isDaylight));
+    rules.add(_daylight(weather.isDaylight, config));
     rules.add(_restrictedArea(weather));
 
     final status = _statusFor(rules);
@@ -100,8 +84,7 @@ class FlightReadinessEvaluator {
       summary: _summaryFor(status, rules),
       rules: rules,
       weather: weather,
-      droneProfile: droneProfile,
-      missionProfile: missionProfile,
+      config: config,
       bestWindow: bestWindow,
     );
   }
@@ -147,16 +130,16 @@ class FlightReadinessEvaluator {
   FlightRuleResult _thresholdRule({
     required String code,
     required double value,
-    required double threshold,
+    required double warning,
+    required double blocked,
     required String okTitle,
     required String warningTitle,
     required String blockedTitle,
     required String unit,
   }) {
-    final warningThreshold = threshold * 0.8;
-    final severity = value > threshold
+    final severity = value > blocked
         ? RuleSeverity.blocked
-        : value > warningThreshold
+        : value > warning
         ? RuleSeverity.warning
         : RuleSeverity.ok;
     final title = switch (severity) {
@@ -164,24 +147,22 @@ class FlightReadinessEvaluator {
       RuleSeverity.warning => warningTitle,
       RuleSeverity.blocked => blockedTitle,
     };
-
     return FlightRuleResult(
       code: code,
       severity: severity,
       title: title,
-      details: '${_fmt(value)} $unit sobre limite de ${_fmt(threshold)} $unit.',
+      details: '${_fmt(value)} $unit sobre limite de ${_fmt(blocked)} $unit.',
       measuredValue: value,
-      threshold: threshold,
+      threshold: blocked,
     );
   }
 
-  FlightRuleResult _gustSpread(double spread) {
-    final severity = spread > 18
+  FlightRuleResult _gustSpread(double spread, FlightRulesConfig config) {
+    final severity = spread > config.gustSpreadBlockedKmh
         ? RuleSeverity.blocked
-        : spread > 10
+        : spread > config.gustSpreadWarningKmh
         ? RuleSeverity.warning
         : RuleSeverity.ok;
-
     return FlightRuleResult(
       code: 'GUST_SPREAD',
       severity: severity,
@@ -192,17 +173,19 @@ class FlightReadinessEvaluator {
       },
       details: 'Diferencia entre viento y rafaga: ${_fmt(spread)} km/h.',
       measuredValue: spread,
-      threshold: severity == RuleSeverity.blocked ? 18 : 10,
+      threshold: config.gustSpreadBlockedKmh,
     );
   }
 
-  FlightRuleResult _precipitationProbability(double probability) {
-    final severity = probability >= 55
+  FlightRuleResult _precipitationProbability(
+    double probability,
+    FlightRulesConfig config,
+  ) {
+    final severity = probability >= config.precipProbabilityBlockedPercent
         ? RuleSeverity.blocked
-        : probability >= 25
+        : probability >= config.precipProbabilityWarningPercent
         ? RuleSeverity.warning
         : RuleSeverity.ok;
-
     return FlightRuleResult(
       code: 'PRECIP_PROBABILITY',
       severity: severity,
@@ -213,17 +196,19 @@ class FlightReadinessEvaluator {
       },
       details: 'Probabilidad de lluvia: ${_fmt(probability)}%.',
       measuredValue: probability,
-      threshold: severity == RuleSeverity.blocked ? 55 : 25,
+      threshold: config.precipProbabilityBlockedPercent,
     );
   }
 
-  FlightRuleResult _precipitationIntensity(double intensity) {
-    final severity = intensity > 0.5
+  FlightRuleResult _precipitationIntensity(
+    double intensity,
+    FlightRulesConfig config,
+  ) {
+    final severity = intensity > config.precipIntensityBlockedMmPerHour
         ? RuleSeverity.blocked
-        : intensity > 0
+        : intensity > config.precipIntensityWarningMmPerHour
         ? RuleSeverity.warning
         : RuleSeverity.ok;
-
     return FlightRuleResult(
       code: 'PRECIP_INTENSITY',
       severity: severity,
@@ -234,18 +219,16 @@ class FlightReadinessEvaluator {
       },
       details: 'Intensidad de lluvia: ${_fmt(intensity)} mm/h.',
       measuredValue: intensity,
-      threshold: severity == RuleSeverity.blocked ? 0.5 : 0,
+      threshold: config.precipIntensityBlockedMmPerHour,
     );
   }
 
-  FlightRuleResult _visibility(double visibility, double minimum) {
-    final warningThreshold = minimum * 0.7;
-    final severity = visibility < warningThreshold
+  FlightRuleResult _visibility(double visibility, FlightRulesConfig config) {
+    final severity = visibility < config.visibilityBlockedKm
         ? RuleSeverity.blocked
-        : visibility < minimum
+        : visibility < config.visibilityWarningKm
         ? RuleSeverity.warning
         : RuleSeverity.ok;
-
     return FlightRuleResult(
       code: 'VISIBILITY',
       severity: severity,
@@ -255,21 +238,22 @@ class FlightReadinessEvaluator {
         RuleSeverity.blocked => 'Visibilidad insuficiente',
       },
       details:
-          '${_fmt(visibility)} km disponibles; minimo ${_fmt(minimum)} km.',
+          '${_fmt(visibility)} km disponibles; minimo ${_fmt(config.visibilityWarningKm)} km.',
       measuredValue: visibility,
-      threshold: minimum,
+      threshold: config.visibilityWarningKm,
     );
   }
 
-  FlightRuleResult _cloudBase(double cloudBase, int targetAltitude) {
-    final okThreshold = targetAltitude + 120;
-    final blockedThreshold = targetAltitude + 60;
+  FlightRuleResult _cloudBase(double cloudBase, FlightRulesConfig config) {
+    final okThreshold =
+        config.targetAltitudeMeters + config.cloudBaseWarningMarginMeters;
+    final blockedThreshold =
+        config.targetAltitudeMeters + config.cloudBaseBlockedMarginMeters;
     final severity = cloudBase < blockedThreshold
         ? RuleSeverity.blocked
         : cloudBase < okThreshold
         ? RuleSeverity.warning
         : RuleSeverity.ok;
-
     return FlightRuleResult(
       code: 'CLOUD_BASE',
       severity: severity,
@@ -278,19 +262,22 @@ class FlightReadinessEvaluator {
         RuleSeverity.warning => 'Base de nubes cercana',
         RuleSeverity.blocked => 'Base de nubes baja',
       },
-      details: 'Base ${_fmt(cloudBase)} m; altura objetivo $targetAltitude m.',
+      details:
+          'Base ${_fmt(cloudBase)} m; altura objetivo ${config.targetAltitudeMeters} m.',
       measuredValue: cloudBase,
       threshold: okThreshold.toDouble(),
     );
   }
 
-  FlightRuleResult _temperature(double temperature) {
-    final severity = temperature < -5 || temperature > 40
+  FlightRuleResult _temperature(double temperature, FlightRulesConfig config) {
+    final severity =
+        temperature < config.temperatureMinBlockedC ||
+            temperature > config.temperatureMaxBlockedC
         ? RuleSeverity.blocked
-        : temperature < 0 || temperature > 35
+        : temperature < config.temperatureMinWarningC ||
+              temperature > config.temperatureMaxWarningC
         ? RuleSeverity.warning
         : RuleSeverity.ok;
-
     return FlightRuleResult(
       code: 'TEMPERATURE',
       severity: severity,
@@ -304,13 +291,12 @@ class FlightReadinessEvaluator {
     );
   }
 
-  FlightRuleResult _kpIndex(double kp) {
-    final severity = kp >= 6
+  FlightRuleResult _kpIndex(double kp, FlightRulesConfig config) {
+    final severity = kp >= config.kpBlocked
         ? RuleSeverity.blocked
-        : kp >= 4
+        : kp >= config.kpWarning
         ? RuleSeverity.warning
         : RuleSeverity.ok;
-
     return FlightRuleResult(
       code: 'KP_INDEX',
       severity: severity,
@@ -321,19 +307,24 @@ class FlightReadinessEvaluator {
       },
       details: 'Indice Kp: ${_fmt(kp)}.',
       measuredValue: kp,
-      threshold: severity == RuleSeverity.blocked ? 6 : 4,
+      threshold: config.kpBlocked,
     );
   }
 
-  FlightRuleResult _daylight(bool isDaylight) {
+  FlightRuleResult _daylight(bool isDaylight, FlightRulesConfig config) {
+    final ok = isDaylight || config.allowNightFlight;
     return FlightRuleResult(
       code: 'DAYLIGHT',
-      severity: isDaylight ? RuleSeverity.ok : RuleSeverity.blocked,
+      severity: ok ? RuleSeverity.ok : RuleSeverity.blocked,
       title: isDaylight
           ? 'Luz diurna disponible'
+          : ok
+          ? 'Vuelo nocturno habilitado'
           : 'Vuelo nocturno no habilitado',
       details: isDaylight
           ? 'La ventana esta dentro de horario diurno.'
+          : ok
+          ? 'Activaste vuelo nocturno en tus reglas. Verifica permisos.'
           : 'Activa vuelo nocturno solo si corresponde y tenes permiso.',
     );
   }

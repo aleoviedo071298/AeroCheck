@@ -1,13 +1,10 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
 import '../../app/weather_session.dart';
-import '../../data/location/flight_location.dart';
-import '../../data/mock/mock_flight_data.dart';
-import '../../domain/entities/flight_readiness_report.dart';
 import '../../domain/i18n/app_strings.dart';
+import '../../domain/i18n/language.dart';
 import '../../domain/rules/rule_severity.dart';
 import '../../domain/rules/wind_profile_evaluator.dart';
 import '../../domain/units/unit_formatters.dart';
@@ -29,23 +26,15 @@ class WindScreen extends StatelessWidget {
       animation: session,
       builder: (context, _) {
         AppStrings.currentLanguage = session.preferences.language;
-        final report = session.currentReport;
-        final location = session.selectedLocation;
         final rows = session.windProfileRows;
 
         final evaluator = WindProfileEvaluator(
-          droneProfile: MockFlightData.droneProfile,
-          missionProfile: MockFlightData.missionProfile,
+          config: session.preferences.rulesConfig,
         );
 
         final evaluatedRows = evaluator.evaluateProfile(rows);
         final bestWindRow = evaluator.findBestWindAltitude(rows);
         final units = session.preferences.units;
-        final targetAltitude = UnitFormatters.formatAltitude(
-          MockFlightData.droneProfile.preferredAltitudeMeters.toDouble(),
-          units,
-          decimals: 0,
-        );
 
         return Column(
           children: [
@@ -67,17 +56,10 @@ class WindScreen extends StatelessWidget {
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
                     children: [
-                      // 1. Collapsible Location Card
-                      _CollapsibleLocationCard(
+                      // 1. Screen Header
+                      _ScreenHeader(
+                        title: AppStrings.get('perfil_vertical'),
                         session: session,
-                        report: report,
-                      ),
-                      const SizedBox(height: 14),
-
-                      // 2. Redesigned Title & Subtitle block
-                      _VerticalProfileTitleBlock(
-                        session: session,
-                        location: location,
                       ),
                       const SizedBox(height: 14),
 
@@ -95,10 +77,14 @@ class WindScreen extends StatelessWidget {
                             Expanded(
                               child: _WindStatsCard(
                                 label: AppStrings.get(
-                                  'altitud_objetivo',
+                                  'altitud_maxima',
                                 ).toUpperCase(),
-                                value: targetAltitude,
-                                subValue: AppStrings.get('nivel_seleccionado'),
+                                value: UnitFormatters.formatAltitude(
+                                  122.0,
+                                  units,
+                                  decimals: 0,
+                                ),
+                                subValue: AppStrings.get('categoria_abierta'),
                                 icon: Icons.gps_fixed_rounded,
                                 iconColor: const Color(0xFF0284C7),
                                 iconBg: const Color(0xFFE0F2FE),
@@ -156,9 +142,10 @@ class WindScreen extends StatelessWidget {
                                     index: index,
                                     isTarget:
                                         _altitudeMeters(row.altitude) ==
-                                        MockFlightData
-                                            .droneProfile
-                                            .preferredAltitudeMeters,
+                                        session
+                                            .preferences
+                                            .rulesConfig
+                                            .targetAltitudeMeters,
                                     isBestWind:
                                         row.altitude == bestWindRow.altitude,
                                     units: units,
@@ -171,11 +158,11 @@ class WindScreen extends StatelessWidget {
                         const SizedBox(height: 14),
 
                         // 5. Legend Card
-                        const _WindLegendCard(),
+                        _WindLegendCard(language: session.preferences.language),
                         const SizedBox(height: 14),
 
                         // 6. Bottom optimal window tip card
-                        const _WindTipCard(),
+                        _WindTipCard(language: session.preferences.language),
                       ],
                     ],
                   ),
@@ -189,289 +176,15 @@ class WindScreen extends StatelessWidget {
   }
 }
 
-class _CollapsibleLocationCard extends StatefulWidget {
-  const _CollapsibleLocationCard({required this.session, this.report});
+class _ScreenHeader extends StatelessWidget {
+  const _ScreenHeader({required this.title, required this.session});
 
+  final String title;
   final WeatherSession session;
-  final FlightReadinessReport? report;
-
-  @override
-  State<_CollapsibleLocationCard> createState() =>
-      _CollapsibleLocationCardState();
-}
-
-class _CollapsibleLocationCardState extends State<_CollapsibleLocationCard> {
-  bool _isExpanded = false;
-  final _searchController = TextEditingController();
-  Future<List<FlightLocation>>? _searchFuture;
-  Timer? _debounceTimer;
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    _debounceTimer?.cancel();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
-    final location = widget.session.selectedLocation;
-    final colorScheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Card(
-      margin: EdgeInsets.zero,
-      elevation: 0,
-      color: isDark ? const Color(0xFF1E293B) : Colors.white,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () {
-          setState(() {
-            _isExpanded = !_isExpanded;
-          });
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.location_on_rounded,
-                    color: colorScheme.primary,
-                    size: 28,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          location.label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Lat: ${location.latitude.toStringAsFixed(4)} · Lon: ${location.longitude.toStringAsFixed(4)} · Elev. ${UnitFormatters.formatAltitude(location.elevation.toDouble(), widget.session.preferences.units, decimals: 0)}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDark
-                                ? const Color(0xFF94A3B8)
-                                : const Color(0xFF64748B),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    _isExpanded
-                        ? Icons.keyboard_arrow_up_rounded
-                        : Icons.keyboard_arrow_down_rounded,
-                    color: isDark
-                        ? const Color(0xFF94A3B8)
-                        : const Color(0xFF64748B),
-                  ),
-                ],
-              ),
-              if (_isExpanded) ...[
-                const SizedBox(height: 14),
-                const Divider(height: 1),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Text(
-                      AppStrings.get('cambiar_ubicacion'),
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.primary,
-                      ),
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      key: const ValueKey('gps-location-button'),
-                      icon: const Icon(Icons.my_location_rounded),
-                      iconSize: 20,
-                      tooltip: AppStrings.get('mi_ubicacion_gps'),
-                      onPressed: () {
-                        widget.session.setLocationToCurrentGPS();
-                        setState(() {
-                          _isExpanded = false;
-                        });
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    ...widget.session.availableLocations.map((loc) {
-                      final isSelected = loc.id == location.id;
-                      return ChoiceChip(
-                        key: ValueKey('location-chip-${loc.id}'),
-                        label: Text(loc.name),
-                        selected: isSelected,
-                        onSelected: (_) {
-                          widget.session.setLocation(loc);
-                          setState(() {
-                            _isExpanded = false;
-                          });
-                        },
-                      );
-                    }),
-                    ActionChip(
-                      key: const ValueKey('add-location-button'),
-                      label: Text(AppStrings.get('buscar')),
-                      avatar: const Icon(Icons.search_rounded, size: 16),
-                      onPressed: () {
-                        _showAddLocationDialog();
-                      },
-                    ),
-                  ],
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showAddLocationDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            title: Text(AppStrings.get('buscar_ciudad')),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: AppStrings.get('escribe_nombre_ciudad'),
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    onChanged: (val) {
-                      _debounceTimer?.cancel();
-                      _debounceTimer = Timer(
-                        const Duration(milliseconds: 300),
-                        () {
-                          setDialogState(() {
-                            _searchFuture = widget.session.searchCities(val);
-                          });
-                        },
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    height: 300,
-                    width: double.maxFinite,
-                    child: _searchFuture == null
-                        ? Center(
-                            child: Text(
-                              AppStrings.get('escribe_buscar_ciudades'),
-                            ),
-                          )
-                        : FutureBuilder<List<FlightLocation>>(
-                            future: _searchFuture,
-                            builder: (context, snapshot) {
-                              if (snapshot.connectionState ==
-                                  ConnectionState.waiting) {
-                                return const Center(
-                                  child: CircularProgressIndicator(),
-                                );
-                              }
-                              if (snapshot.hasError) {
-                                return Center(
-                                  child: Text(
-                                    '${AppStrings.get('error')}: ${snapshot.error}',
-                                  ),
-                                );
-                              }
-                              final locations = snapshot.data ?? [];
-                              if (locations.isEmpty) {
-                                return Center(
-                                  child: Text(
-                                    AppStrings.get('sin_resultados_ciudades'),
-                                  ),
-                                );
-                              }
-                              return ListView.builder(
-                                itemCount: locations.length,
-                                itemBuilder: (context, index) {
-                                  final loc = locations[index];
-                                  return ListTile(
-                                    key: ValueKey('search-location-${loc.id}'),
-                                    title: Text(loc.name),
-                                    subtitle: Text(
-                                      '${loc.region}, ${loc.country}',
-                                    ),
-                                    trailing: const Icon(
-                                      Icons.add_circle_outline_rounded,
-                                    ),
-                                    onTap: () {
-                                      widget.session.addFavoriteLocation(loc);
-                                      Navigator.pop(context);
-                                      _searchController.clear();
-                                      setState(() {
-                                        _isExpanded = false;
-                                        _searchFuture = null;
-                                      });
-                                    },
-                                  );
-                                },
-                              );
-                            },
-                          ),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _searchController.clear();
-                  setState(() {
-                    _searchFuture = null;
-                  });
-                },
-                child: Text(AppStrings.get('cerrar')),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _VerticalProfileTitleBlock extends StatelessWidget {
-  const _VerticalProfileTitleBlock({
-    required this.session,
-    required this.location,
-  });
-
-  final WeatherSession session;
-  final FlightLocation location;
-
-  @override
-  Widget build(BuildContext context) {
+    final location = session.selectedLocation;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
@@ -479,41 +192,19 @@ class _VerticalProfileTitleBlock extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Circular Outline Wind Icon Container
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: isDark
-                    ? const Color(0xFF334155)
-                    : const Color(0xFFCBD5E1),
-                width: 1.5,
-              ),
-            ),
-            child: const Icon(
-              Icons.air_rounded,
-              color: Color(0xFF0D9488),
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 14),
-
-          // Title Texts
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  AppStrings.get('perfil_vertical'),
+                  title,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 4),
                 Text(
-                  _descriptionFor(session, location),
+                  '${location.label}\nLat: ${location.latitude.toStringAsFixed(4)} · Lon: ${location.longitude.toStringAsFixed(4)} · Elev. ${UnitFormatters.formatAltitude(location.elevation.toDouble(), session.preferences.units, decimals: 0)}',
                   style: TextStyle(
                     fontSize: 12,
                     color: isDark
@@ -525,40 +216,9 @@ class _VerticalProfileTitleBlock extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 8),
-
-          // Info Button on right
-          IconButton(
-            icon: const Icon(Icons.info_outline_rounded),
-            color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-            onPressed: () {
-              // Information popup/tooltip
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: Text(AppStrings.get('perfil_vertical_viento')),
-                  content: Text(AppStrings.get('perfil_info')),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text(AppStrings.get('entendido')),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
         ],
       ),
     );
-  }
-
-  String _descriptionFor(WeatherSession session, FlightLocation location) {
-    final isReal = session.dataSource == WeatherDataSource.real;
-    final providerText = isReal
-        ? AppStrings.get('perfil_real_descripcion')
-        : AppStrings.get('perfil_mock_descripcion');
-    return '${location.name}, ${location.region}\n$providerText';
   }
 }
 
@@ -769,17 +429,11 @@ class _RedesignedWindRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final borderHighlightColor = isTarget
-        ? const Color(0xFF0284C7).withValues(alpha: isDark ? 0.6 : 0.4) // Blue
-        : const Color(
-            0xFF22C55E,
-          ).withValues(alpha: isDark ? 0.6 : 0.4); // Green
+    final borderHighlightColor = const Color(
+      0xFF22C55E,
+    ).withValues(alpha: isDark ? 0.6 : 0.4); // Green
 
-    final rowBgColor = isTarget
-        ? (isDark
-              ? const Color(0xFF0284C7).withValues(alpha: 0.1)
-              : const Color(0xFFE0F2FE).withValues(alpha: 0.6))
-        : isBestWind
+    final rowBgColor = isBestWind
         ? (isDark
               ? const Color(0xFF22C55E).withValues(alpha: 0.1)
               : const Color(0xFFDCFCE7).withValues(alpha: 0.6))
@@ -791,9 +445,7 @@ class _RedesignedWindRow extends StatelessWidget {
         color: rowBgColor,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: (isTarget || isBestWind)
-              ? borderHighlightColor
-              : Colors.transparent,
+          color: isBestWind ? borderHighlightColor : Colors.transparent,
           width: 1.5,
         ),
       ),
@@ -812,11 +464,7 @@ class _RedesignedWindRow extends StatelessWidget {
                     style: TextStyle(
                       fontWeight: FontWeight.w900,
                       fontSize: 14,
-                      color: isTarget
-                          ? const Color(0xFF0284C7)
-                          : isBestWind
-                          ? const Color(0xFF15803D)
-                          : null,
+                      color: isBestWind ? const Color(0xFF15803D) : null,
                     ),
                   ),
                   const SizedBox(height: 1),
@@ -829,14 +477,7 @@ class _RedesignedWindRow extends StatelessWidget {
                           : const Color(0xFF94A3B8),
                     ),
                   ),
-                  if (isTarget) ...[
-                    const SizedBox(height: 4),
-                    _buildPill(
-                      AppStrings.get('objetivo').toUpperCase(),
-                      const Color(0xFFE0F2FE),
-                      const Color(0xFF0369A1),
-                    ),
-                  ] else if (isBestWind) ...[
+                  if (isBestWind) ...[
                     const SizedBox(height: 4),
                     _buildPill(
                       AppStrings.get('mejor').toUpperCase(),
@@ -1124,7 +765,9 @@ class _RedesignedWindRow extends StatelessWidget {
 }
 
 class _WindLegendCard extends StatelessWidget {
-  const _WindLegendCard();
+  const _WindLegendCard({required this.language});
+
+  final Language language;
 
   @override
   Widget build(BuildContext context) {
@@ -1263,7 +906,9 @@ class _WindLegendCard extends StatelessWidget {
 }
 
 class _WindTipCard extends StatelessWidget {
-  const _WindTipCard();
+  const _WindTipCard({required this.language});
+
+  final Language language;
 
   @override
   Widget build(BuildContext context) {

@@ -26,6 +26,7 @@ class RealMapWidget extends StatefulWidget {
 
 class _RealMapWidgetState extends State<RealMapWidget> {
   late final MapController _mapController;
+  bool _showSatellite = false;
 
   @override
   void initState() {
@@ -75,7 +76,9 @@ class _RealMapWidgetState extends State<RealMapWidget> {
     final layers = <Widget>[
       // Base map layer
       TileLayer(
-        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+        urlTemplate: _showSatellite
+            ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+            : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
         userAgentPackageName: 'com.aerocheck.app',
       ),
 
@@ -146,15 +149,42 @@ class _RealMapWidgetState extends State<RealMapWidget> {
       ),
     ];
 
-    return FlutterMap(
-      mapController: _mapController,
-      options: MapOptions(
-        initialCenter: location,
-        initialZoom: 13,
-        minZoom: 5,
-        maxZoom: 19,
-      ),
-      children: layers,
+    return Stack(
+      children: [
+        FlutterMap(
+          mapController: _mapController,
+          options: MapOptions(
+            initialCenter: location,
+            initialZoom: 13,
+            minZoom: 5,
+            maxZoom: 19,
+          ),
+          children: layers,
+        ),
+        // Floating Overlay Action Buttons
+        Positioned(
+          bottom: 12,
+          right: 12,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _MapOverlayButton(
+                icon: Icons.layers_rounded,
+                onPressed: () {
+                  setState(() {
+                    _showSatellite = !_showSatellite;
+                  });
+                },
+              ),
+              const SizedBox(height: 8),
+              _MapOverlayButton(
+                icon: Icons.gps_fixed_rounded,
+                onPressed: _fitBounds,
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -189,5 +219,48 @@ class _RealMapWidgetState extends State<RealMapWidget> {
         Colors.orange.withValues(alpha: 0.5),
       );
     }
+  }
+}
+
+class _MapOverlayButton extends StatelessWidget {
+  const _MapOverlayButton({required this.icon, required this.onPressed});
+
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      width: 38,
+      height: 38,
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onPressed,
+          child: Icon(
+            icon,
+            size: 18,
+            color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+          ),
+        ),
+      ),
+    );
   }
 }

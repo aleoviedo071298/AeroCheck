@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../domain/i18n/language.dart';
+import '../../domain/rules/flight_rules_config.dart';
 import '../../domain/units/unit_preferences.dart';
 import 'user_preferences.dart';
 import 'user_preferences_store.dart';
@@ -14,6 +15,7 @@ class SharedPreferencesUserPreferencesStore implements UserPreferencesStore {
   static const _dataSourceKey = 'aerocheck.data_source';
   static const _languageKey = 'aerocheck.language';
   static const _unitsKey = 'aerocheck.units';
+  static const _rulesConfigKey = 'aerocheck.rules_config';
   static const _mockScenarioKey = 'aerocheck.mock_scenario';
   // Legacy keys for migration
   static const _legacyLocationIdKey = 'aerocheck.location_id';
@@ -52,6 +54,18 @@ class SharedPreferencesUserPreferencesStore implements UserPreferencesStore {
       }
     }
 
+    FlightRulesConfig rulesConfig = const FlightRulesConfig.defaults();
+    final rulesJson = preferences.getString(_rulesConfigKey);
+    if (rulesJson != null) {
+      try {
+        rulesConfig = FlightRulesConfig.fromJson(
+          jsonDecode(rulesJson) as Map<String, dynamic>,
+        );
+      } catch (_) {
+        // Keep defaults if corrupted.
+      }
+    }
+
     return UserPreferences(
       selectedLocationId: preferences.getString(_selectedLocationIdKey),
       favoriteLocationsJson:
@@ -60,6 +74,7 @@ class SharedPreferencesUserPreferencesStore implements UserPreferencesStore {
       dataSourceName: preferences.getString(_dataSourceKey),
       language: language,
       units: units,
+      rulesConfig: rulesConfig,
     );
   }
 
@@ -80,6 +95,10 @@ class SharedPreferencesUserPreferencesStore implements UserPreferencesStore {
       _setOrRemove(store, _dataSourceKey, preferences.dataSourceName),
       store.setString(_languageKey, preferences.language.code),
       store.setString(_unitsKey, jsonEncode(preferences.units.toJson())),
+      store.setString(
+        _rulesConfigKey,
+        jsonEncode(preferences.rulesConfig.toJson()),
+      ),
     ]);
   }
 

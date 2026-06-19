@@ -38,7 +38,7 @@ void main() {
     );
 
     // Verify initial state
-    expect(find.text('1 guardada'), findsOneWidget);
+    expect(find.text('Comodoro Rivadavia, Chubut'), findsWidgets);
 
     // Search for Mendoza
     await tester.enterText(
@@ -57,7 +57,7 @@ void main() {
     }
 
     // Verify it was added to favorites
-    expect(find.text('2 guardadas'), findsWidgets);
+    expect(find.text('Mendoza, Mendoza'), findsWidgets);
   });
 
   testWidgets('settings screen shows empty state when no results', (

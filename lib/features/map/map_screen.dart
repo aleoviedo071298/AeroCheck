@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../app/airspace_state.dart';
@@ -50,10 +49,6 @@ class MapScreen extends StatelessWidget {
                     children: [
                       // 1. Title Block
                       _MapTitleBlock(session: session, location: location),
-                      const SizedBox(height: 14),
-
-                      // 2. Favorite Location Selector Row
-                      _FavoriteLocationSelector(session: session),
                       const SizedBox(height: 14),
 
                       // 3. Radio Guia card
@@ -235,29 +230,6 @@ class MapScreen extends StatelessWidget {
                                   ),
                                 ),
                               ),
-                              // Floating Overlay Action Buttons
-                              Positioned(
-                                bottom: 12,
-                                right: 12,
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    _MapOverlayButton(
-                                      icon: Icons.layers_rounded,
-                                      onPressed: () {
-                                        // Just a visual action
-                                      },
-                                    ),
-                                    const SizedBox(height: 8),
-                                    _MapOverlayButton(
-                                      icon: Icons.gps_fixed_rounded,
-                                      onPressed: () {
-                                        // Centers/fits bounds visually
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ),
                             ],
                           ),
                         ),
@@ -350,153 +322,6 @@ class _MapTitleBlock extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _FavoriteLocationSelector extends StatelessWidget {
-  const _FavoriteLocationSelector({required this.session});
-
-  final WeatherSession session;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          ...session.availableLocations.map((loc) {
-            final isSelected = loc.id == session.selectedLocation.id;
-            return Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: ChoiceChip(
-                key: ValueKey('map-location-${loc.id}'),
-                avatar: isSelected
-                    ? const Icon(
-                        Icons.check_rounded,
-                        size: 16,
-                        color: Colors.white,
-                      )
-                    : const Icon(
-                        Icons.location_on_rounded,
-                        size: 16,
-                        color: Color(0xFF64748B),
-                      ),
-                label: Text(
-                  loc.name,
-                  style: TextStyle(
-                    color: isSelected
-                        ? Colors.white
-                        : (isDark
-                              ? const Color(0xFFCBD5E1)
-                              : const Color(0xFF334155)),
-                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                  ),
-                ),
-                selected: isSelected,
-                selectedColor: const Color(0xFF0D9488),
-                backgroundColor: isDark
-                    ? const Color(0xFF1E293B)
-                    : Colors.white,
-                checkmarkColor: Colors.white,
-                showCheckmark: false,
-                side: BorderSide(
-                  color: isSelected
-                      ? Colors.transparent
-                      : (isDark
-                            ? const Color(0xFF334155)
-                            : const Color(0xFFE2E8F0)),
-                ),
-                onSelected: (_) => session.setLocation(loc),
-              ),
-            );
-          }),
-          Container(
-            height: 38,
-            width: 38,
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E293B) : Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: isDark
-                    ? const Color(0xFF334155)
-                    : const Color(0xFFE2E8F0),
-              ),
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(8),
-                onTap: () {
-                  _showLocationOptionsSheet(context, session);
-                },
-                child: Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  size: 20,
-                  color: isDark
-                      ? const Color(0xFF94A3B8)
-                      : const Color(0xFF64748B),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showLocationOptionsSheet(BuildContext context, WeatherSession session) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return SafeArea(
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  leading: const Icon(
-                    Icons.my_location_rounded,
-                    color: Color(0xFF0D9488),
-                  ),
-                  title: Text(
-                    AppStrings.get('usar_ubicacion_gps'),
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  onTap: () {
-                    session.setLocationToCurrentGPS();
-                    Navigator.pop(context);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(
-                    Icons.search_rounded,
-                    color: Color(0xFF0D9488),
-                  ),
-                  title: Text(
-                    AppStrings.get('buscar_otra_ciudad'),
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _showAddLocationDialog(context, session);
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  void _showAddLocationDialog(BuildContext context, WeatherSession session) {
-    showDialog(
-      context: context,
-      builder: (context) => _AddLocationDialog(session: session),
     );
   }
 }
@@ -610,49 +435,6 @@ class _GuideRadiusControl extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MapOverlayButton extends StatelessWidget {
-  const _MapOverlayButton({required this.icon, required this.onPressed});
-
-  final IconData icon;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      width: 38,
-      height: 38,
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-        border: Border.all(
-          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-        ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: onPressed,
-          child: Icon(
-            icon,
-            size: 18,
-            color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
-          ),
         ),
       ),
     );
@@ -1038,129 +820,6 @@ class _MapTipCard extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _AddLocationDialog extends StatefulWidget {
-  const _AddLocationDialog({required this.session});
-
-  final WeatherSession session;
-
-  @override
-  State<_AddLocationDialog> createState() => _AddLocationDialogState();
-}
-
-class _AddLocationDialogState extends State<_AddLocationDialog> {
-  late final TextEditingController _controller;
-  Future<List<FlightLocation>>? _searchFuture;
-  Timer? _debounceTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    _debounceTimer?.cancel();
-    super.dispose();
-  }
-
-  void _onSearchChanged(String val) {
-    _debounceTimer?.cancel();
-    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
-      if (mounted) {
-        setState(() {
-          _searchFuture = widget.session.searchCities(val);
-        });
-      }
-    });
-  }
-
-  void _onLocationSelected(FlightLocation location) {
-    widget.session.addFavoriteLocation(location);
-    Navigator.pop(context);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(AppStrings.get('buscar_ciudad')),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _controller,
-              decoration: InputDecoration(
-                hintText: AppStrings.get('escribe_nombre_ciudad'),
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              onChanged: _onSearchChanged,
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 300,
-              width: double.maxFinite,
-              child: _searchFuture == null
-                  ? Center(
-                      child: Text(AppStrings.get('escribe_buscar_ciudades')),
-                    )
-                  : FutureBuilder<List<FlightLocation>>(
-                      future: _searchFuture,
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return Center(child: CircularProgressIndicator());
-                        }
-                        if (snapshot.hasError) {
-                          return Center(
-                            child: Text(
-                              '${AppStrings.get('error')}: ${snapshot.error}',
-                            ),
-                          );
-                        }
-                        final locations = snapshot.data ?? [];
-                        if (locations.isEmpty) {
-                          return Center(
-                            child: Text(
-                              AppStrings.get('sin_resultados_ciudades'),
-                            ),
-                          );
-                        }
-                        return ListView.builder(
-                          itemCount: locations.length,
-                          itemBuilder: (context, index) {
-                            final loc = locations[index];
-                            return ListTile(
-                              key: ValueKey('map-search-location-${loc.id}'),
-                              title: Text(loc.name),
-                              subtitle: Text('${loc.region}, ${loc.country}'),
-                              trailing: const Icon(
-                                Icons.add_circle_outline_rounded,
-                              ),
-                              onTap: () => _onLocationSelected(loc),
-                            );
-                          },
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(AppStrings.get('cerrar')),
-        ),
-      ],
     );
   }
 }
