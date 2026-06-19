@@ -93,6 +93,7 @@ class WeatherSession extends ChangeNotifier {
   UserPreferences _userPreferences = const UserPreferences();
   WeatherBundle? _cachedRowsBundle;
   List<ForecastRow>? _cachedRows;
+  bool _isInitialLoadDone = false;
 
   FlightLocation get selectedLocation => _selectedLocation;
   List<FlightLocation> get availableLocations => _favoriteLocations;
@@ -104,9 +105,7 @@ class WeatherSession extends ChangeNotifier {
   AirspaceState get airspaceState => _airspaceState;
   UserPreferences get preferences => _userPreferences;
 
-  bool get isInitialLoadComplete =>
-      (_realBundle != null || _realError != null) &&
-      _airspaceState is! AirspaceLoadingState;
+  bool get isInitialLoadComplete => _isInitialLoadDone;
 
   FlightReadinessReport? get currentReport {
     final bundle = _realBundle;
@@ -205,15 +204,21 @@ class WeatherSession extends ChangeNotifier {
       _dataSource = WeatherDataSource.real;
 
       notifyListeners();
-      _loadNearbyAirspaces();
-
-      await loadRealWeather();
+      await Future.wait([
+        _loadNearbyAirspaces(),
+        loadRealWeather(),
+      ]);
     } catch (_) {
       // Preferences should never block the operational screen.
       _userPreferences = const UserPreferences();
       _dataSource = WeatherDataSource.real;
-      _loadNearbyAirspaces();
-      await loadRealWeather();
+      await Future.wait([
+        _loadNearbyAirspaces(),
+        loadRealWeather(),
+      ]);
+    } finally {
+      _isInitialLoadDone = true;
+      notifyListeners();
     }
   }
 
