@@ -669,7 +669,9 @@ class _StatusIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = _statusColor(status);
-    final icon = _iconForReasonTitle(reasonTitle);
+    final icon = status == FlightReadinessStatus.ready
+        ? Icons.check_rounded
+        : _iconForReasonTitle(reasonTitle);
 
     return Container(
       width: 26,
@@ -718,6 +720,10 @@ class _ForecastReasonLine extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final localizedTitle = reason.localizedTitle(AppStrings.currentLanguage);
 
+    final icon = reason.severity == RuleSeverity.ok
+        ? Icons.check_rounded
+        : _iconForReasonTitle(localizedTitle);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
@@ -729,7 +735,7 @@ class _ForecastReasonLine extends StatelessWidget {
             height: 28,
             decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             child: Icon(
-              _iconForReasonTitle(localizedTitle),
+              icon,
               color: Colors.white,
               size: 14,
             ),

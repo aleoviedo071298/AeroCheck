@@ -571,7 +571,6 @@ class _ReworkedMetricsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // Calculate dew point estimate if temperature and humidity exist
     String dewPointStr = AppStrings.get('sin_dato');
@@ -644,92 +643,73 @@ class _ReworkedMetricsGrid extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
 
-        // 2. Secondary Metrics Row (1x4)
-        Card(
-          margin: EdgeInsets.zero,
-          elevation: 0,
-          color: isDark ? const Color(0xFF1E293B) : Colors.white,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _MiniMetricCol(
-                    icon: Icons.cloud_rounded,
-                    label: AppStrings.get('nubosidad').toUpperCase(),
-                    value: _cloudCoverValue(weather, session.preferences.units),
-                  ),
-                ),
-                _vDivider(isDark),
-                Expanded(
-                  child: _MiniMetricCol(
-                    icon: Icons.visibility_rounded,
-                    label: AppStrings.get('visibilidad').toUpperCase(),
-                    value: weather.visibilityKm == null
-                        ? AppStrings.get('sin_dato')
-                        : UnitFormatters.formatDistance(
-                            weather.visibilityKm,
-                            session.preferences.units,
-                          ),
-                  ),
-                ),
-                _vDivider(isDark),
-                Expanded(
-                  child: _MiniMetricCol(
-                    icon: Icons.sensors_rounded,
-                    label: AppStrings.get('indice_kp').toUpperCase(),
-                    value: weather.kpIndex == null
-                        ? AppStrings.get('sin_dato')
-                        : _fmt(weather.kpIndex!),
-                  ),
-                ),
-                _vDivider(isDark),
-                Expanded(
-                  child: _MiniMetricCol(
-                    icon: Icons.water_drop_rounded,
-                    label: AppStrings.get('precip').toUpperCase(),
-                    value: weather.precipitationProbability == null
-                        ? '0%'
-                        : '${_fmt(weather.precipitationProbability!)}%',
-                  ),
-                ),
-              ],
-            ),
+        // 2. Secondary Metrics Grid (2x2)
+        GridView(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: EdgeInsets.zero,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            childAspectRatio: 1.6,
+            mainAxisSpacing: 10,
+            crossAxisSpacing: 10,
           ),
+          children: [
+            _MetricCard(
+              label: AppStrings.get('nubosidad').toUpperCase(),
+              value: weather.cloudCoverPercent == null
+                  ? AppStrings.get('sin_dato')
+                  : '${_cloudCoverFraction(weather.cloudCoverPercent!)} (${_fmt(weather.cloudCoverPercent!)}%)',
+              subValue: weather.cloudBaseMeters != null
+                  ? 'Base: ${UnitFormatters.formatAltitude(weather.cloudBaseMeters, session.preferences.units, decimals: 0)}'
+                  : 'Cielo despejado',
+              icon: Icons.cloud_rounded,
+              accentColor: const Color(0xFF14B8A6), // Teal bottom line
+            ),
+            _MetricCard(
+              label: AppStrings.get('visibilidad').toUpperCase(),
+              value: weather.visibilityKm == null
+                  ? AppStrings.get('sin_dato')
+                  : UnitFormatters.formatDistance(
+                      weather.visibilityKm,
+                      session.preferences.units,
+                    ),
+              subValue: 'Límite: ${UnitFormatters.formatDistance(session.preferences.rulesConfig.visibilityWarningKm, session.preferences.units, decimals: 0)}',
+              icon: Icons.visibility_rounded,
+              accentColor: const Color(0xFF10B981), // Emerald bottom line
+            ),
+            _MetricCard(
+              label: AppStrings.get('indice_kp').toUpperCase(),
+              value: weather.kpIndex == null
+                  ? AppStrings.get('sin_dato')
+                  : _fmt(weather.kpIndex!),
+              subValue: 'Límite: Kp ${session.preferences.rulesConfig.kpWarning}',
+              icon: Icons.sensors_rounded,
+              accentColor: const Color(0xFF8B5CF6), // Violet bottom line
+            ),
+            _MetricCard(
+              label: AppStrings.get('precip').toUpperCase(),
+              value: weather.precipitationProbability == null
+                  ? '0%'
+                  : '${_fmt(weather.precipitationProbability!)}%',
+              subValue: weather.precipitationMmPerHour != null &&
+                      weather.precipitationMmPerHour! > 0
+                  ? '${_fmt(weather.precipitationMmPerHour!)} mm/h'
+                  : AppStrings.get('sin_lluvia'),
+              icon: Icons.water_drop_rounded,
+              accentColor: const Color(0xFF06B6D4), // Cyan bottom line
+            ),
+          ],
         ),
       ],
-    );
-  }
-
-  Widget _vDivider(bool isDark) {
-    return Container(
-      width: 1,
-      height: 30,
-      color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
     );
   }
 
   String _cloudCoverFraction(double percent) {
     final okta = (percent / 12.5).round();
     return '$okta/8';
-  }
-
-  String _cloudCoverValue(WeatherSnapshot weather, UnitPreferences units) {
-    if (weather.cloudCoverPercent == null) {
-      return AppStrings.get('sin_dato');
-    }
-    final fraction = _cloudCoverFraction(weather.cloudCoverPercent!);
-    final pct = '${_fmt(weather.cloudCoverPercent!)}%';
-    if (weather.cloudBaseMeters != null) {
-      final cloudBase = UnitFormatters.formatAltitude(
-        weather.cloudBaseMeters,
-        units,
-      );
-      return '$fraction ($pct)\n($cloudBase)';
-    }
-    return '$fraction ($pct)';
   }
 
   String _formatGustDelta(WeatherSnapshot weather, WeatherSession session) {
@@ -860,55 +840,7 @@ class _MetricCard extends StatelessWidget {
   }
 }
 
-class _MiniMetricCol extends StatelessWidget {
-  const _MiniMetricCol({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
 
-  final IconData icon;
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          icon,
-          size: 16,
-          color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 8,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 0.2,
-            color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          maxLines: 2,
-          textAlign: TextAlign.center,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w800,
-            height: 1.1,
-          ),
-        ),
-      ],
-    );
-  }
-}
 
 class _HourlyTimelineWidget extends StatelessWidget {
   const _HourlyTimelineWidget({required this.session});
@@ -918,7 +850,18 @@ class _HourlyTimelineWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final rows = session.forecastRows;
+    var rows = session.forecastRows;
+
+    final reportTime = session.currentReport?.weather.time;
+    if (reportTime != null) {
+      rows = rows.where((row) {
+        if (row.time == null) return false;
+        return row.time!.year == reportTime.year &&
+            row.time!.month == reportTime.month &&
+            row.time!.day == reportTime.day;
+      }).toList();
+    }
+
     if (rows.isEmpty) return const SizedBox.shrink();
 
     return Card(

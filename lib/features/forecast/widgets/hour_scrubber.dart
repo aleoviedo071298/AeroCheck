@@ -1,11 +1,9 @@
 // lib/features/forecast/widgets/hour_scrubber.dart
 import 'package:flutter/material.dart';
 
-import '../../../data/mock/mock_flight_data.dart';
 import '../../../domain/i18n/app_strings.dart';
 import '../../../domain/i18n/language.dart';
 import '../forecast_day_grouping.dart';
-import 'focused_hour_card.dart';
 
 class HourScrubber extends StatelessWidget {
   const HourScrubber({

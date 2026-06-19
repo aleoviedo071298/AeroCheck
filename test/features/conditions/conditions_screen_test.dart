@@ -20,6 +20,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(const AeroCheckApp());
+    await tester.pumpAndSettle();
 
     expect(find.text('AeroCheck'), findsOneWidget);
     expect(find.textContaining('Comodoro Rivadavia'), findsWidgets);

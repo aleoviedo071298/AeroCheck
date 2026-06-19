@@ -104,6 +104,10 @@ class WeatherSession extends ChangeNotifier {
   AirspaceState get airspaceState => _airspaceState;
   UserPreferences get preferences => _userPreferences;
 
+  bool get isInitialLoadComplete =>
+      (_realBundle != null || _realError != null) &&
+      _airspaceState is! AirspaceLoadingState;
+
   FlightReadinessReport? get currentReport {
     final bundle = _realBundle;
     if (bundle == null) {
