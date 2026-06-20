@@ -10,6 +10,7 @@ import '../features/settings/settings_screen.dart';
 import '../features/splash/splash_screen.dart';
 import '../features/wind/wind_screen.dart';
 import 'weather_session.dart';
+import 'widgets/app_bar_title.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -76,27 +77,10 @@ class _AppShellState extends State<AppShell> {
               : Scaffold(
                   key: const ValueKey('main_shell'),
                   appBar: AppBar(
-                    title: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.asset(
-                            'assets/images/logo.png',
-                            height: 32,
-                            width: 32,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        const Text(
-                          'AeroCheck',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                      ],
+                    title: AppBarTitle(
+                      location: (_index == 0 || _index == 1 || _index == 2)
+                          ? _weatherSession.selectedLocation.label
+                          : null,
                     ),
                     actions: [
                       if ((_index == 0 || _index == 1 || _index == 2) &&
