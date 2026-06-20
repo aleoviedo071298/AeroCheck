@@ -17,6 +17,8 @@ class SharedPreferencesUserPreferencesStore implements UserPreferencesStore {
   static const _unitsKey = 'aerocheck.units';
   static const _rulesConfigKey = 'aerocheck.rules_config';
   static const _firstLaunchHandledKey = 'aerocheck.first_launch_handled';
+  static const _alertsEnabledKey = 'aerocheck.alerts_enabled';
+  static const _alertLeadMinutesKey = 'aerocheck.alert_lead_minutes';
   static const _mockScenarioKey = 'aerocheck.mock_scenario';
   // Legacy keys for migration
   static const _legacyLocationIdKey = 'aerocheck.location_id';
@@ -69,6 +71,8 @@ class SharedPreferencesUserPreferencesStore implements UserPreferencesStore {
 
     final firstLaunchHandled =
         preferences.getBool(_firstLaunchHandledKey) ?? false;
+    final alertsEnabled = preferences.getBool(_alertsEnabledKey) ?? false;
+    final alertLeadMinutes = preferences.getInt(_alertLeadMinutesKey) ?? 30;
 
     return UserPreferences(
       selectedLocationId: preferences.getString(_selectedLocationIdKey),
@@ -80,6 +84,8 @@ class SharedPreferencesUserPreferencesStore implements UserPreferencesStore {
       units: units,
       rulesConfig: rulesConfig,
       firstLaunchHandled: firstLaunchHandled,
+      alertsEnabled: alertsEnabled,
+      alertLeadMinutes: alertLeadMinutes,
     );
   }
 
@@ -105,6 +111,8 @@ class SharedPreferencesUserPreferencesStore implements UserPreferencesStore {
         jsonEncode(preferences.rulesConfig.toJson()),
       ),
       store.setBool(_firstLaunchHandledKey, preferences.firstLaunchHandled),
+      store.setBool(_alertsEnabledKey, preferences.alertsEnabled),
+      store.setInt(_alertLeadMinutesKey, preferences.alertLeadMinutes),
     ]);
   }
 

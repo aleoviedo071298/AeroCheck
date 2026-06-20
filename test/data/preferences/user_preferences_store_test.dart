@@ -38,4 +38,21 @@ void main() {
     final restored = await store.load();
     expect(restored.firstLaunchHandled, isFalse);
   });
+
+  test('alert preferences round-trip and default', () async {
+    final store = SharedPreferencesUserPreferencesStore();
+    final defaults = await store.load();
+    expect(defaults.alertsEnabled, isFalse);
+    expect(defaults.alertLeadMinutes, 30);
+
+    await store.save(
+      const UserPreferences().copyWith(
+        alertsEnabled: true,
+        alertLeadMinutes: 60,
+      ),
+    );
+    final restored = await store.load();
+    expect(restored.alertsEnabled, isTrue);
+    expect(restored.alertLeadMinutes, 60);
+  });
 }

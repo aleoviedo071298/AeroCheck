@@ -9,6 +9,7 @@ import '../features/map/map_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/splash/splash_screen.dart';
 import '../features/wind/wind_screen.dart';
+import '../features/alerts/local_notifications_alert_scheduler.dart';
 import 'weather_session.dart';
 import 'widgets/app_bar_title.dart';
 
@@ -27,7 +28,9 @@ class _AppShellState extends State<AppShell> {
   @override
   void initState() {
     super.initState();
-    _weatherSession = WeatherSession();
+    _weatherSession = WeatherSession(
+      alertScheduler: LocalNotificationsAlertScheduler(),
+    );
     unawaited(_weatherSession.restorePreferences());
   }
 

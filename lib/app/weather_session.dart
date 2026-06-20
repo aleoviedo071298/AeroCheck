@@ -30,6 +30,8 @@ import '../domain/rules/flight_readiness_evaluator.dart';
 import '../domain/rules/flight_readiness_status.dart';
 import '../domain/rules/flight_rules_config.dart';
 import '../domain/rules/rule_severity.dart';
+import '../features/alerts/alert_scheduler.dart';
+import '../features/alerts/apto_windows.dart';
 import 'airspace_geom_helper.dart';
 import 'airspace_state.dart';
 
@@ -60,6 +62,7 @@ class WeatherSession extends ChangeNotifier {
     AirportRepository? airportRepository,
     GeocodingService? geocodingService,
     GpsLocationResolver? gpsResolver,
+    AlertScheduler? alertScheduler,
   }) : _weatherRepository = weatherRepository,
        _preferencesStore =
            preferencesStore ?? SharedPreferencesUserPreferencesStore(),
@@ -74,11 +77,13 @@ class WeatherSession extends ChangeNotifier {
                ? null
                : OpenAipAirportRepository()),
        _geocodingService = geocodingService ?? GeocodingRepository(),
-       _gpsResolver = gpsResolver;
+       _gpsResolver = gpsResolver,
+       _alertScheduler = alertScheduler;
 
   WeatherRepository? _weatherRepository;
   final UserPreferencesStore _preferencesStore;
   final GpsLocationResolver? _gpsResolver;
+  final AlertScheduler? _alertScheduler;
   final AirspaceRepository? _airspaceRepository;
   final AirportRepository? _airportRepository;
   final GeocodingService _geocodingService;
@@ -269,6 +274,42 @@ class WeatherSession extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> _maybeRescheduleAlerts() async {
+    final scheduler = _alertScheduler;
+    if (scheduler == null) return;
+    try {
+      await scheduler.cancelAll();
+      if (!_userPreferences.alertsEnabled) return;
+      final windows = upcomingAptoWindows(forecastRows, now: DateTime.now());
+      await scheduler.scheduleWindowAlerts(
+        windows: windows,
+        leadMinutes: _userPreferences.alertLeadMinutes,
+        locationLabel: _selectedLocation.label,
+        language: _userPreferences.language,
+      );
+    } catch (_) {
+      // Alerts must never break the weather flow.
+    }
+  }
+
+  Future<void> rescheduleAlerts() => _maybeRescheduleAlerts();
+
+  Future<void> updateAlertPreferences({bool? enabled, int? leadMinutes}) async {
+    _userPreferences = _userPreferences.copyWith(
+      alertsEnabled: enabled,
+      alertLeadMinutes: leadMinutes,
+    );
+    await _preferencesStore.save(_userPreferences);
+    notifyListeners();
+    await _maybeRescheduleAlerts();
+  }
+
+  Future<bool> requestAlertPermission() async {
+    final scheduler = _alertScheduler;
+    if (scheduler == null) return true;
+    return scheduler.ensurePermission();
+  }
+
   Future<void> updateRulesConfig(FlightRulesConfig config) async {
     if (_userPreferences.rulesConfig == config) {
       return;
@@ -370,6 +411,7 @@ class WeatherSession extends ChangeNotifier {
       _realBundle = bundle;
       _isLoadingReal = false;
       notifyListeners();
+      await _maybeRescheduleAlerts();
     } catch (error) {
       _realError = error;
       _isLoadingReal = false;
