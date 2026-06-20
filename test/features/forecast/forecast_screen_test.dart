@@ -85,7 +85,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('focused-hour-time')), findsOneWidget);
-    expect(find.text('TEMPERATURA'), findsOneWidget);
+    expect(find.text('TEMP.'), findsOneWidget);
   });
 }
 
