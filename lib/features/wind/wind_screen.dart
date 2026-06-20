@@ -482,46 +482,54 @@ class _RedesignedWindRow extends StatelessWidget {
               ),
             ),
 
-            // Column 3: RÁFAGA
+            // Column 3: RÁFAGA — "—" when no gust data for this altitude
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.air_rounded,
-                        size: 11,
-                        color: isDark
-                            ? const Color(0xFF64748B)
-                            : const Color(0xFF94A3B8),
+              child: row.gustKmh <= 0
+                  ? const Text(
+                      '—',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 13,
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        UnitFormatters.formatSpeedValue(
-                          row.gustKmh,
-                          units,
-                          decimals: 0,
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.air_rounded,
+                              size: 11,
+                              color: isDark
+                                  ? const Color(0xFF64748B)
+                                  : const Color(0xFF94A3B8),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              UnitFormatters.formatSpeedValue(
+                                row.gustKmh,
+                                units,
+                                decimals: 0,
+                              ),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
                         ),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w900,
-                          fontSize: 13,
+                        const SizedBox(height: 2),
+                        Text(
+                          units.speed.shortName,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: isDark
+                                ? const Color(0xFF64748B)
+                                : const Color(0xFF94A3B8),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    units.speed.shortName,
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: isDark
-                          ? const Color(0xFF64748B)
-                          : const Color(0xFF94A3B8),
+                      ],
                     ),
-                  ),
-                ],
-              ),
             ),
 
             // Column 4: TEMP.

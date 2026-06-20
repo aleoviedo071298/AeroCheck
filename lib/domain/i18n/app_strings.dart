@@ -7,7 +7,7 @@ class AppStrings {
     'es': {
       // Navigation
       'condiciones': 'Condiciones',
-      'forecast': 'Forecast',
+      'forecast': 'Pronóstico',
       'viento': 'Viento',
       'mapa': 'Mapa',
       'ajustes': 'Ajustes',
@@ -60,6 +60,7 @@ class AppStrings {
 
       // Language Screen
       'seleccionar_idioma': 'Seleccionar idioma',
+      'idioma_subtitulo': 'El cambio se aplicará en toda la aplicación.',
 
       // Alerts Screen
       'proxima_fase': 'Próxima fase:',
@@ -89,7 +90,7 @@ class AppStrings {
       'precaucion': 'Precaución',
       'mejora_ventana_disponible': 'Mejor ventana disponible',
       'proxima_ventana_disponible': 'Próxima ventana disponible',
-      'razones_de_rechazo': 'Razones de rechazo',
+      'razones_de_rechazo': 'Motivos detectados',
       'sin_restricciones': 'Sin restricciones detectadas.',
 
       // Conditions
@@ -320,6 +321,7 @@ class AppStrings {
 
       // Language Screen
       'seleccionar_idioma': 'Select language',
+      'idioma_subtitulo': 'The change applies across the whole app.',
 
       // Alerts Screen
       'proxima_fase': 'Next phase:',
@@ -349,7 +351,7 @@ class AppStrings {
       'precaucion': 'Caution',
       'mejora_ventana_disponible': 'Best available window',
       'proxima_ventana_disponible': 'Next available window',
-      'razones_de_rechazo': 'Rejection reasons',
+      'razones_de_rechazo': 'Detected factors',
       'sin_restricciones': 'No restrictions detected.',
 
       // Conditions

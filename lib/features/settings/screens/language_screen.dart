@@ -39,6 +39,11 @@ class _LanguageScreenState extends State<LanguageScreen> {
             context,
           ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
         ),
+        const SizedBox(height: 6),
+        Text(
+          AppStrings.get('idioma_subtitulo', language: selectedLanguage),
+          style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+        ),
         const SizedBox(height: 12),
         ...Language.values.map(
           (lang) => _LanguageOption(
