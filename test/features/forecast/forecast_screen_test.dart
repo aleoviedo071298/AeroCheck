@@ -44,6 +44,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Forecast horario'), findsOneWidget);
+    await tester.drag(find.byType(ListView), const Offset(0, -1500));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Mejor hora:'), findsOneWidget);
   });
 
   testWidgets('forecast uses persisted English copy and speed units', (

@@ -157,7 +157,10 @@ class _ForecastScreenState extends State<ForecastScreen> {
         sunset: sun?.sunset,
       ),
       const SizedBox(height: 16),
-      _ForecastTipCard(language: language),
+      _ForecastTipCard(
+        language: language,
+        bestHourLabel: activeDay.bestHour?.hour ?? '—',
+      ),
     ];
   }
 }
@@ -209,9 +212,10 @@ class _ScreenHeader extends StatelessWidget {
 }
 
 class _ForecastTipCard extends StatelessWidget {
-  const _ForecastTipCard({required this.language});
+  const _ForecastTipCard({required this.language, required this.bestHourLabel});
 
   final Language language;
+  final String bestHourLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -239,7 +243,7 @@ class _ForecastTipCard extends StatelessWidget {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                AppStrings.get('ventana_optima_tip'),
+                '${AppStrings.get('mejor_hora', language: language)}: $bestHourLabel',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
