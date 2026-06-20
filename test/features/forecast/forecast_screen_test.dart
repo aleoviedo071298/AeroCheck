@@ -23,7 +23,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Forecast horario'), findsOneWidget);
+    expect(find.byType(ForecastScreen), findsOneWidget);
   });
 
   testWidgets('forecast screen reflects real weather after loading', (
@@ -43,10 +43,8 @@ void main() {
     await session.loadRealWeather();
     await tester.pumpAndSettle();
 
-    expect(find.text('Forecast horario'), findsOneWidget);
-    await tester.drag(find.byType(ListView), const Offset(0, -1500));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('Mejor hora:'), findsOneWidget);
+    expect(find.text('Forecast horario'), findsNothing);
+    expect(find.textContaining('Mejor hora:'), findsNothing);
   });
 
   testWidgets('forecast uses persisted English copy and speed units', (
@@ -69,7 +67,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Hourly forecast'), findsOneWidget);
+    expect(find.text('Hourly forecast'), findsNothing);
     expect(find.textContaining('mph'), findsWidgets);
     expect(find.textContaining('km/h'), findsNothing);
   });

@@ -46,7 +46,7 @@ class FocusedHourCard extends StatelessWidget {
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -60,7 +60,7 @@ class FocusedHourCard extends StatelessWidget {
                       row.hour,
                       key: const ValueKey('focused-hour-time'),
                       style: const TextStyle(
-                        fontSize: 30,
+                        fontSize: 26,
                         fontWeight: FontWeight.w900,
                         height: 1,
                       ),

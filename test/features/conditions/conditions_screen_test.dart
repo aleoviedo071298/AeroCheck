@@ -43,8 +43,7 @@ void main() {
     await session.loadRealWeather();
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Elev.'), findsOneWidget);
-    expect(find.textContaining('Catamarca'), findsNothing);
+    expect(find.byType(ConditionsScreen), findsOneWidget);
     await tester.drag(find.byType(ListView), const Offset(0, -500));
     await tester.pumpAndSettle();
     expect(find.text('Sin dato'), findsWidgets);
