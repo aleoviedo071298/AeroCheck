@@ -83,7 +83,9 @@ void main() {
     },
   );
 
-  testWidgets('HourScrubber renders a gradient track container', (tester) async {
+  testWidgets('HourScrubber renders a gradient track container', (
+    tester,
+  ) async {
     final rows = [
       row(DateTime(2026, 6, 16, 8), 30),
       row(DateTime(2026, 6, 16, 9), 90, best: true),

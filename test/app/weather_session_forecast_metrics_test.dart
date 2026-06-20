@@ -8,18 +8,21 @@ import 'package:aerocheck/domain/entities/weather_snapshot.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('forecastRows carry temperature, cloud, precip mm/h and dew point', () async {
-    final session = WeatherSession(
-      weatherRepository: _Repo(),
-      preferencesStore: _Store(),
-    );
-    await session.loadRealWeather();
-    final row = session.forecastRows.first;
-    expect(row.temperatureC, 18);
-    expect(row.cloudCoverPercent, 40);
-    expect(row.precipitationMmPerHour, 0.2);
-    expect(row.dewPointC, 9);
-  });
+  test(
+    'forecastRows carry temperature, cloud, precip mm/h and dew point',
+    () async {
+      final session = WeatherSession(
+        weatherRepository: _Repo(),
+        preferencesStore: _Store(),
+      );
+      await session.loadRealWeather();
+      final row = session.forecastRows.first;
+      expect(row.temperatureC, 18);
+      expect(row.cloudCoverPercent, 40);
+      expect(row.precipitationMmPerHour, 0.2);
+      expect(row.dewPointC, 9);
+    },
+  );
 }
 
 class _Store implements UserPreferencesStore {
@@ -59,9 +62,17 @@ class _Repo implements WeatherRepository {
       locationLabel: locationLabel,
       timezone: 'UTC',
       current: s,
-      hourlySnapshots: [s, s.copyWith(time: DateTime(2026, 6, 16, 14))],
+      hourlySnapshots: [
+        s,
+        s.copyWith(time: DateTime(2026, 6, 16, 14)),
+      ],
       windProfileRows: const [
-        WindProfileRow(altitude: '10 m', windKmh: 10, gustKmh: 16, temperatureC: 18),
+        WindProfileRow(
+          altitude: '10 m',
+          windKmh: 10,
+          gustKmh: 16,
+          temperatureC: 18,
+        ),
       ],
     );
   }

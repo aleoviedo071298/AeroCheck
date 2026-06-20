@@ -100,14 +100,18 @@ class HourScrubber extends StatelessWidget {
               builder: (context, constraints) {
                 final width = constraints.maxWidth;
                 final hasRange =
-                    rows.isNotEmpty && rows.first.time != null && rows.last.time != null;
+                    rows.isNotEmpty &&
+                    rows.first.time != null &&
+                    rows.last.time != null;
                 final trackStart = hasRange ? rows.first.time! : selectedHour;
                 final trackEnd = hasRange ? rows.last.time! : selectedHour;
                 final totalMs = trackEnd.difference(trackStart).inMilliseconds;
                 double fracOf(DateTime t) => totalMs <= 0
                     ? 0
-                    : (t.difference(trackStart).inMilliseconds / totalMs)
-                          .clamp(0.0, 1.0);
+                    : (t.difference(trackStart).inMilliseconds / totalMs).clamp(
+                        0.0,
+                        1.0,
+                      );
                 final gradient = dayNightGradient(
                   trackStart: trackStart,
                   trackEnd: trackEnd,
@@ -200,7 +204,8 @@ class HourScrubber extends StatelessWidget {
                             Expanded(
                               child: _ScrubberTick(
                                 hourLabel:
-                                    int.parse(row.hour.split(':').first) % 3 == 0
+                                    int.parse(row.hour.split(':').first) % 3 ==
+                                        0
                                     ? row.hour.split(':').first
                                     : null,
                                 color: _scoreColor(row.score),

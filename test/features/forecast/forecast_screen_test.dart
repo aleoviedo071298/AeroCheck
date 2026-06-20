@@ -77,7 +77,9 @@ void main() {
       preferencesStore: _FakePreferencesStore(),
     );
     await tester.pumpWidget(
-      MaterialApp(home: Scaffold(body: ForecastScreen(session: session))),
+      MaterialApp(
+        home: Scaffold(body: ForecastScreen(session: session)),
+      ),
     );
     await session.loadRealWeather();
     await tester.pumpAndSettle();

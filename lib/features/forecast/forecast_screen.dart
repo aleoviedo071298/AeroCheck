@@ -208,7 +208,6 @@ class _ScreenHeader extends StatelessWidget {
   }
 }
 
-
 class _ForecastTipCard extends StatelessWidget {
   const _ForecastTipCard({required this.language});
 
@@ -364,4 +363,3 @@ Color _severityColor(RuleSeverity severity) {
     RuleSeverity.blocked => const Color(0xFFDC2626),
   };
 }
-

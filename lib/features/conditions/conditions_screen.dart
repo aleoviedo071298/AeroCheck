@@ -564,7 +564,6 @@ class _ReworkedMetricsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     // Calculate dew point estimate if temperature and humidity exist
     String dewPointStr = AppStrings.get('sin_dato');
     if (weather.temperatureC != null &&
@@ -687,7 +686,8 @@ class _ReworkedMetricsGrid extends StatelessWidget {
               value: weather.precipitationProbability == null
                   ? '0%'
                   : '${_fmt(weather.precipitationProbability!)}%',
-              subValue: weather.precipitationMmPerHour != null &&
+              subValue:
+                  weather.precipitationMmPerHour != null &&
                       weather.precipitationMmPerHour! > 0
                   ? '${_fmt(weather.precipitationMmPerHour!)} mm/h'
                   : AppStrings.get('sin_lluvia'),
@@ -832,9 +832,6 @@ class _MetricCard extends StatelessWidget {
     );
   }
 }
-
-
-
 
 class _RealWeatherLoadingCard extends StatelessWidget {
   const _RealWeatherLoadingCard();

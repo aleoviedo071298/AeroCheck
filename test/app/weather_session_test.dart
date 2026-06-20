@@ -165,29 +165,26 @@ void main() {
     expect(session.forecastRows.first.status, isA<FlightReadinessStatus>());
   });
 
-  test(
-    'loads nearby airspaces with selected location',
-    () async {
-      final repository = _FakeAirspaceRepository();
-      final session = WeatherSession(
-        weatherRepository: _FakeWeatherRepository(),
-        preferencesStore: _FakePreferencesStore(),
-        airspaceRepository: repository,
-      );
+  test('loads nearby airspaces with selected location', () async {
+    final repository = _FakeAirspaceRepository();
+    final session = WeatherSession(
+      weatherRepository: _FakeWeatherRepository(),
+      preferencesStore: _FakePreferencesStore(),
+      airspaceRepository: repository,
+    );
 
-      await session.loadNearbyAirspaces();
+    await session.loadNearbyAirspaces();
 
-      expect(
-        repository.lastLatitude,
-        -45.8641, // Comodoro Rivadavia default
-      );
-      expect(
-        repository.lastLongitude,
-        -67.4966, // Comodoro Rivadavia default
-      );
-      expect(repository.lastRadiusKm, 30.0);
-    },
-  );
+    expect(
+      repository.lastLatitude,
+      -45.8641, // Comodoro Rivadavia default
+    );
+    expect(
+      repository.lastLongitude,
+      -67.4966, // Comodoro Rivadavia default
+    );
+    expect(repository.lastRadiusKm, 30.0);
+  });
 
   test('exposes airspace state: loading, loaded, error, empty', () async {
     final repository = _FakeAirspaceRepository(

@@ -204,18 +204,12 @@ class WeatherSession extends ChangeNotifier {
       _dataSource = WeatherDataSource.real;
 
       notifyListeners();
-      await Future.wait([
-        loadNearbyAirspaces(),
-        loadRealWeather(),
-      ]);
+      await Future.wait([loadNearbyAirspaces(), loadRealWeather()]);
     } catch (_) {
       // Preferences should never block the operational screen.
       _userPreferences = const UserPreferences();
       _dataSource = WeatherDataSource.real;
-      await Future.wait([
-        loadNearbyAirspaces(),
-        loadRealWeather(),
-      ]);
+      await Future.wait([loadNearbyAirspaces(), loadRealWeather()]);
     } finally {
       _isInitialLoadDone = true;
       notifyListeners();

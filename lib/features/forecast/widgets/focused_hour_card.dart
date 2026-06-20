@@ -160,8 +160,15 @@ class FocusedHourCard extends StatelessWidget {
               children: [
                 MetricTile(
                   isDark: isDark,
-                  label: AppStrings.get('viento', language: language).toUpperCase(),
-                  value: UnitFormatters.formatSpeed(row.windKmh, units, decimals: 0),
+                  label: AppStrings.get(
+                    'viento',
+                    language: language,
+                  ).toUpperCase(),
+                  value: UnitFormatters.formatSpeed(
+                    row.windKmh,
+                    units,
+                    decimals: 0,
+                  ),
                   leading: row.windDirectionDegrees == null
                       ? null
                       : Transform.rotate(
@@ -176,8 +183,15 @@ class FocusedHourCard extends StatelessWidget {
                 const SizedBox(width: 10),
                 MetricTile(
                   isDark: isDark,
-                  label: AppStrings.get('rafagas', language: language).toUpperCase(),
-                  value: UnitFormatters.formatSpeed(row.gustKmh, units, decimals: 0),
+                  label: AppStrings.get(
+                    'rafagas',
+                    language: language,
+                  ).toUpperCase(),
+                  value: UnitFormatters.formatSpeed(
+                    row.gustKmh,
+                    units,
+                    decimals: 0,
+                  ),
                 ),
               ],
             ),
@@ -186,7 +200,10 @@ class FocusedHourCard extends StatelessWidget {
               children: [
                 MetricTile(
                   isDark: isDark,
-                  label: AppStrings.get('lluvia', language: language).toUpperCase(),
+                  label: AppStrings.get(
+                    'lluvia',
+                    language: language,
+                  ).toUpperCase(),
                   value: '${row.rainPercent.round()} %',
                 ),
                 const SizedBox(width: 10),
@@ -209,5 +226,4 @@ class FocusedHourCard extends StatelessWidget {
       ),
     );
   }
-
 }
