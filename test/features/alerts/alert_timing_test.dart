@@ -21,7 +21,10 @@ void main() {
   test('shouldScheduleAlert skips quiet-hour and past fires', () {
     final now = DateTime(2026, 6, 16, 7);
     expect(shouldScheduleAlert(win(9), 30, now), isTrue); // fire 08:30
-    expect(shouldScheduleAlert(win(6), 30, now), isFalse); // fire 05:30 (quiet + past)
+    expect(
+      shouldScheduleAlert(win(6), 30, now),
+      isFalse,
+    ); // fire 05:30 (quiet + past)
     expect(shouldScheduleAlert(win(7), 30, now), isFalse); // fire 06:30 (quiet)
   });
 }

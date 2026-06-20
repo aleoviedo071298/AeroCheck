@@ -31,7 +31,10 @@ void main() {
     ], now: now);
     expect(windows.length, 2);
     expect(windows.first.start, DateTime(2026, 6, 16, 9));
-    expect(windows.first.end, DateTime(2026, 6, 16, 11)); // hour after last APTO
+    expect(
+      windows.first.end,
+      DateTime(2026, 6, 16, 11),
+    ); // hour after last APTO
     expect(windows[1].start, DateTime(2026, 6, 16, 12));
   });
 

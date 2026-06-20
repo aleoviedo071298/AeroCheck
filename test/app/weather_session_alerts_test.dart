@@ -76,7 +76,12 @@ class _AptoRepo implements WeatherRepository {
       current: current,
       hourlySnapshots: [current, snap(1), snap(2)],
       windProfileRows: const [
-        WindProfileRow(altitude: '10 m', windKmh: 5, gustKmh: 8, temperatureC: 16),
+        WindProfileRow(
+          altitude: '10 m',
+          windKmh: 5,
+          gustKmh: 8,
+          temperatureC: 16,
+        ),
       ],
     );
   }

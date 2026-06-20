@@ -46,7 +46,10 @@ void main() {
     expect(defaults.alertLeadMinutes, 30);
 
     await store.save(
-      const UserPreferences().copyWith(alertsEnabled: true, alertLeadMinutes: 60),
+      const UserPreferences().copyWith(
+        alertsEnabled: true,
+        alertLeadMinutes: 60,
+      ),
     );
     final restored = await store.load();
     expect(restored.alertsEnabled, isTrue);

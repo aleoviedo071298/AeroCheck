@@ -36,8 +36,7 @@ List<FlightWindow> upcomingAptoWindows(
     if (t == null) continue;
     if (row.status == FlightReadinessStatus.ready) {
       // Close the current run if there is a gap (non-contiguous hours)
-      if (lastHour != null &&
-          t.difference(lastHour!).inHours > 1) {
+      if (lastHour != null && t.difference(lastHour!).inHours > 1) {
         close();
       }
       runStart ??= t;

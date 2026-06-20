@@ -25,10 +25,9 @@ class AlertsScreen extends StatelessWidget {
           children: [
             Text(
               AppStrings.get('alertas', language: language),
-              style: Theme.of(context)
-                  .textTheme
-                  .headlineSmall
-                  ?.copyWith(fontWeight: FontWeight.w900),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 12),
             Card(
@@ -118,10 +117,9 @@ class AlertsScreen extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               AppStrings.get('opciones_futuras', language: language),
-              style: Theme.of(context)
-                  .textTheme
-                  .titleSmall
-                  ?.copyWith(fontWeight: FontWeight.w900),
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 12),
             _AlertOption(
