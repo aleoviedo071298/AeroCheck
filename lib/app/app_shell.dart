@@ -77,14 +77,10 @@ class _AppShellState extends State<AppShell> {
               : Scaffold(
                   key: const ValueKey('main_shell'),
                   appBar: AppBar(
-                    title: AppBarTitle(
-                      location: (_index == 0 || _index == 1 || _index == 2)
-                          ? _weatherSession.selectedLocation.label
-                          : null,
-                    ),
+                    title: const AppBarTitle(),
                     actions: [
                       if ((_index == 0 || _index == 1 || _index == 2) &&
-                          updateTimeText.isNotEmpty) ...[
+                          updateTimeText.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(right: 4),
                           child: Text(
@@ -96,12 +92,11 @@ class _AppShellState extends State<AppShell> {
                             ),
                           ),
                         ),
-                        IconButton(
-                          tooltip: AppStrings.get('refrescar_clima'),
-                          icon: const Icon(Icons.refresh_rounded, size: 20),
-                          onPressed: () => _weatherSession.loadRealWeather(),
-                        ),
-                      ],
+                      IconButton(
+                        tooltip: AppStrings.get('refrescar_clima'),
+                        icon: const Icon(Icons.refresh_rounded, size: 20),
+                        onPressed: () => _weatherSession.loadRealWeather(),
+                      ),
                       IconButton(
                         tooltip: AppStrings.get('compartir'),
                         onPressed: () {},

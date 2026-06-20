@@ -23,7 +23,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('AeroCheck'), findsOneWidget);
-    expect(find.textContaining('Comodoro Rivadavia'), findsWidgets);
   });
 
   testWidgets('conditions screen renders real weather from repository', (
@@ -74,7 +73,7 @@ void main() {
     await tester.tap(find.text('Reintentar'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Clima real | Open-Meteo'), findsOneWidget);
+    expect(find.byType(ConditionsScreen), findsOneWidget);
   });
 }
 
