@@ -461,6 +461,10 @@ class WeatherSession extends ChangeNotifier {
       visibilityKm: weather.visibilityKm ?? 0,
       score: report.score,
       windDirectionDegrees: weather.windDirectionDegrees,
+      temperatureC: weather.temperatureC,
+      cloudCoverPercent: weather.cloudCoverPercent,
+      precipitationMmPerHour: weather.precipitationMmPerHour,
+      dewPointC: weather.dewPointC,
     );
   }
 

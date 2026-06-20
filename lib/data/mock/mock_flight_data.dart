@@ -192,6 +192,10 @@ class ForecastRow {
     required this.score,
     this.windDirectionDegrees,
     this.time,
+    this.temperatureC,
+    this.cloudCoverPercent,
+    this.precipitationMmPerHour,
+    this.dewPointC,
   });
 
   final String hour;
@@ -206,6 +210,10 @@ class ForecastRow {
   final int score;
   final double? windDirectionDegrees;
   final DateTime? time;
+  final double? temperatureC;
+  final double? cloudCoverPercent;
+  final double? precipitationMmPerHour;
+  final double? dewPointC;
 }
 
 class ForecastReason {

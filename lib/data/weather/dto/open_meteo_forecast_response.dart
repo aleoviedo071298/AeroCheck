@@ -11,6 +11,7 @@ class OpenMeteoForecastResponse {
     required this.utcOffsetSeconds,
     required this.current,
     required this.hourly,
+    this.daily,
   });
 
   factory OpenMeteoForecastResponse.fromJsonString(String source) {
@@ -29,6 +30,9 @@ class OpenMeteoForecastResponse {
       utcOffsetSeconds: _int(json, 'utc_offset_seconds'),
       current: _object(json, 'current'),
       hourly: _object(json, 'hourly'),
+      daily: json['daily'] is Map<String, Object?>
+          ? json['daily'] as Map<String, Object?>
+          : null,
     );
   }
 
@@ -36,6 +40,7 @@ class OpenMeteoForecastResponse {
   final int utcOffsetSeconds;
   final Map<String, Object?> current;
   final Map<String, Object?> hourly;
+  final Map<String, Object?>? daily;
 
   WeatherBundle toWeatherBundle({required String locationLabel}) {
     final hourlySnapshots = _hourlySnapshots(locationLabel);
@@ -52,6 +57,7 @@ class OpenMeteoForecastResponse {
       current: currentSnapshot,
       hourlySnapshots: hourlySnapshots,
       windProfileRows: _windProfileRows(nearestIndex),
+      dailySun: _dailySun(),
     );
   }
 
@@ -231,6 +237,38 @@ class OpenMeteoForecastResponse {
         ),
       ),
     ];
+  }
+
+  List<DaySunTimes> _dailySun() {
+    final d = daily;
+    if (d == null) return const [];
+    final times = d['time'];
+    final sunrises = d['sunrise'];
+    final sunsets = d['sunset'];
+    if (times is! List || sunrises is! List || sunsets is! List) {
+      return const [];
+    }
+    final out = <DaySunTimes>[];
+    for (var i = 0; i < times.length; i++) {
+      if (i >= sunrises.length || i >= sunsets.length) break;
+      final dateStr = times[i];
+      final sr = sunrises[i];
+      final ss = sunsets[i];
+      if (dateStr is! String || sr is! String || ss is! String) continue;
+      try {
+        final date = DateTime.parse(dateStr);
+        out.add(
+          DaySunTimes(
+            date: DateTime(date.year, date.month, date.day),
+            sunrise: DateTime.parse(sr),
+            sunset: DateTime.parse(ss),
+          ),
+        );
+      } catch (_) {
+        // Skip malformed entries.
+      }
+    }
+    return out;
   }
 
   static Map<String, Object?> _object(Map<String, Object?> json, String key) {

@@ -39,6 +39,7 @@ class OpenMeteoWeatherRepository implements WeatherRepository {
           'wind_direction_10m',
           'wind_gusts_10m',
         ].join(','),
+        'daily': 'sunrise,sunset',
         'hourly': [
           'temperature_2m',
           'dew_point_2m',
