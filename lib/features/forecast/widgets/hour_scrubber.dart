@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../../domain/i18n/app_strings.dart';
 import '../../../domain/i18n/language.dart';
+import '../day_night_gradient.dart';
 import '../forecast_day_grouping.dart';
 
 class HourScrubber extends StatelessWidget {
@@ -16,6 +17,8 @@ class HourScrubber extends StatelessWidget {
     required this.onHourSelected,
     required this.onDaySelected,
     required this.onGoToBest,
+    this.sunrise,
+    this.sunset,
   });
 
   final List<ForecastDay> days;
@@ -26,11 +29,22 @@ class HourScrubber extends StatelessWidget {
   final ValueChanged<DateTime> onHourSelected;
   final ValueChanged<DateTime> onDaySelected;
   final VoidCallback onGoToBest;
+  final DateTime? sunrise;
+  final DateTime? sunset;
 
   Color _scoreColor(int score) {
     if (score >= 80) return const Color(0xFF16A34A);
     if (score >= 40) return const Color(0xFFF59E0B);
     return const Color(0xFFDC2626);
+  }
+
+  Widget _sunMoon(IconData icon, double frac, double width, Color color) {
+    final left = (frac.clamp(0.0, 1.0) * width - 9).clamp(0.0, width - 18);
+    return Positioned(
+      left: left,
+      top: 10,
+      child: Icon(icon, size: 16, color: color),
+    );
   }
 
   @override
@@ -85,6 +99,22 @@ class HourScrubber extends StatelessWidget {
             LayoutBuilder(
               builder: (context, constraints) {
                 final width = constraints.maxWidth;
+                final hasRange =
+                    rows.isNotEmpty && rows.first.time != null && rows.last.time != null;
+                final trackStart = hasRange ? rows.first.time! : selectedHour;
+                final trackEnd = hasRange ? rows.last.time! : selectedHour;
+                final totalMs = trackEnd.difference(trackStart).inMilliseconds;
+                double fracOf(DateTime t) => totalMs <= 0
+                    ? 0
+                    : (t.difference(trackStart).inMilliseconds / totalMs)
+                          .clamp(0.0, 1.0);
+                final gradient = dayNightGradient(
+                  trackStart: trackStart,
+                  trackEnd: trackEnd,
+                  sunrise: sunrise,
+                  sunset: sunset,
+                );
+
                 void selectFromDx(double dx) {
                   if (rows.isEmpty) return;
                   final clamped = dx.clamp(0.0, width);
@@ -102,47 +132,87 @@ class HourScrubber extends StatelessWidget {
                   onTapDown: (d) => selectFromDx(d.localPosition.dx),
                   onHorizontalDragUpdate: (d) =>
                       selectFromDx(d.localPosition.dx),
-                  child: SizedBox(
-                    height: 56,
-                    width: width,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Positioned(
-                          left: 4,
-                          right: 4,
-                          child: Container(
-                            height: 3,
-                            decoration: BoxDecoration(
-                              color: isDark
-                                  ? const Color(0xFF334155)
-                                  : const Color(0xFFE2E8F0),
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                        ),
-                        Row(
+                  child: Column(
+                    children: [
+                      // Gradient bar with thumb + sun/moon.
+                      SizedBox(
+                        height: 38,
+                        width: width,
+                        child: Stack(
                           children: [
-                            for (final row in rows)
-                              Expanded(
-                                child: _ScrubberTick(
-                                  hourLabel:
-                                      int.parse(row.hour.split(':').first) %
-                                              3 ==
-                                          0
-                                      ? row.hour.split(':').first
-                                      : null,
-                                  color: _scoreColor(row.score),
-                                  selected: row.time == selectedHour,
-                                  isBest: row.time == bestTime,
-                                  isDark: isDark,
-                                  mutedColor: mutedColor,
+                            Container(
+                              key: const ValueKey('scrubber-gradient'),
+                              height: 38,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(10),
+                                gradient: LinearGradient(
+                                  colors: gradient.colors,
+                                  stops: gradient.stops,
                                 ),
                               ),
+                            ),
+                            if (sunrise != null && sunset != null) ...[
+                              _sunMoon(
+                                Icons.wb_sunny_rounded,
+                                (fracOf(sunrise!) + fracOf(sunset!)) / 2,
+                                width,
+                                const Color(0xFFFDE68A),
+                              ),
+                              _sunMoon(
+                                Icons.nightlight_round,
+                                fracOf(sunrise!) > 0.25
+                                    ? fracOf(sunrise!) / 2
+                                    : (fracOf(sunset!) + 1) / 2,
+                                width,
+                                const Color(0xFFCBD5E1),
+                              ),
+                            ],
+                            // Thumb
+                            Positioned(
+                              left: (fracOf(selectedHour) * width - 1.5).clamp(
+                                0.0,
+                                width - 3,
+                              ),
+                              top: 0,
+                              bottom: 0,
+                              child: Container(
+                                width: 3,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(2),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Color(0x66000000),
+                                      blurRadius: 3,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ],
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 8),
+                      // Hour labels + score dots.
+                      Row(
+                        children: [
+                          for (final row in rows)
+                            Expanded(
+                              child: _ScrubberTick(
+                                hourLabel:
+                                    int.parse(row.hour.split(':').first) % 3 == 0
+                                    ? row.hour.split(':').first
+                                    : null,
+                                color: _scoreColor(row.score),
+                                selected: row.time == selectedHour,
+                                isBest: row.time == bestTime,
+                                isDark: isDark,
+                                mutedColor: mutedColor,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
                   ),
                 );
               },

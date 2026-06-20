@@ -125,6 +125,7 @@ class _ForecastScreenState extends State<ForecastScreen> {
       orElse: () => activeDay.bestHour ?? activeDay.rows.first,
     );
     final bestTime = activeDay.bestHour?.time;
+    final sun = session.realBundle?.sunTimesFor(activeDay.date);
 
     return [
       FocusedHourCard(
@@ -150,6 +151,8 @@ class _ForecastScreenState extends State<ForecastScreen> {
         onGoToBest: () => setState(() {
           _selectedHour = activeDay.bestHour?.time;
         }),
+        sunrise: sun?.sunrise,
+        sunset: sun?.sunset,
       ),
       const SizedBox(height: 14),
       ConditionsMetricsCard(row: selectedRow, units: units, language: language),

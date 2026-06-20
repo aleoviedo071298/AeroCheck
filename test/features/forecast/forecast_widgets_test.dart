@@ -82,4 +82,33 @@ void main() {
       expect(wentToBest, isTrue);
     },
   );
+
+  testWidgets('HourScrubber renders a gradient track container', (tester) async {
+    final rows = [
+      row(DateTime(2026, 6, 16, 8), 30),
+      row(DateTime(2026, 6, 16, 9), 90, best: true),
+      row(DateTime(2026, 6, 16, 10), 40),
+    ];
+    final days = groupForecastByDay(rows);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: HourScrubber(
+            days: days,
+            selectedDate: DateTime(2026, 6, 16),
+            selectedHour: DateTime(2026, 6, 16, 9),
+            today: DateTime(2026, 6, 16),
+            language: Language.es,
+            sunrise: DateTime(2026, 6, 16, 7),
+            sunset: DateTime(2026, 6, 16, 18),
+            onHourSelected: (_) {},
+            onDaySelected: (_) {},
+            onGoToBest: () {},
+          ),
+        ),
+      ),
+    );
+    expect(find.byKey(const ValueKey('scrubber-gradient')), findsOneWidget);
+    expect(find.byKey(const ValueKey('scrubber-track')), findsOneWidget);
+  });
 }
