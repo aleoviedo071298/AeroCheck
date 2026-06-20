@@ -30,7 +30,7 @@
 **Interfaces:**
 - Produces: `session.forecastRows` returns all future hours (no 12-cap), memoized per `WeatherBundle`; cache invalidated on `updateRulesConfig` and after `_loadNearbyAirspaces`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```dart
 // test/app/weather_session_forecast_test.dart
@@ -121,17 +121,17 @@ class _ManyHoursRepository implements WeatherRepository {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `flutter test test/app/weather_session_forecast_test.dart`
 Expected: FAIL — `forecastRows` is currently capped at 12 (`first.length` would be 12, not >12) and is recomputed each call (the `identical` check fails).
 
-- [ ] **Step 3: Bump the API range**
+- [x] **Step 3: Bump the API range**
 
 In `lib/data/weather/open_meteo_weather_repository.dart`, change the line
 `'forecast_days': '2',` to `'forecast_days': '7',`.
 
-- [ ] **Step 4: Memoize `forecastRows` and add invalidation**
+- [x] **Step 4: Memoize `forecastRows` and add invalidation**
 
 In `lib/app/weather_session.dart`, add cache fields near the other private
 fields (after `UserPreferences _userPreferences = const UserPreferences();`):
@@ -186,17 +186,17 @@ sets `AirspaceLoadedState`/`AirspaceEmptyState`, and the `catch` branch that
 sets `AirspaceErrorState`) — forecast rows depend on loaded airspaces via
 `_withOperationalContext`.
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `flutter test test/app/weather_session_forecast_test.dart && flutter analyze`
 Expected: PASS, analyzer clean.
 
-- [ ] **Step 6: Run full suite (existing forecast test still green)**
+- [x] **Step 6: Run full suite (existing forecast test still green)**
 
 Run: `flutter test`
 Expected: all pass (1 pre-existing skip). The existing `forecast_screen_test.dart` still passes — it only checks the title and that `mph` renders.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add lib/data/weather/open_meteo_weather_repository.dart lib/app/weather_session.dart test/app/weather_session_forecast_test.dart

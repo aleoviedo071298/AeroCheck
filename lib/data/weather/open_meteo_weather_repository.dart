@@ -25,7 +25,7 @@ class OpenMeteoWeatherRepository implements WeatherRepository {
         'latitude': latitude.toString(),
         'longitude': longitude.toString(),
         'timezone': 'auto',
-        'forecast_days': '2',
+        'forecast_days': '7',
         'current': [
           'temperature_2m',
           'relative_humidity_2m',
@@ -39,6 +39,7 @@ class OpenMeteoWeatherRepository implements WeatherRepository {
           'wind_direction_10m',
           'wind_gusts_10m',
         ].join(','),
+        'daily': 'sunrise,sunset',
         'hourly': [
           'temperature_2m',
           'dew_point_2m',

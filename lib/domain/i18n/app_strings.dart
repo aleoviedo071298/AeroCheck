@@ -98,6 +98,9 @@ class AppStrings {
 
       // Forecast
       'forecast_horario': 'Forecast horario',
+      'ir_a_mejor_hora': 'Ir a mejor hora',
+      'ver_lista_completa': 'Ver lista completa por hora',
+      'ocultar_lista': 'Ocultar lista',
 
       // Wind
       'perfil_vertical': 'Perfil vertical',
@@ -209,7 +212,7 @@ class AppStrings {
       'visibilidad': 'Visibilidad',
       'indice_kp': 'Índice Kp',
       'precip': 'Precip.',
-      'proximas_horas': 'Próximas horas (hora local)',
+
       'operacion_configurada_mayus': 'Operación configurada',
       'dron': 'Dron',
       'mision': 'Misión',
@@ -339,6 +342,9 @@ class AppStrings {
 
       // Forecast
       'forecast_horario': 'Hourly forecast',
+      'ir_a_mejor_hora': 'Go to best hour',
+      'ver_lista_completa': 'See full hourly list',
+      'ocultar_lista': 'Hide list',
 
       // Wind
       'perfil_vertical': 'Vertical profile',
@@ -448,7 +454,7 @@ class AppStrings {
       'visibilidad': 'Visibility',
       'indice_kp': 'Kp index',
       'precip': 'Precip.',
-      'proximas_horas': 'Next hours (local time)',
+
       'operacion_configurada_mayus': 'Configured operation',
       'dron': 'Drone',
       'mision': 'Mission',

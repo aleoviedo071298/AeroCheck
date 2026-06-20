@@ -91,6 +91,9 @@ class WeatherSession extends ChangeNotifier {
   List<Airspace> _loadedAirspaces = [];
   List<Airport> _loadedAirports = [];
   UserPreferences _userPreferences = const UserPreferences();
+  WeatherBundle? _cachedRowsBundle;
+  List<ForecastRow>? _cachedRows;
+  bool _isInitialLoadDone = false;
 
   FlightLocation get selectedLocation => _selectedLocation;
   List<FlightLocation> get availableLocations => _favoriteLocations;
@@ -101,6 +104,8 @@ class WeatherSession extends ChangeNotifier {
   double get guideRadiusKm => _guideRadiusKm;
   AirspaceState get airspaceState => _airspaceState;
   UserPreferences get preferences => _userPreferences;
+
+  bool get isInitialLoadComplete => _isInitialLoadDone;
 
   FlightReadinessReport? get currentReport {
     final bundle = _realBundle;
@@ -116,21 +121,30 @@ class WeatherSession extends ChangeNotifier {
 
   List<ForecastRow> get forecastRows {
     final bundle = _realBundle;
-    if (bundle != null) {
-      final bestWindow = bestWindowFor(
-        bundle.hourlySnapshots,
-        referenceTime: bundle.current.time,
-      );
-      final now = bundle.current.time;
-      final currentHour = DateTime(now.year, now.month, now.day, now.hour);
-
-      return bundle.hourlySnapshots
-          .where((snapshot) => !snapshot.time.isBefore(currentHour))
-          .take(12)
-          .map((snapshot) => _forecastRowFor(snapshot, bestWindow))
-          .toList();
+    if (bundle == null) {
+      return const [];
     }
-    return [];
+    if (identical(bundle, _cachedRowsBundle) && _cachedRows != null) {
+      return _cachedRows!;
+    }
+    final bestWindow = bestWindowFor(
+      bundle.hourlySnapshots,
+      referenceTime: bundle.current.time,
+    );
+    final now = bundle.current.time;
+    final currentHour = DateTime(now.year, now.month, now.day, now.hour);
+    final rows = bundle.hourlySnapshots
+        .where((snapshot) => !snapshot.time.isBefore(currentHour))
+        .map((snapshot) => _forecastRowFor(snapshot, bestWindow))
+        .toList();
+    _cachedRowsBundle = bundle;
+    _cachedRows = rows;
+    return rows;
+  }
+
+  void _invalidateForecastCache() {
+    _cachedRowsBundle = null;
+    _cachedRows = null;
   }
 
   List<WindProfileRow> get windProfileRows {
@@ -190,15 +204,15 @@ class WeatherSession extends ChangeNotifier {
       _dataSource = WeatherDataSource.real;
 
       notifyListeners();
-      _loadNearbyAirspaces();
-
-      await loadRealWeather();
+      await Future.wait([loadNearbyAirspaces(), loadRealWeather()]);
     } catch (_) {
       // Preferences should never block the operational screen.
       _userPreferences = const UserPreferences();
       _dataSource = WeatherDataSource.real;
-      _loadNearbyAirspaces();
-      await loadRealWeather();
+      await Future.wait([loadNearbyAirspaces(), loadRealWeather()]);
+    } finally {
+      _isInitialLoadDone = true;
+      notifyListeners();
     }
   }
 
@@ -211,7 +225,6 @@ class WeatherSession extends ChangeNotifier {
     _guideRadiusKm = nextRadius;
     notifyListeners();
     _persistPreferences();
-    _loadNearbyAirspaces();
   }
 
   Future<void> updateLanguage(Language language) async {
@@ -239,6 +252,7 @@ class WeatherSession extends ChangeNotifier {
       return;
     }
     _userPreferences = _userPreferences.copyWith(rulesConfig: config);
+    _invalidateForecastCache();
     await _preferencesStore.save(_userPreferences);
     notifyListeners();
   }
@@ -271,8 +285,11 @@ class WeatherSession extends ChangeNotifier {
     notifyListeners();
     _persistPreferences();
 
-    if (removedSelected && _dataSource == WeatherDataSource.real) {
-      loadRealWeather();
+    if (removedSelected) {
+      if (_dataSource == WeatherDataSource.real) {
+        loadRealWeather();
+      }
+      loadNearbyAirspaces();
     }
   }
 
@@ -291,7 +308,7 @@ class WeatherSession extends ChangeNotifier {
     if (_dataSource == WeatherDataSource.real) {
       loadRealWeather();
     }
-    _loadNearbyAirspaces();
+    loadNearbyAirspaces();
   }
 
   void setDataSource(WeatherDataSource source) {
@@ -438,6 +455,10 @@ class WeatherSession extends ChangeNotifier {
       visibilityKm: weather.visibilityKm ?? 0,
       score: report.score,
       windDirectionDegrees: weather.windDirectionDegrees,
+      temperatureC: weather.temperatureC,
+      cloudCoverPercent: weather.cloudCoverPercent,
+      precipitationMmPerHour: weather.precipitationMmPerHour,
+      dewPointC: weather.dewPointC,
     );
   }
 
@@ -517,7 +538,7 @@ class WeatherSession extends ChangeNotifier {
     return radiusKm.clamp(minGuideRadiusKm, maxGuideRadiusKm).toDouble();
   }
 
-  Future<void> _loadNearbyAirspaces() async {
+  Future<void> loadNearbyAirspaces() async {
     final airspaceRepo = _airspaceRepository;
     final airportRepo = _airportRepository;
 
@@ -572,11 +593,13 @@ class WeatherSession extends ChangeNotifier {
           airports: airports,
         );
       }
+      _invalidateForecastCache();
       notifyListeners();
     } catch (error) {
       _loadedAirspaces = [];
       _loadedAirports = [];
       _airspaceState = AirspaceErrorState(error);
+      _invalidateForecastCache();
       notifyListeners();
     }
   }
@@ -689,7 +712,7 @@ class WeatherSession extends ChangeNotifier {
       if (_dataSource == WeatherDataSource.real) {
         await loadRealWeather();
       }
-      _loadNearbyAirspaces();
+      loadNearbyAirspaces();
     } catch (error) {
       developer.log('GPS error: $error', name: 'AeroCheck.GPS');
     }

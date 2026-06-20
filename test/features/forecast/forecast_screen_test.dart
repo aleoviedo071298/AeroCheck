@@ -67,13 +67,25 @@ void main() {
     );
 
     expect(find.text('Hourly forecast'), findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.text('mph').first,
-      300,
-      scrollable: find.byType(Scrollable).first,
+    expect(find.textContaining('mph'), findsWidgets);
+    expect(find.textContaining('km/h'), findsNothing);
+  });
+
+  testWidgets('forecast shows the conditions metrics card', (tester) async {
+    final session = WeatherSession(
+      weatherRepository: _FakeWeatherRepository(),
+      preferencesStore: _FakePreferencesStore(),
     );
-    expect(find.text('mph'), findsWidgets);
-    expect(find.text('km/h'), findsNothing);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: ForecastScreen(session: session)),
+      ),
+    );
+    await session.loadRealWeather();
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('focused-hour-time')), findsOneWidget);
+    expect(find.text('TEMPERATURA'), findsOneWidget);
   });
 }
 

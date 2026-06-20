@@ -1,9 +1,6 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 
 import '../../app/weather_session.dart';
-import '../../data/mock/mock_flight_data.dart';
 import '../../domain/entities/flight_readiness_report.dart';
 import '../../domain/entities/flight_rule_result.dart';
 import '../../domain/entities/weather_snapshot.dart';
@@ -96,10 +93,6 @@ class ConditionsScreen extends StatelessWidget {
                           weather: weather,
                           session: session,
                         ),
-                        const SizedBox(height: 16),
-
-                        // 6. Hourly timeline table
-                        _HourlyTimelineWidget(session: session),
                       ],
                     ],
                   ),
@@ -571,8 +564,6 @@ class _ReworkedMetricsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     // Calculate dew point estimate if temperature and humidity exist
     String dewPointStr = AppStrings.get('sin_dato');
     if (weather.temperatureC != null &&
@@ -644,92 +635,74 @@ class _ReworkedMetricsGrid extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
 
-        // 2. Secondary Metrics Row (1x4)
-        Card(
-          margin: EdgeInsets.zero,
-          elevation: 0,
-          color: isDark ? const Color(0xFF1E293B) : Colors.white,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _MiniMetricCol(
-                    icon: Icons.cloud_rounded,
-                    label: AppStrings.get('nubosidad').toUpperCase(),
-                    value: _cloudCoverValue(weather, session.preferences.units),
-                  ),
-                ),
-                _vDivider(isDark),
-                Expanded(
-                  child: _MiniMetricCol(
-                    icon: Icons.visibility_rounded,
-                    label: AppStrings.get('visibilidad').toUpperCase(),
-                    value: weather.visibilityKm == null
-                        ? AppStrings.get('sin_dato')
-                        : UnitFormatters.formatDistance(
-                            weather.visibilityKm,
-                            session.preferences.units,
-                          ),
-                  ),
-                ),
-                _vDivider(isDark),
-                Expanded(
-                  child: _MiniMetricCol(
-                    icon: Icons.sensors_rounded,
-                    label: AppStrings.get('indice_kp').toUpperCase(),
-                    value: weather.kpIndex == null
-                        ? AppStrings.get('sin_dato')
-                        : _fmt(weather.kpIndex!),
-                  ),
-                ),
-                _vDivider(isDark),
-                Expanded(
-                  child: _MiniMetricCol(
-                    icon: Icons.water_drop_rounded,
-                    label: AppStrings.get('precip').toUpperCase(),
-                    value: weather.precipitationProbability == null
-                        ? '0%'
-                        : '${_fmt(weather.precipitationProbability!)}%',
-                  ),
-                ),
-              ],
-            ),
+        // 2. Secondary Metrics Grid (2x2)
+        GridView(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: EdgeInsets.zero,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            childAspectRatio: 1.6,
+            mainAxisSpacing: 10,
+            crossAxisSpacing: 10,
           ),
+          children: [
+            _MetricCard(
+              label: AppStrings.get('nubosidad').toUpperCase(),
+              value: weather.cloudCoverPercent == null
+                  ? AppStrings.get('sin_dato')
+                  : '${_cloudCoverFraction(weather.cloudCoverPercent!)} (${_fmt(weather.cloudCoverPercent!)}%)',
+              subValue: weather.cloudBaseMeters != null
+                  ? 'Base: ${UnitFormatters.formatAltitude(weather.cloudBaseMeters, session.preferences.units, decimals: 0)}'
+                  : 'Cielo despejado',
+              icon: Icons.cloud_rounded,
+              accentColor: const Color(0xFF14B8A6), // Teal bottom line
+            ),
+            _MetricCard(
+              label: AppStrings.get('visibilidad').toUpperCase(),
+              value: weather.visibilityKm == null
+                  ? AppStrings.get('sin_dato')
+                  : UnitFormatters.formatDistance(
+                      weather.visibilityKm,
+                      session.preferences.units,
+                    ),
+              subValue: '',
+              icon: Icons.visibility_rounded,
+              accentColor: const Color(0xFF10B981), // Emerald bottom line
+            ),
+            _MetricCard(
+              label: AppStrings.get('indice_kp').toUpperCase(),
+              value: weather.kpIndex == null
+                  ? AppStrings.get('sin_dato')
+                  : _fmt(weather.kpIndex!),
+              subValue: '',
+              icon: Icons.sensors_rounded,
+              accentColor: const Color(0xFF8B5CF6), // Violet bottom line
+            ),
+            _MetricCard(
+              label: AppStrings.get('precip').toUpperCase(),
+              value: weather.precipitationProbability == null
+                  ? '0%'
+                  : '${_fmt(weather.precipitationProbability!)}%',
+              subValue:
+                  weather.precipitationMmPerHour != null &&
+                      weather.precipitationMmPerHour! > 0
+                  ? '${_fmt(weather.precipitationMmPerHour!)} mm/h'
+                  : AppStrings.get('sin_lluvia'),
+              icon: Icons.water_drop_rounded,
+              accentColor: const Color(0xFF06B6D4), // Cyan bottom line
+            ),
+          ],
         ),
       ],
-    );
-  }
-
-  Widget _vDivider(bool isDark) {
-    return Container(
-      width: 1,
-      height: 30,
-      color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
     );
   }
 
   String _cloudCoverFraction(double percent) {
     final okta = (percent / 12.5).round();
     return '$okta/8';
-  }
-
-  String _cloudCoverValue(WeatherSnapshot weather, UnitPreferences units) {
-    if (weather.cloudCoverPercent == null) {
-      return AppStrings.get('sin_dato');
-    }
-    final fraction = _cloudCoverFraction(weather.cloudCoverPercent!);
-    final pct = '${_fmt(weather.cloudCoverPercent!)}%';
-    if (weather.cloudBaseMeters != null) {
-      final cloudBase = UnitFormatters.formatAltitude(
-        weather.cloudBaseMeters,
-        units,
-      );
-      return '$fraction ($pct)\n($cloudBase)';
-    }
-    return '$fraction ($pct)';
   }
 
   String _formatGustDelta(WeatherSnapshot weather, WeatherSession session) {
@@ -857,242 +830,6 @@ class _MetricCard extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-class _MiniMetricCol extends StatelessWidget {
-  const _MiniMetricCol({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          icon,
-          size: 16,
-          color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 8,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 0.2,
-            color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          maxLines: 2,
-          textAlign: TextAlign.center,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w800,
-            height: 1.1,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _HourlyTimelineWidget extends StatelessWidget {
-  const _HourlyTimelineWidget({required this.session});
-
-  final WeatherSession session;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final rows = session.forecastRows;
-    if (rows.isEmpty) return const SizedBox.shrink();
-
-    return Card(
-      margin: EdgeInsets.zero,
-      elevation: 0,
-      color: isDark ? const Color(0xFF1E293B) : Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              AppStrings.get('proximas_horas').toUpperCase(),
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0.5,
-                color: isDark
-                    ? const Color(0xFFCBD5E1)
-                    : const Color(0xFF475569),
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Timeline horizontal scroll area
-            SizedBox(
-              height: 136,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: rows.length,
-                itemBuilder: (context, index) {
-                  final row = rows[index];
-                  return _TimelineColumn(
-                    row: row,
-                    units: session.preferences.units,
-                  );
-                },
-              ),
-            ),
-
-            const SizedBox(height: 12),
-            const Divider(height: 1),
-            const SizedBox(height: 10),
-
-            // Bottom tips
-            Row(
-              children: [
-                const Icon(
-                  Icons.task_alt_rounded,
-                  color: Color(0xFF16A34A),
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    AppStrings.get('ventana_optima_tip'),
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: isDark
-                          ? const Color(0xFFCBD5E1)
-                          : const Color(0xFF475569),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _TimelineColumn extends StatelessWidget {
-  const _TimelineColumn({required this.row, required this.units});
-
-  final ForecastRow row;
-  final UnitPreferences units;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    // Status color
-    final scoreColor = _indexColor(row.score);
-
-    // Wind rotation arrow
-    final angleRad = row.windDirectionDegrees != null
-        ? (row.windDirectionDegrees! * math.pi / 180.0)
-        : 0.0;
-
-    final borderHighlightColor = const Color(
-      0xFF22C55E,
-    ); // Green highlight border
-
-    return Container(
-      width: 68,
-      margin: const EdgeInsets.only(right: 8),
-      decoration: BoxDecoration(
-        color: row.isBestWindow
-            ? borderHighlightColor.withValues(alpha: 0.08)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: row.isBestWindow ? borderHighlightColor : Colors.transparent,
-          width: 1.5,
-        ),
-      ),
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          // Hour
-          Text(
-            row.hour,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
-          ),
-
-          // Flight index score
-          Text(
-            '${row.score}',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w900,
-              color: scoreColor,
-            ),
-          ),
-
-          // Wind Arrow + speed
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Transform.rotate(
-                angle: angleRad,
-                child: const Icon(
-                  Icons.navigation_rounded,
-                  size: 13,
-                  color: Color(0xFF0EA5E9),
-                ),
-              ),
-              const SizedBox(width: 3),
-              Text(
-                UnitFormatters.formatSpeedValue(
-                  row.windKmh,
-                  units,
-                  decimals: 0,
-                ),
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
-          ),
-
-          // Gust speed
-          Text(
-            UnitFormatters.formatSpeedValue(row.gustKmh, units, decimals: 0),
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Color _indexColor(int score) {
-    if (score >= 80) return const Color(0xFF16A34A);
-    if (score >= 40) return const Color(0xFFF59E0B);
-    return const Color(0xFFDC2626);
   }
 }
 
