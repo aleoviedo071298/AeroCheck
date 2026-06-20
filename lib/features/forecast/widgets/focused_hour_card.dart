@@ -10,6 +10,7 @@ import '../../../domain/i18n/rule_localizer.dart';
 import '../../../domain/rules/flight_readiness_status.dart';
 import '../../../domain/units/unit_formatters.dart';
 import '../../../domain/units/unit_preferences.dart';
+import 'metric_tile.dart';
 
 Color forecastStatusColor(FlightReadinessStatus status) => switch (status) {
   FlightReadinessStatus.ready => const Color(0xFF16A34A),
@@ -157,10 +158,10 @@ class FocusedHourCard extends StatelessWidget {
             const SizedBox(height: 14),
             Row(
               children: [
-                _metric(
-                  isDark,
-                  AppStrings.get('viento', language: language).toUpperCase(),
-                  UnitFormatters.formatSpeed(row.windKmh, units, decimals: 0),
+                MetricTile(
+                  isDark: isDark,
+                  label: AppStrings.get('viento', language: language).toUpperCase(),
+                  value: UnitFormatters.formatSpeed(row.windKmh, units, decimals: 0),
                   leading: row.windDirectionDegrees == null
                       ? null
                       : Transform.rotate(
@@ -173,29 +174,29 @@ class FocusedHourCard extends StatelessWidget {
                         ),
                 ),
                 const SizedBox(width: 10),
-                _metric(
-                  isDark,
-                  AppStrings.get('rafagas', language: language).toUpperCase(),
-                  UnitFormatters.formatSpeed(row.gustKmh, units, decimals: 0),
+                MetricTile(
+                  isDark: isDark,
+                  label: AppStrings.get('rafagas', language: language).toUpperCase(),
+                  value: UnitFormatters.formatSpeed(row.gustKmh, units, decimals: 0),
                 ),
               ],
             ),
             const SizedBox(height: 10),
             Row(
               children: [
-                _metric(
-                  isDark,
-                  AppStrings.get('lluvia', language: language).toUpperCase(),
-                  '${row.rainPercent.round()} %',
+                MetricTile(
+                  isDark: isDark,
+                  label: AppStrings.get('lluvia', language: language).toUpperCase(),
+                  value: '${row.rainPercent.round()} %',
                 ),
                 const SizedBox(width: 10),
-                _metric(
-                  isDark,
-                  AppStrings.get(
+                MetricTile(
+                  isDark: isDark,
+                  label: AppStrings.get(
                     'visibilidad',
                     language: language,
                   ).toUpperCase(),
-                  UnitFormatters.formatDistance(
+                  value: UnitFormatters.formatDistance(
                     row.visibilityKm,
                     units,
                     decimals: 0,
@@ -209,44 +210,4 @@ class FocusedHourCard extends StatelessWidget {
     );
   }
 
-  Widget _metric(bool isDark, String label, String value, {Widget? leading}) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 9,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0.3,
-                color: isDark
-                    ? const Color(0xFF94A3B8)
-                    : const Color(0xFF64748B),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                if (leading != null) ...[leading, const SizedBox(width: 4)],
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
