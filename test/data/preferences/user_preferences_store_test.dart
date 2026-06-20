@@ -26,7 +26,9 @@ void main() {
 
   test('firstLaunchHandled round-trips through the store', () async {
     final store = SharedPreferencesUserPreferencesStore();
-    await store.save(const UserPreferences().copyWith(firstLaunchHandled: true));
+    await store.save(
+      const UserPreferences().copyWith(firstLaunchHandled: true),
+    );
     final restored = await store.load();
     expect(restored.firstLaunchHandled, isTrue);
   });

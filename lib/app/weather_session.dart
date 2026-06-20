@@ -212,8 +212,9 @@ class WeatherSession extends ChangeNotifier {
         _userPreferences = _userPreferences.copyWith(
           firstLaunchHandled: true,
           selectedLocationId: _selectedLocation.id,
-          favoriteLocationsJson:
-              _favoriteLocations.map((location) => location.toJson()).toList(),
+          favoriteLocationsJson: _favoriteLocations
+              .map((location) => location.toJson())
+              .toList(),
         );
         await _preferencesStore.save(_userPreferences);
       }
