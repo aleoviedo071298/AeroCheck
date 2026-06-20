@@ -36,7 +36,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Vertical profile'), findsOneWidget);
+    expect(find.byType(WindScreen), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('kt').first,
       300,

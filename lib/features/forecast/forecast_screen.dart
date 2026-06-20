@@ -4,7 +4,6 @@ import '../../app/weather_session.dart';
 import '../../domain/i18n/app_strings.dart';
 import '../../domain/i18n/language.dart';
 import '../../domain/rules/rule_severity.dart';
-import '../../domain/units/unit_formatters.dart';
 import '../../domain/units/unit_preferences.dart';
 import 'forecast_day_grouping.dart';
 import 'widgets/focused_hour_card.dart';
@@ -84,11 +83,6 @@ class _ForecastScreenState extends State<ForecastScreen> {
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
                     children: [
-                      _ScreenHeader(
-                        title: AppStrings.get('forecast_horario'),
-                        session: session,
-                      ),
-                      const SizedBox(height: 14),
                       if (session.isLoadingReal)
                         const _RealWeatherLoadingCard()
                       else if (session.dataSource == WeatherDataSource.real &&
@@ -162,52 +156,6 @@ class _ForecastScreenState extends State<ForecastScreen> {
         bestHourLabel: activeDay.bestHour?.hour ?? '—',
       ),
     ];
-  }
-}
-
-class _ScreenHeader extends StatelessWidget {
-  const _ScreenHeader({required this.title, required this.session});
-
-  final String title;
-  final WeatherSession session;
-
-  @override
-  Widget build(BuildContext context) {
-    final location = session.selectedLocation;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${location.label}\nLat: ${location.latitude.toStringAsFixed(4)} · Lon: ${location.longitude.toStringAsFixed(4)} · Elev. ${UnitFormatters.formatAltitude(location.elevation.toDouble(), session.preferences.units, decimals: 0)}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isDark
-                        ? const Color(0xFF94A3B8)
-                        : const Color(0xFF64748B),
-                    height: 1.3,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 

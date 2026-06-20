@@ -25,7 +25,6 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Mapa operativo'), findsOneWidget);
     expect(find.textContaining('Comodoro Rivadavia'), findsWidgets);
     expect(find.textContaining('-45.8641'), findsOneWidget);
     expect(find.textContaining('-67.4966'), findsOneWidget);
@@ -76,7 +75,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Operational map'), findsOneWidget);
+    expect(find.text('Operational map'), findsNothing);
     expect(find.textContaining('121 ft'), findsWidgets);
     expect(find.textContaining('3 mi'), findsWidgets);
     expect(find.textContaining('CTR zones'), findsOneWidget);
