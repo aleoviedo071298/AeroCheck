@@ -86,6 +86,42 @@ void main() {
       expect(best.altitude, '50 m');
     });
 
+    test(
+      'best-wind ranks by sustained wind only (gust only exists at 10 m)',
+      () {
+        // Upper altitudes have no gust data (0). The lowest-wind altitude (10 m)
+        // must win even though it carries the only real, high gust.
+        final evaluator = WindProfileEvaluator(config: config);
+        final best = evaluator.findBestWindAltitude(const [
+          WindProfileRow(
+            altitude: '10 m',
+            windKmh: 40,
+            gustKmh: 79,
+            temperatureC: 11,
+          ),
+          WindProfileRow(
+            altitude: '80 m',
+            windKmh: 56,
+            gustKmh: 0,
+            temperatureC: 11,
+          ),
+          WindProfileRow(
+            altitude: '120 m',
+            windKmh: 59,
+            gustKmh: 0,
+            temperatureC: 11,
+          ),
+          WindProfileRow(
+            altitude: '180 m',
+            windKmh: 65,
+            gustKmh: 0,
+            temperatureC: 11,
+          ),
+        ]);
+        expect(best.altitude, '10 m');
+      },
+    );
+
     test('evaluates a real mock profile without error', () {
       final evaluator = WindProfileEvaluator(config: config);
       final rows = MockFlightData.windProfileRows();

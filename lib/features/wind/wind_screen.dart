@@ -485,11 +485,16 @@ class _RedesignedWindRow extends StatelessWidget {
             // Column 3: RÁFAGA — "—" when no gust data for this altitude
             Expanded(
               child: row.gustKmh <= 0
-                  ? const Text(
-                      '—',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 13,
+                  ? Center(
+                      child: Text(
+                        '—',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 13,
+                          color: isDark
+                              ? const Color(0xFF64748B)
+                              : const Color(0xFF94A3B8),
+                        ),
                       ),
                     )
                   : Column(

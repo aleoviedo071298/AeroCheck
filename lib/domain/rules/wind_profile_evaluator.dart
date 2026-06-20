@@ -91,8 +91,11 @@ class WindProfileEvaluator {
     return best;
   }
 
-  // Lower wind and gust = higher score
+  // Rank altitudes by sustained wind only: lower wind = higher score.
+  // Gust is excluded because Open-Meteo only provides it at 10 m, so it is not
+  // comparable across altitudes (a missing/0 gust at upper levels would
+  // otherwise make them look artificially calmer).
   double _scoreAltitude(WindProfileRow row) {
-    return -(row.windKmh + row.gustKmh / 2);
+    return -row.windKmh;
   }
 }
