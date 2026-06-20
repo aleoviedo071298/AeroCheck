@@ -12,6 +12,8 @@ class UserPreferences {
     this.units = const UnitPreferences(),
     this.rulesConfig = const FlightRulesConfig.defaults(),
     this.firstLaunchHandled = false,
+    this.alertsEnabled = false,
+    this.alertLeadMinutes = 30,
   });
 
   final String? selectedLocationId;
@@ -22,6 +24,8 @@ class UserPreferences {
   final UnitPreferences units;
   final FlightRulesConfig rulesConfig;
   final bool firstLaunchHandled;
+  final bool alertsEnabled;
+  final int alertLeadMinutes;
 
   UserPreferences copyWith({
     String? selectedLocationId,
@@ -32,6 +36,8 @@ class UserPreferences {
     UnitPreferences? units,
     FlightRulesConfig? rulesConfig,
     bool? firstLaunchHandled,
+    bool? alertsEnabled,
+    int? alertLeadMinutes,
   }) {
     return UserPreferences(
       selectedLocationId: selectedLocationId ?? this.selectedLocationId,
@@ -43,6 +49,8 @@ class UserPreferences {
       units: units ?? this.units,
       rulesConfig: rulesConfig ?? this.rulesConfig,
       firstLaunchHandled: firstLaunchHandled ?? this.firstLaunchHandled,
+      alertsEnabled: alertsEnabled ?? this.alertsEnabled,
+      alertLeadMinutes: alertLeadMinutes ?? this.alertLeadMinutes,
     );
   }
 }
