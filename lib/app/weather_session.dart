@@ -201,6 +201,23 @@ class WeatherSession extends ChangeNotifier {
       _favoriteLocations = favorites;
       _selectedLocation = selectedLocation ?? favorites.first;
 
+      if (!preferences.firstLaunchHandled &&
+          preferences.selectedLocationId == null) {
+        final resolver = _gpsResolver ?? _resolveGpsLocation;
+        final gps = await resolver();
+        if (gps != null) {
+          _selectedLocation = gps;
+          _favoriteLocations = [..._favoriteLocations, gps];
+        }
+        _userPreferences = _userPreferences.copyWith(
+          firstLaunchHandled: true,
+          selectedLocationId: _selectedLocation.id,
+          favoriteLocationsJson:
+              _favoriteLocations.map((location) => location.toJson()).toList(),
+        );
+        await _preferencesStore.save(_userPreferences);
+      }
+
       if (preferences.guideRadiusKm != null) {
         _guideRadiusKm = _clampGuideRadius(preferences.guideRadiusKm!);
       }
