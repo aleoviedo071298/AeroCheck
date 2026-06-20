@@ -196,6 +196,11 @@ class ForecastRow {
     this.cloudCoverPercent,
     this.precipitationMmPerHour,
     this.dewPointC,
+    this.relativeHumidityPercent,
+    this.apparentTemperatureC,
+    this.pressureHpa,
+    this.uvIndex,
+    this.weatherCode,
   });
 
   final String hour;
@@ -214,6 +219,11 @@ class ForecastRow {
   final double? cloudCoverPercent;
   final double? precipitationMmPerHour;
   final double? dewPointC;
+  final double? relativeHumidityPercent;
+  final double? apparentTemperatureC;
+  final double? pressureHpa;
+  final double? uvIndex;
+  final int? weatherCode;
 }
 
 class ForecastReason {

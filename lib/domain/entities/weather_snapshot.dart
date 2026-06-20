@@ -14,6 +14,10 @@ class WeatherSnapshot {
     this.visibilityKm,
     this.kpIndex,
     this.relativeHumidityPercent,
+    this.apparentTemperatureC,
+    this.pressureHpa,
+    this.uvIndex,
+    this.weatherCode,
     required this.isDaylight,
     required this.isInsideRestrictedArea,
     required this.isNearRestrictedArea,
@@ -33,6 +37,10 @@ class WeatherSnapshot {
   final double? visibilityKm;
   final double? kpIndex;
   final double? relativeHumidityPercent;
+  final double? apparentTemperatureC;
+  final double? pressureHpa;
+  final double? uvIndex;
+  final int? weatherCode;
   final bool isDaylight;
   final bool isInsideRestrictedArea;
   final bool isNearRestrictedArea;
@@ -77,6 +85,10 @@ class WeatherSnapshot {
     double? visibilityKm,
     double? kpIndex,
     double? relativeHumidityPercent,
+    double? apparentTemperatureC,
+    double? pressureHpa,
+    double? uvIndex,
+    int? weatherCode,
     bool? isDaylight,
     bool? isInsideRestrictedArea,
     bool? isNearRestrictedArea,
@@ -99,6 +111,10 @@ class WeatherSnapshot {
       kpIndex: kpIndex ?? this.kpIndex,
       relativeHumidityPercent:
           relativeHumidityPercent ?? this.relativeHumidityPercent,
+      apparentTemperatureC: apparentTemperatureC ?? this.apparentTemperatureC,
+      pressureHpa: pressureHpa ?? this.pressureHpa,
+      uvIndex: uvIndex ?? this.uvIndex,
+      weatherCode: weatherCode ?? this.weatherCode,
       isDaylight: isDaylight ?? this.isDaylight,
       isInsideRestrictedArea:
           isInsideRestrictedArea ?? this.isInsideRestrictedArea,
