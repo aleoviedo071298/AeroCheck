@@ -150,61 +150,7 @@ class _ForecastScreenState extends State<ForecastScreen> {
         sunrise: sun?.sunrise,
         sunset: sun?.sunset,
       ),
-      const SizedBox(height: 16),
-      _ForecastTipCard(
-        language: language,
-        bestHourLabel: activeDay.bestHour?.hour ?? '—',
-      ),
     ];
-  }
-}
-
-class _ForecastTipCard extends StatelessWidget {
-  const _ForecastTipCard({required this.language, required this.bestHourLabel});
-
-  final Language language;
-  final String bestHourLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Card(
-      margin: EdgeInsets.zero,
-      elevation: 0,
-      color: isDark ? const Color(0xFF1E293B) : Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          children: [
-            const Icon(
-              Icons.task_alt_rounded,
-              color: Color(0xFF16A34A),
-              size: 20,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                '${AppStrings.get('mejor_hora', language: language)}: $bestHourLabel',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: isDark
-                      ? const Color(0xFFCBD5E1)
-                      : const Color(0xFF475569),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 

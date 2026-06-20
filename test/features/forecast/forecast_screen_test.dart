@@ -44,6 +44,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Forecast horario'), findsNothing);
+    expect(find.textContaining('Mejor hora:'), findsNothing);
   });
 
   testWidgets('forecast uses persisted English copy and speed units', (
