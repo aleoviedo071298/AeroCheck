@@ -44,6 +44,8 @@
     </queries>
     <!-- Internet permission for network requests -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Notification permission for APTO window alerts -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- GPS location permissions -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />

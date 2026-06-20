@@ -76,6 +76,7 @@ class AppStrings {
       'zona_restringida': 'Zona restringida',
       'notificacion_espacio_controlado':
           'Notificación si entras en espacio aéreo controlado',
+      'alerta_ventana_titulo': 'Ventana apta para volar',
 
       // Status & Rules
       'no_apto': 'No apto',
@@ -330,6 +331,7 @@ class AppStrings {
       'zona_restringida': 'Restricted zone',
       'notificacion_espacio_controlado':
           'Notification when entering controlled airspace',
+      'alerta_ventana_titulo': 'Suitable flight window',
 
       // Status & Rules
       'no_apto': 'Not suitable',
