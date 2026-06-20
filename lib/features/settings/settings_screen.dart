@@ -108,7 +108,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           onBack: _goBack,
         );
       case _SettingsView.alertas:
-        return AlertsScreen(language: session.preferences.language);
+        return AlertsScreen(
+          language: session.preferences.language,
+          session: session,
+        );
       case _SettingsView.reglas:
         return FlightRulesScreen(
           initialConfig: session.preferences.rulesConfig,

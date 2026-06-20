@@ -77,6 +77,10 @@ class AppStrings {
       'notificacion_espacio_controlado':
           'Notificación si entras en espacio aéreo controlado',
       'alerta_ventana_titulo': 'Ventana apta para volar',
+      'avisos_ventana_apta_titulo': 'Avisos de ventana apta',
+      'anticipacion': 'Anticipación',
+      'minutos_antes': 'min antes',
+      'permiso_notif_denegado': 'Permiso de notificaciones denegado',
 
       // Status & Rules
       'no_apto': 'No apto',
@@ -332,6 +336,10 @@ class AppStrings {
       'notificacion_espacio_controlado':
           'Notification when entering controlled airspace',
       'alerta_ventana_titulo': 'Suitable flight window',
+      'avisos_ventana_apta_titulo': 'Suitable-window alerts',
+      'anticipacion': 'Lead time',
+      'minutos_antes': 'min before',
+      'permiso_notif_denegado': 'Notification permission denied',
 
       // Status & Rules
       'no_apto': 'Not suitable',
