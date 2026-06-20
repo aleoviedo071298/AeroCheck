@@ -136,8 +136,16 @@ class OpenMeteoForecastResponse {
             _optionalDoubleAt(hourly, 'visibility', index),
           ),
           kpIndex: null,
-          relativeHumidityPercent: _optionalDoubleAt(hourly, 'relative_humidity_2m', index),
-          apparentTemperatureC: _optionalDoubleAt(hourly, 'apparent_temperature', index),
+          relativeHumidityPercent: _optionalDoubleAt(
+            hourly,
+            'relative_humidity_2m',
+            index,
+          ),
+          apparentTemperatureC: _optionalDoubleAt(
+            hourly,
+            'apparent_temperature',
+            index,
+          ),
           pressureHpa: _optionalDoubleAt(hourly, 'pressure_msl', index),
           uvIndex: _optionalDoubleAt(hourly, 'uv_index', index),
           weatherCode: _optionalIntAt(hourly, 'weather_code', index),

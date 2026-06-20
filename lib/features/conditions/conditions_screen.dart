@@ -574,7 +574,8 @@ class _ReworkedMetricsGrid extends StatelessWidget {
       dewPointStr = UnitFormatters.formatTemperature(weather.dewPointC, units);
     } else if (weather.temperatureC != null &&
         weather.relativeHumidityPercent != null) {
-      final dp = weather.temperatureC! -
+      final dp =
+          weather.temperatureC! -
           ((100 - weather.relativeHumidityPercent!) / 5.0);
       dewPointStr = UnitFormatters.formatTemperature(dp, units);
     }
@@ -656,7 +657,9 @@ class _ReworkedMetricsGrid extends StatelessWidget {
           label: AppStrings.get('humedad').toUpperCase(),
           value: weather.relativeHumidityPercent == null
               ? AppStrings.get('sin_dato')
-              : UnitFormatters.formatPercentage(weather.relativeHumidityPercent),
+              : UnitFormatters.formatPercentage(
+                  weather.relativeHumidityPercent,
+                ),
           subValue: '${AppStrings.get('punto_rocio')} $dewPointStr',
           icon: Icons.opacity_rounded,
           accentColor: const Color(0xFF6366F1),
@@ -700,7 +703,8 @@ class _ReworkedMetricsGrid extends StatelessWidget {
   }
 
   String _formatSensation(WeatherSnapshot weather, WeatherSession session) {
-    final sensation = weather.apparentTemperatureC ??
+    final sensation =
+        weather.apparentTemperatureC ??
         (weather.temperatureC != null ? weather.temperatureC! - 2.0 : null);
     if (sensation != null) {
       return '${AppStrings.get('sensacion')} ${UnitFormatters.formatTemperature(sensation, session.preferences.units)}';

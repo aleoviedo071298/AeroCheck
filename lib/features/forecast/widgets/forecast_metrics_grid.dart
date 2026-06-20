@@ -57,7 +57,8 @@ class ForecastMetricsGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final condition = weatherConditionFor(row.weatherCode);
     final gustDelta = row.gustKmh - row.windKmh;
-    final sensation = row.apparentTemperatureC ??
+    final sensation =
+        row.apparentTemperatureC ??
         (row.temperatureC == null ? null : row.temperatureC! - 2.0);
 
     return GridView(
@@ -99,8 +100,11 @@ class ForecastMetricsGrid extends StatelessWidget {
         ),
         MetricCard(
           label: _t('visibilidad').toUpperCase(),
-          value:
-              UnitFormatters.formatDistance(row.visibilityKm, units, decimals: 0),
+          value: UnitFormatters.formatDistance(
+            row.visibilityKm,
+            units,
+            decimals: 0,
+          ),
           subValue: '',
           icon: Icons.visibility_rounded,
           accentColor: const Color(0xFF10B981),

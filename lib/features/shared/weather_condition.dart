@@ -33,10 +33,7 @@ WeatherCondition weatherConditionFor(int? code) {
     );
   }
   if (code == 45 || code == 48) {
-    return const WeatherCondition(
-      labelKey: 'cielo_niebla',
-      icon: Icons.foggy,
-    );
+    return const WeatherCondition(labelKey: 'cielo_niebla', icon: Icons.foggy);
   }
   if (code >= 51 && code <= 57) {
     return const WeatherCondition(

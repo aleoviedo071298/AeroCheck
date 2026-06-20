@@ -11,19 +11,22 @@ const _json = '''
 }''';
 
 void main() {
-  test('parses pressure, uv, weather_code, apparent temp and hourly humidity', () {
-    final bundle = OpenMeteoForecastResponse.fromJsonString(
-      _json,
-    ).toWeatherBundle(locationLabel: 'x');
-    expect(bundle.current.pressureHpa, 1013);
-    expect(bundle.current.uvIndex, 4);
-    expect(bundle.current.weatherCode, 3);
-    expect(bundle.current.apparentTemperatureC, 14);
-    final h = bundle.hourlySnapshots.first;
-    expect(h.relativeHumidityPercent, 70);
-    expect(h.pressureHpa, 1012);
-    expect(h.uvIndex, 5);
-    expect(h.weatherCode, 61);
-    expect(h.apparentTemperatureC, 14);
-  });
+  test(
+    'parses pressure, uv, weather_code, apparent temp and hourly humidity',
+    () {
+      final bundle = OpenMeteoForecastResponse.fromJsonString(
+        _json,
+      ).toWeatherBundle(locationLabel: 'x');
+      expect(bundle.current.pressureHpa, 1013);
+      expect(bundle.current.uvIndex, 4);
+      expect(bundle.current.weatherCode, 3);
+      expect(bundle.current.apparentTemperatureC, 14);
+      final h = bundle.hourlySnapshots.first;
+      expect(h.relativeHumidityPercent, 70);
+      expect(h.pressureHpa, 1012);
+      expect(h.uvIndex, 5);
+      expect(h.weatherCode, 61);
+      expect(h.apparentTemperatureC, 14);
+    },
+  );
 }
