@@ -41,7 +41,7 @@ void main() {
     );
     expect(find.text('09:00'), findsOneWidget);
     expect(find.text('Hoy'), findsWidgets);
-    expect(find.textContaining('14'), findsWidgets); // wind value
+    expect(find.text('Mejor hora'), findsOneWidget);
   });
 
   testWidgets(

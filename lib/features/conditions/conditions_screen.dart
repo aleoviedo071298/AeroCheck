@@ -10,6 +10,8 @@ import '../../domain/rules/flight_readiness_status.dart';
 import '../../domain/rules/rule_severity.dart';
 import '../../domain/units/unit_formatters.dart';
 import '../../domain/units/unit_preferences.dart';
+import '../shared/weather_condition.dart';
+import '../shared/widgets/metric_card.dart';
 
 class ConditionsScreen extends StatelessWidget {
   const ConditionsScreen({
@@ -564,137 +566,121 @@ class _ReworkedMetricsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Calculate dew point estimate if temperature and humidity exist
+    final units = session.preferences.units;
+    final condition = weatherConditionFor(weather.weatherCode);
+
     String dewPointStr = AppStrings.get('sin_dato');
-    if (weather.temperatureC != null &&
+    if (weather.dewPointC != null) {
+      dewPointStr = UnitFormatters.formatTemperature(weather.dewPointC, units);
+    } else if (weather.temperatureC != null &&
         weather.relativeHumidityPercent != null) {
-      final t = weather.temperatureC!;
-      final rh = weather.relativeHumidityPercent!;
-      final dp = t - ((100 - rh) / 5.0); // Simple dew point approximation
-      dewPointStr = UnitFormatters.formatTemperature(
-        dp,
-        session.preferences.units,
-      );
+      final dp =
+          weather.temperatureC! -
+          ((100 - weather.relativeHumidityPercent!) / 5.0);
+      dewPointStr = UnitFormatters.formatTemperature(dp, units);
     }
 
-    return Column(
+    return GridView(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.zero,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 1.6,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+      ),
       children: [
-        // 1. Primary Metrics Grid (2x2)
-        GridView(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          padding: EdgeInsets.zero,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: 1.6,
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-          ),
-          children: [
-            _MetricCard(
-              label: AppStrings.get('viento').toUpperCase(),
-              value: UnitFormatters.formatSpeed(
-                weather.windKmh,
-                session.preferences.units,
-              ),
-              subValue:
-                  '↗ ${weather.windDirectionCardinal ?? ""} ${_fmt(weather.windDirectionDegrees)}°',
-              icon: Icons.air_rounded,
-              accentColor: const Color(0xFF0EA5E9), // Cyan bottom line
-            ),
-            _MetricCard(
-              label: AppStrings.get('rafagas').toUpperCase(),
-              value: UnitFormatters.formatSpeed(
-                weather.gustKmh,
-                session.preferences.units,
-              ),
-              subValue: _formatGustDelta(weather, session),
-              icon: Icons.wind_power_rounded,
-              accentColor: const Color(0xFFD97706), // Orange bottom line
-            ),
-            _MetricCard(
-              label: AppStrings.get('temp').toUpperCase(),
-              value: UnitFormatters.formatTemperature(
-                weather.temperatureC,
-                session.preferences.units,
-              ),
-              subValue: _formatSensation(weather, session),
-              icon: Icons.device_thermostat_rounded,
-              accentColor: const Color(0xFF3B82F6), // Blue bottom line
-            ),
-            _MetricCard(
-              label: AppStrings.get('humedad').toUpperCase(),
-              value: weather.relativeHumidityPercent == null
-                  ? AppStrings.get('sin_dato')
-                  : UnitFormatters.formatPercentage(
-                      weather.relativeHumidityPercent,
-                    ),
-              subValue: '${AppStrings.get('punto_rocio')} $dewPointStr',
-              icon: Icons.opacity_rounded,
-              accentColor: const Color(0xFF6366F1), // Indigo bottom line
-            ),
-          ],
+        MetricCard(
+          label: AppStrings.get('viento').toUpperCase(),
+          value: UnitFormatters.formatSpeed(weather.windKmh, units),
+          subValue:
+              '↗ ${weather.windDirectionCardinal ?? ""} ${_fmt(weather.windDirectionDegrees)}°',
+          icon: Icons.air_rounded,
+          accentColor: const Color(0xFF0EA5E9),
         ),
-        const SizedBox(height: 10),
-
-        // 2. Secondary Metrics Grid (2x2)
-        GridView(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          padding: EdgeInsets.zero,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: 1.6,
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-          ),
-          children: [
-            _MetricCard(
-              label: AppStrings.get('nubosidad').toUpperCase(),
-              value: weather.cloudCoverPercent == null
-                  ? AppStrings.get('sin_dato')
-                  : '${_cloudCoverFraction(weather.cloudCoverPercent!)} (${_fmt(weather.cloudCoverPercent!)}%)',
-              subValue: weather.cloudBaseMeters != null
-                  ? 'Base: ${UnitFormatters.formatAltitude(weather.cloudBaseMeters, session.preferences.units, decimals: 0)}'
-                  : 'Cielo despejado',
-              icon: Icons.cloud_rounded,
-              accentColor: const Color(0xFF14B8A6), // Teal bottom line
-            ),
-            _MetricCard(
-              label: AppStrings.get('visibilidad').toUpperCase(),
-              value: weather.visibilityKm == null
-                  ? AppStrings.get('sin_dato')
-                  : UnitFormatters.formatDistance(
-                      weather.visibilityKm,
-                      session.preferences.units,
-                    ),
-              subValue: '',
-              icon: Icons.visibility_rounded,
-              accentColor: const Color(0xFF10B981), // Emerald bottom line
-            ),
-            _MetricCard(
-              label: AppStrings.get('indice_kp').toUpperCase(),
-              value: weather.kpIndex == null
-                  ? AppStrings.get('sin_dato')
-                  : _fmt(weather.kpIndex!),
-              subValue: '',
-              icon: Icons.sensors_rounded,
-              accentColor: const Color(0xFF8B5CF6), // Violet bottom line
-            ),
-            _MetricCard(
-              label: AppStrings.get('precip').toUpperCase(),
-              value: weather.precipitationProbability == null
-                  ? '0%'
-                  : '${_fmt(weather.precipitationProbability!)}%',
-              subValue:
-                  weather.precipitationMmPerHour != null &&
-                      weather.precipitationMmPerHour! > 0
-                  ? '${_fmt(weather.precipitationMmPerHour!)} mm/h'
-                  : AppStrings.get('sin_lluvia'),
-              icon: Icons.water_drop_rounded,
-              accentColor: const Color(0xFF06B6D4), // Cyan bottom line
-            ),
-          ],
+        MetricCard(
+          label: AppStrings.get('rafagas').toUpperCase(),
+          value: UnitFormatters.formatSpeed(weather.gustKmh, units),
+          subValue: _formatGustDelta(weather, session),
+          icon: Icons.wind_power_rounded,
+          accentColor: const Color(0xFFD97706),
+        ),
+        MetricCard(
+          label: AppStrings.get('precip').toUpperCase(),
+          value: weather.precipitationProbability == null
+              ? '0%'
+              : '${_fmt(weather.precipitationProbability!)}%',
+          subValue:
+              weather.precipitationMmPerHour != null &&
+                  weather.precipitationMmPerHour! > 0
+              ? '${_fmt(weather.precipitationMmPerHour!)} mm/h'
+              : AppStrings.get('sin_lluvia'),
+          icon: Icons.water_drop_rounded,
+          accentColor: const Color(0xFF06B6D4),
+        ),
+        MetricCard(
+          label: AppStrings.get('visibilidad').toUpperCase(),
+          value: weather.visibilityKm == null
+              ? AppStrings.get('sin_dato')
+              : UnitFormatters.formatDistance(weather.visibilityKm, units),
+          subValue: '',
+          icon: Icons.visibility_rounded,
+          accentColor: const Color(0xFF10B981),
+        ),
+        MetricCard(
+          label: AppStrings.get('nubosidad').toUpperCase(),
+          value: weather.cloudCoverPercent == null
+              ? AppStrings.get('sin_dato')
+              : '${_cloudCoverFraction(weather.cloudCoverPercent!)} (${_fmt(weather.cloudCoverPercent!)}%)',
+          subValue: weather.cloudBaseMeters != null
+              ? 'Base: ${UnitFormatters.formatAltitude(weather.cloudBaseMeters, units, decimals: 0)}'
+              : '',
+          icon: Icons.cloud_rounded,
+          accentColor: const Color(0xFF14B8A6),
+        ),
+        MetricCard(
+          label: AppStrings.get('condicion').toUpperCase(),
+          value: AppStrings.get(condition.labelKey),
+          subValue: '',
+          icon: condition.icon,
+          accentColor: const Color(0xFFF59E0B),
+        ),
+        MetricCard(
+          label: AppStrings.get('temp').toUpperCase(),
+          value: UnitFormatters.formatTemperature(weather.temperatureC, units),
+          subValue: _formatSensation(weather, session),
+          icon: Icons.device_thermostat_rounded,
+          accentColor: const Color(0xFF3B82F6),
+        ),
+        MetricCard(
+          label: AppStrings.get('humedad').toUpperCase(),
+          value: weather.relativeHumidityPercent == null
+              ? AppStrings.get('sin_dato')
+              : UnitFormatters.formatPercentage(
+                  weather.relativeHumidityPercent,
+                ),
+          subValue: '${AppStrings.get('punto_rocio')} $dewPointStr',
+          icon: Icons.opacity_rounded,
+          accentColor: const Color(0xFF6366F1),
+        ),
+        MetricCard(
+          label: AppStrings.get('presion').toUpperCase(),
+          value: weather.pressureHpa == null
+              ? AppStrings.get('sin_dato')
+              : UnitFormatters.formatPressure(weather.pressureHpa, units),
+          subValue: '',
+          icon: Icons.speed_rounded,
+          accentColor: const Color(0xFF64748B),
+        ),
+        MetricCard(
+          label: AppStrings.get('indice_kp').toUpperCase(),
+          value: weather.kpIndex == null
+              ? AppStrings.get('sin_dato')
+              : _fmt(weather.kpIndex!),
+          subValue: '',
+          icon: Icons.sensors_rounded,
+          accentColor: const Color(0xFF8B5CF6),
         ),
       ],
     );
@@ -717,119 +703,13 @@ class _ReworkedMetricsGrid extends StatelessWidget {
   }
 
   String _formatSensation(WeatherSnapshot weather, WeatherSession session) {
-    final sensation = weather.temperatureC != null
-        ? (weather.temperatureC! - 2.0)
-        : null;
+    final sensation =
+        weather.apparentTemperatureC ??
+        (weather.temperatureC != null ? weather.temperatureC! - 2.0 : null);
     if (sensation != null) {
       return '${AppStrings.get('sensacion')} ${UnitFormatters.formatTemperature(sensation, session.preferences.units)}';
     }
     return AppStrings.get('sin_dato');
-  }
-}
-
-class _MetricCard extends StatelessWidget {
-  const _MetricCard({
-    required this.label,
-    required this.value,
-    required this.subValue,
-    required this.icon,
-    required this.accentColor,
-  });
-
-  final String label;
-  final String value;
-  final String subValue;
-  final IconData icon;
-  final Color accentColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Card(
-      margin: EdgeInsets.zero,
-      elevation: 0,
-      color: isDark ? const Color(0xFF1E293B) : Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-        ),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Stack(
-          children: [
-            // Accent Color Line at the bottom
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: 4,
-              child: Container(color: accentColor),
-            ),
-
-            // Content
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  Icon(
-                    icon,
-                    color: isDark
-                        ? const Color(0xFF94A3B8)
-                        : const Color(0xFF64748B),
-                    size: 26,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          label,
-                          style: TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0.5,
-                            color: isDark
-                                ? const Color(0xFF94A3B8)
-                                : const Color(0xFF64748B),
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          value,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                            height: 1.1,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          subValue,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: accentColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 

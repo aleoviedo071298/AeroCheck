@@ -1,6 +1,4 @@
 // lib/features/forecast/widgets/focused_hour_card.dart
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 
 import '../../../data/mock/mock_flight_data.dart';
@@ -8,9 +6,7 @@ import '../../../domain/i18n/app_strings.dart';
 import '../../../domain/i18n/language.dart';
 import '../../../domain/i18n/rule_localizer.dart';
 import '../../../domain/rules/flight_readiness_status.dart';
-import '../../../domain/units/unit_formatters.dart';
 import '../../../domain/units/unit_preferences.dart';
-import 'metric_tile.dart';
 
 Color forecastStatusColor(FlightReadinessStatus status) => switch (status) {
   FlightReadinessStatus.ready => const Color(0xFF16A34A),
@@ -154,72 +150,6 @@ class FocusedHourCard extends StatelessWidget {
                     ? const Color(0xFFCBD5E1)
                     : const Color(0xFF475569),
               ),
-            ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                MetricTile(
-                  isDark: isDark,
-                  label: AppStrings.get(
-                    'viento',
-                    language: language,
-                  ).toUpperCase(),
-                  value: UnitFormatters.formatSpeed(
-                    row.windKmh,
-                    units,
-                    decimals: 0,
-                  ),
-                  leading: row.windDirectionDegrees == null
-                      ? null
-                      : Transform.rotate(
-                          angle: row.windDirectionDegrees! * math.pi / 180.0,
-                          child: const Icon(
-                            Icons.navigation_rounded,
-                            size: 13,
-                            color: Color(0xFF0EA5E9),
-                          ),
-                        ),
-                ),
-                const SizedBox(width: 10),
-                MetricTile(
-                  isDark: isDark,
-                  label: AppStrings.get(
-                    'rafagas',
-                    language: language,
-                  ).toUpperCase(),
-                  value: UnitFormatters.formatSpeed(
-                    row.gustKmh,
-                    units,
-                    decimals: 0,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                MetricTile(
-                  isDark: isDark,
-                  label: AppStrings.get(
-                    'lluvia',
-                    language: language,
-                  ).toUpperCase(),
-                  value: '${row.rainPercent.round()} %',
-                ),
-                const SizedBox(width: 10),
-                MetricTile(
-                  isDark: isDark,
-                  label: AppStrings.get(
-                    'visibilidad',
-                    language: language,
-                  ).toUpperCase(),
-                  value: UnitFormatters.formatDistance(
-                    row.visibilityKm,
-                    units,
-                    decimals: 0,
-                  ),
-                ),
-              ],
             ),
           ],
         ),

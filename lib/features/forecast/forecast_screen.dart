@@ -7,8 +7,8 @@ import '../../domain/rules/rule_severity.dart';
 import '../../domain/units/unit_formatters.dart';
 import '../../domain/units/unit_preferences.dart';
 import 'forecast_day_grouping.dart';
-import 'widgets/conditions_metrics_card.dart';
 import 'widgets/focused_hour_card.dart';
+import 'widgets/forecast_metrics_grid.dart';
 import 'widgets/hour_scrubber.dart';
 
 class ForecastScreen extends StatefulWidget {
@@ -136,6 +136,8 @@ class _ForecastScreenState extends State<ForecastScreen> {
         dayLabel: forecastDayLabel(activeDay.date, today, language),
       ),
       const SizedBox(height: 14),
+      ForecastMetricsGrid(row: selectedRow, units: units, language: language),
+      const SizedBox(height: 14),
       HourScrubber(
         days: days,
         selectedDate: activeDay.date,
@@ -154,10 +156,11 @@ class _ForecastScreenState extends State<ForecastScreen> {
         sunrise: sun?.sunrise,
         sunset: sun?.sunset,
       ),
-      const SizedBox(height: 14),
-      ConditionsMetricsCard(row: selectedRow, units: units, language: language),
       const SizedBox(height: 16),
-      _ForecastTipCard(language: language),
+      _ForecastTipCard(
+        language: language,
+        bestHourLabel: activeDay.bestHour?.hour ?? '—',
+      ),
     ];
   }
 }
@@ -209,9 +212,10 @@ class _ScreenHeader extends StatelessWidget {
 }
 
 class _ForecastTipCard extends StatelessWidget {
-  const _ForecastTipCard({required this.language});
+  const _ForecastTipCard({required this.language, required this.bestHourLabel});
 
   final Language language;
+  final String bestHourLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -239,7 +243,7 @@ class _ForecastTipCard extends StatelessWidget {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                AppStrings.get('ventana_optima_tip'),
+                '${AppStrings.get('mejor_hora', language: language)}: $bestHourLabel',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,

@@ -459,6 +459,11 @@ class WeatherSession extends ChangeNotifier {
       cloudCoverPercent: weather.cloudCoverPercent,
       precipitationMmPerHour: weather.precipitationMmPerHour,
       dewPointC: weather.dewPointC,
+      relativeHumidityPercent: weather.relativeHumidityPercent,
+      apparentTemperatureC: weather.apparentTemperatureC,
+      pressureHpa: weather.pressureHpa,
+      uvIndex: weather.uvIndex,
+      weatherCode: weather.weatherCode,
     );
   }
 
