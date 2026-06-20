@@ -67,7 +67,7 @@ class ForecastMetricsGrid extends StatelessWidget {
       padding: EdgeInsets.zero,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 1.6,
+        childAspectRatio: 2.1,
         mainAxisSpacing: 10,
         crossAxisSpacing: 10,
       ),
