@@ -10,6 +10,7 @@ import '../../domain/rules/flight_readiness_status.dart';
 import '../../domain/rules/rule_severity.dart';
 import '../../domain/units/unit_formatters.dart';
 import '../../domain/units/unit_preferences.dart';
+import '../shared/widgets/metric_card.dart';
 
 class ConditionsScreen extends StatelessWidget {
   const ConditionsScreen({
@@ -591,7 +592,7 @@ class _ReworkedMetricsGrid extends StatelessWidget {
             crossAxisSpacing: 10,
           ),
           children: [
-            _MetricCard(
+            MetricCard(
               label: AppStrings.get('viento').toUpperCase(),
               value: UnitFormatters.formatSpeed(
                 weather.windKmh,
@@ -602,7 +603,7 @@ class _ReworkedMetricsGrid extends StatelessWidget {
               icon: Icons.air_rounded,
               accentColor: const Color(0xFF0EA5E9), // Cyan bottom line
             ),
-            _MetricCard(
+            MetricCard(
               label: AppStrings.get('rafagas').toUpperCase(),
               value: UnitFormatters.formatSpeed(
                 weather.gustKmh,
@@ -612,7 +613,7 @@ class _ReworkedMetricsGrid extends StatelessWidget {
               icon: Icons.wind_power_rounded,
               accentColor: const Color(0xFFD97706), // Orange bottom line
             ),
-            _MetricCard(
+            MetricCard(
               label: AppStrings.get('temp').toUpperCase(),
               value: UnitFormatters.formatTemperature(
                 weather.temperatureC,
@@ -622,7 +623,7 @@ class _ReworkedMetricsGrid extends StatelessWidget {
               icon: Icons.device_thermostat_rounded,
               accentColor: const Color(0xFF3B82F6), // Blue bottom line
             ),
-            _MetricCard(
+            MetricCard(
               label: AppStrings.get('humedad').toUpperCase(),
               value: weather.relativeHumidityPercent == null
                   ? AppStrings.get('sin_dato')
@@ -649,7 +650,7 @@ class _ReworkedMetricsGrid extends StatelessWidget {
             crossAxisSpacing: 10,
           ),
           children: [
-            _MetricCard(
+            MetricCard(
               label: AppStrings.get('nubosidad').toUpperCase(),
               value: weather.cloudCoverPercent == null
                   ? AppStrings.get('sin_dato')
@@ -660,7 +661,7 @@ class _ReworkedMetricsGrid extends StatelessWidget {
               icon: Icons.cloud_rounded,
               accentColor: const Color(0xFF14B8A6), // Teal bottom line
             ),
-            _MetricCard(
+            MetricCard(
               label: AppStrings.get('visibilidad').toUpperCase(),
               value: weather.visibilityKm == null
                   ? AppStrings.get('sin_dato')
@@ -672,7 +673,7 @@ class _ReworkedMetricsGrid extends StatelessWidget {
               icon: Icons.visibility_rounded,
               accentColor: const Color(0xFF10B981), // Emerald bottom line
             ),
-            _MetricCard(
+            MetricCard(
               label: AppStrings.get('indice_kp').toUpperCase(),
               value: weather.kpIndex == null
                   ? AppStrings.get('sin_dato')
@@ -681,7 +682,7 @@ class _ReworkedMetricsGrid extends StatelessWidget {
               icon: Icons.sensors_rounded,
               accentColor: const Color(0xFF8B5CF6), // Violet bottom line
             ),
-            _MetricCard(
+            MetricCard(
               label: AppStrings.get('precip').toUpperCase(),
               value: weather.precipitationProbability == null
                   ? '0%'
@@ -724,112 +725,6 @@ class _ReworkedMetricsGrid extends StatelessWidget {
       return '${AppStrings.get('sensacion')} ${UnitFormatters.formatTemperature(sensation, session.preferences.units)}';
     }
     return AppStrings.get('sin_dato');
-  }
-}
-
-class _MetricCard extends StatelessWidget {
-  const _MetricCard({
-    required this.label,
-    required this.value,
-    required this.subValue,
-    required this.icon,
-    required this.accentColor,
-  });
-
-  final String label;
-  final String value;
-  final String subValue;
-  final IconData icon;
-  final Color accentColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Card(
-      margin: EdgeInsets.zero,
-      elevation: 0,
-      color: isDark ? const Color(0xFF1E293B) : Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-        ),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Stack(
-          children: [
-            // Accent Color Line at the bottom
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: 4,
-              child: Container(color: accentColor),
-            ),
-
-            // Content
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  Icon(
-                    icon,
-                    color: isDark
-                        ? const Color(0xFF94A3B8)
-                        : const Color(0xFF64748B),
-                    size: 26,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          label,
-                          style: TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0.5,
-                            color: isDark
-                                ? const Color(0xFF94A3B8)
-                                : const Color(0xFF64748B),
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          value,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                            height: 1.1,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          subValue,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: accentColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 
