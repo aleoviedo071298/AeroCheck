@@ -93,18 +93,29 @@ class AlertsScreen extends StatelessWidget {
                       Row(
                         children: [15, 30, 60].map((value) {
                           final selected = prefs.alertLeadMinutes == value;
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: ChoiceChip(
-                              label: Text(
-                                '$value ${AppStrings.get('minutos_antes', language: language)}',
+                          return Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: ChoiceChip(
+                                label: SizedBox(
+                                  width: double.infinity,
+                                  child: Text(
+                                    '$value ${AppStrings.get('minutos', language: language)}',
+                                    textAlign: TextAlign.center,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                labelPadding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                ),
+                                selected: selected,
+                                onSelected: (_) {
+                                  session.updateAlertPreferences(
+                                    leadMinutes: value,
+                                  );
+                                },
                               ),
-                              selected: selected,
-                              onSelected: (_) {
-                                session.updateAlertPreferences(
-                                  leadMinutes: value,
-                                );
-                              },
                             ),
                           );
                         }).toList(),

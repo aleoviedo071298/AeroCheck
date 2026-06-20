@@ -80,6 +80,7 @@ class AppStrings {
       'avisos_ventana_apta_titulo': 'Avisos de ventana apta',
       'anticipacion': 'Anticipación',
       'minutos_antes': 'min antes',
+      'minutos': 'min',
       'permiso_notif_denegado': 'Permiso de notificaciones denegado',
 
       // Status & Rules
@@ -339,6 +340,7 @@ class AppStrings {
       'avisos_ventana_apta_titulo': 'Suitable-window alerts',
       'anticipacion': 'Lead time',
       'minutos_antes': 'min before',
+      'minutos': 'min',
       'permiso_notif_denegado': 'Notification permission denied',
 
       // Status & Rules
