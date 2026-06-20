@@ -48,6 +48,8 @@ void main() {
     await tester.drag(find.byType(ListView), const Offset(0, -500));
     await tester.pumpAndSettle();
     expect(find.text('Sin dato'), findsWidgets);
+    expect(find.text('PRESIÓN'), findsOneWidget);
+    expect(find.text('CONDICIÓN'), findsOneWidget);
   });
 
   testWidgets('conditions screen shows error and can retry real weather', (
