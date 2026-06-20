@@ -11,6 +11,7 @@ class UserPreferences {
     this.language = Language.es,
     this.units = const UnitPreferences(),
     this.rulesConfig = const FlightRulesConfig.defaults(),
+    this.firstLaunchHandled = false,
   });
 
   final String? selectedLocationId;
@@ -20,6 +21,7 @@ class UserPreferences {
   final Language language;
   final UnitPreferences units;
   final FlightRulesConfig rulesConfig;
+  final bool firstLaunchHandled;
 
   UserPreferences copyWith({
     String? selectedLocationId,
@@ -29,6 +31,7 @@ class UserPreferences {
     Language? language,
     UnitPreferences? units,
     FlightRulesConfig? rulesConfig,
+    bool? firstLaunchHandled,
   }) {
     return UserPreferences(
       selectedLocationId: selectedLocationId ?? this.selectedLocationId,
@@ -39,6 +42,7 @@ class UserPreferences {
       language: language ?? this.language,
       units: units ?? this.units,
       rulesConfig: rulesConfig ?? this.rulesConfig,
+      firstLaunchHandled: firstLaunchHandled ?? this.firstLaunchHandled,
     );
   }
 }

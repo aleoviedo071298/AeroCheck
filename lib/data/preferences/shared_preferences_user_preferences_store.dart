@@ -16,6 +16,7 @@ class SharedPreferencesUserPreferencesStore implements UserPreferencesStore {
   static const _languageKey = 'aerocheck.language';
   static const _unitsKey = 'aerocheck.units';
   static const _rulesConfigKey = 'aerocheck.rules_config';
+  static const _firstLaunchHandledKey = 'aerocheck.first_launch_handled';
   static const _mockScenarioKey = 'aerocheck.mock_scenario';
   // Legacy keys for migration
   static const _legacyLocationIdKey = 'aerocheck.location_id';
@@ -66,6 +67,9 @@ class SharedPreferencesUserPreferencesStore implements UserPreferencesStore {
       }
     }
 
+    final firstLaunchHandled =
+        preferences.getBool(_firstLaunchHandledKey) ?? false;
+
     return UserPreferences(
       selectedLocationId: preferences.getString(_selectedLocationIdKey),
       favoriteLocationsJson:
@@ -75,6 +79,7 @@ class SharedPreferencesUserPreferencesStore implements UserPreferencesStore {
       language: language,
       units: units,
       rulesConfig: rulesConfig,
+      firstLaunchHandled: firstLaunchHandled,
     );
   }
 
@@ -99,6 +104,7 @@ class SharedPreferencesUserPreferencesStore implements UserPreferencesStore {
         _rulesConfigKey,
         jsonEncode(preferences.rulesConfig.toJson()),
       ),
+      store.setBool(_firstLaunchHandledKey, preferences.firstLaunchHandled),
     ]);
   }
 

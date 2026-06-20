@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
@@ -34,6 +33,8 @@ import '../domain/rules/rule_severity.dart';
 import 'airspace_geom_helper.dart';
 import 'airspace_state.dart';
 
+typedef GpsLocationResolver = Future<FlightLocation?> Function();
+
 enum WeatherDataSource { mock, real }
 
 class WeatherSession extends ChangeNotifier {
@@ -58,6 +59,7 @@ class WeatherSession extends ChangeNotifier {
     AirspaceRepository? airspaceRepository,
     AirportRepository? airportRepository,
     GeocodingService? geocodingService,
+    GpsLocationResolver? gpsResolver,
   }) : _weatherRepository = weatherRepository,
        _preferencesStore =
            preferencesStore ?? SharedPreferencesUserPreferencesStore(),
@@ -71,10 +73,12 @@ class WeatherSession extends ChangeNotifier {
            (OpenAipConfig.apiKey.trim().isEmpty
                ? null
                : OpenAipAirportRepository()),
-       _geocodingService = geocodingService ?? GeocodingRepository();
+       _geocodingService = geocodingService ?? GeocodingRepository(),
+       _gpsResolver = gpsResolver;
 
   WeatherRepository? _weatherRepository;
   final UserPreferencesStore _preferencesStore;
+  final GpsLocationResolver? _gpsResolver;
   final AirspaceRepository? _airspaceRepository;
   final AirportRepository? _airportRepository;
   final GeocodingService _geocodingService;
@@ -196,6 +200,24 @@ class WeatherSession extends ChangeNotifier {
 
       _favoriteLocations = favorites;
       _selectedLocation = selectedLocation ?? favorites.first;
+
+      if (!preferences.firstLaunchHandled &&
+          preferences.selectedLocationId == null) {
+        final resolver = _gpsResolver ?? _resolveGpsLocation;
+        final gps = await resolver();
+        if (gps != null) {
+          _selectedLocation = gps;
+          _favoriteLocations = [..._favoriteLocations, gps];
+        }
+        _userPreferences = _userPreferences.copyWith(
+          firstLaunchHandled: true,
+          selectedLocationId: _selectedLocation.id,
+          favoriteLocationsJson: _favoriteLocations
+              .map((location) => location.toJson())
+              .toList(),
+        );
+        await _preferencesStore.save(_userPreferences);
+      }
 
       if (preferences.guideRadiusKm != null) {
         _guideRadiusKm = _clampGuideRadius(preferences.guideRadiusKm!);
@@ -678,28 +700,20 @@ class WeatherSession extends ChangeNotifier {
     return false;
   }
 
-  Future<void> setLocationToCurrentGPS() async {
+  Future<FlightLocation?> _resolveGpsLocation() async {
     try {
-      developer.log('Requesting GPS location...', name: 'AeroCheck.GPS');
-
-      final permission = await Geolocator.checkPermission();
+      var permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
-        final newPermission = await Geolocator.requestPermission();
-        if (newPermission == LocationPermission.denied ||
-            newPermission == LocationPermission.deniedForever) {
-          developer.log('GPS permission denied', name: 'AeroCheck.GPS');
-          return;
-        }
+        permission = await Geolocator.requestPermission();
       }
-
-      final position = await Geolocator.getCurrentPosition();
-
-      developer.log(
-        'Got GPS: ${position.latitude}, ${position.longitude}',
-        name: 'AeroCheck.GPS',
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        return null;
+      }
+      final position = await Geolocator.getCurrentPosition().timeout(
+        const Duration(seconds: 10),
       );
-
-      final location = FlightLocation(
+      return FlightLocation(
         id: 'gps_current',
         name: 'Mi Ubicación',
         region: 'GPS Actual',
@@ -707,19 +721,25 @@ class WeatherSession extends ChangeNotifier {
         latitude: position.latitude,
         longitude: position.longitude,
       );
-
-      _selectedLocation = location;
-      _realBundle = null;
-      _realError = null;
-      notifyListeners();
-      _persistPreferences();
-
-      if (_dataSource == WeatherDataSource.real) {
-        await loadRealWeather();
-      }
-      loadNearbyAirspaces();
-    } catch (error) {
-      developer.log('GPS error: $error', name: 'AeroCheck.GPS');
+    } catch (_) {
+      return null;
     }
+  }
+
+  Future<void> setLocationToCurrentGPS() async {
+    final resolver = _gpsResolver ?? _resolveGpsLocation;
+    final location = await resolver();
+    if (location == null) return;
+
+    _selectedLocation = location;
+    _realBundle = null;
+    _realError = null;
+    notifyListeners();
+    _persistPreferences();
+
+    if (_dataSource == WeatherDataSource.real) {
+      await loadRealWeather();
+    }
+    loadNearbyAirspaces();
   }
 }
