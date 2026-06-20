@@ -77,11 +77,7 @@ class _AppShellState extends State<AppShell> {
               : Scaffold(
                   key: const ValueKey('main_shell'),
                   appBar: AppBar(
-                    title: AppBarTitle(
-                      location: (_index == 0 || _index == 1 || _index == 2)
-                          ? _weatherSession.selectedLocation.label
-                          : null,
-                    ),
+                    title: const AppBarTitle(),
                     actions: [
                       if ((_index == 0 || _index == 1 || _index == 2) &&
                           updateTimeText.isNotEmpty) ...[

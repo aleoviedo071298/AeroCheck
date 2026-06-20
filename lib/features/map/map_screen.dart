@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../app/airspace_state.dart';
 import '../../app/weather_session.dart';
-import '../../data/location/flight_location.dart';
 import '../../domain/i18n/app_strings.dart';
 import '../../domain/units/unit_formatters.dart';
 import 'presentation/widgets/real_map_widget.dart';
@@ -47,11 +46,7 @@ class MapScreen extends StatelessWidget {
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
                     children: [
-                      // 1. Title Block
-                      _MapTitleBlock(session: session, location: location),
-                      const SizedBox(height: 14),
-
-                      // 3. Radio Guia card
+                      // 1. Radio Guia card
                       _GuideRadiusControl(session: session),
                       const SizedBox(height: 14),
 
@@ -254,67 +249,6 @@ class MapScreen extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-}
-
-class _MapTitleBlock extends StatelessWidget {
-  const _MapTitleBlock({required this.session, required this.location});
-
-  final WeatherSession session;
-  final FlightLocation location;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${location.label}\nLat: ${location.latitude.toStringAsFixed(4)} · Lon: ${location.longitude.toStringAsFixed(4)} · Elev. ${UnitFormatters.formatAltitude(location.elevation.toDouble(), session.preferences.units, decimals: 0)}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isDark
-                        ? const Color(0xFF94A3B8)
-                        : const Color(0xFF64748B),
-                    height: 1.3,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(
-                color: isDark
-                    ? const Color(0xFF334155)
-                    : const Color(0xFFCBD5E1),
-                width: 1.0,
-              ),
-            ),
-            child: Text(
-              'UTC-3',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w900,
-                color: isDark
-                    ? const Color(0xFF94A3B8)
-                    : const Color(0xFF64748B),
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

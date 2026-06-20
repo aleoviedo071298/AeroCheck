@@ -57,10 +57,6 @@ class ConditionsScreen extends StatelessWidget {
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
                     children: [
-                      // 1. Weather provider row
-                      _ProviderRow(session: session, report: report),
-                      const SizedBox(height: 12),
-
                       if (session.isLoadingReal)
                         const _RealWeatherLoadingCard()
                       else if (session.dataSource == WeatherDataSource.real &&
@@ -97,83 +93,6 @@ class ConditionsScreen extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-}
-
-class _ProviderRow extends StatelessWidget {
-  const _ProviderRow({required this.session, this.report});
-
-  final WeatherSession session;
-  final FlightReadinessReport? report;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isReal = session.dataSource == WeatherDataSource.real;
-    final providerName = session.realBundle?.providerName ?? 'Open-Meteo';
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-      child: Row(
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: isReal ? const Color(0xFF16A34A) : const Color(0xFFD97706),
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            isReal
-                ? '${AppStrings.get('clima_real')} | $providerName'
-                : AppStrings.get('clima_simulado'),
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
-            ),
-          ),
-          const Spacer(),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text(
-              'UTC-3',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: isDark
-                    ? const Color(0xFFE2E8F0)
-                    : const Color(0xFF475569),
-              ),
-            ),
-          ),
-          const SizedBox(width: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text(
-              'AGL',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: isDark
-                    ? const Color(0xFFE2E8F0)
-                    : const Color(0xFF475569),
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
