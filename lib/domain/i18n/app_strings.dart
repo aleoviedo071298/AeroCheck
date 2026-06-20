@@ -212,7 +212,7 @@ class AppStrings {
       'visibilidad': 'Visibilidad',
       'indice_kp': 'Índice Kp',
       'precip': 'Precip.',
-      'proximas_horas': 'Próximas horas',
+
       'operacion_configurada_mayus': 'Operación configurada',
       'dron': 'Dron',
       'mision': 'Misión',
@@ -454,7 +454,7 @@ class AppStrings {
       'visibilidad': 'Visibility',
       'indice_kp': 'Kp index',
       'precip': 'Precip.',
-      'proximas_horas': 'Next hours',
+
       'operacion_configurada_mayus': 'Configured operation',
       'dron': 'Drone',
       'mision': 'Mission',
