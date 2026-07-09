@@ -1,62 +1,58 @@
 # AeroCheck
 
-A cross-platform mobile app for drone pilots that helps decide when and where it is
-safe or convenient to fly. AeroCheck combines weather forecasts, wind-by-altitude
-data, geomagnetic K-index, regulatory/airspace layers, and pre-flight checks into a
-single flight-readiness view.
+> Flutter app for drone pilots — weather, wind-by-altitude, airspace data, K-index, and pre-flight checks in one flight-readiness view.
 
-## Status
+![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)
+![Dart](https://img.shields.io/badge/Dart-0175C2?style=for-the-badge&logo=dart&logoColor=white)
 
-Active development — Flutter app with a working MVP across five tabs: **Conditions**,
-**Forecast**, **Wind**, **Map**, and **Settings**. Real data providers are wired in
-for weather, wind, K-index, and airspace (OpenAIP); some flows still use mock data
-while their providers are finalized.
+## About
 
-## Features
-
-- **Flight-readiness conditions header** — go/no-go style summary with the primary reason behind the recommendation.
-- **Forecast** — hourly forecast with a "best hour to fly" indicator and expandable reasoning.
-- **Wind by altitude** — wind speed/direction charts across altitude bands.
-- **Geomagnetic K-index** — real data integration for atmospheric conditions relevant to flight risk.
-- **Map** — airspace and regulatory layers via OpenAIP, with a sensitive-zone radius overlay and the user's active location.
-- **Location search & favorites** — city search with persisted favorite locations.
-- **Settings** — unit selection (metric/imperial) and full i18n support.
-- **Notifications** — local alerts via `flutter_local_notifications`.
+AeroCheck consolidates everything a drone pilot needs before takeoff: weather forecasts, wind speed and direction by altitude layer, geomagnetic K-index (interference risk), regulatory airspace data, and a structured pre-flight checklist — all in a single flight-readiness view. Active development — working MVP across five tabs.
 
 ## Tech Stack
 
-- **Framework**: Flutter (Dart), feature-based architecture (`domain/`, `data/`, `features/`).
-- **Mapping**: `flutter_map` + airspace data via OpenAIP.
-- **Location**: `geolocator`.
-- **Persistence**: `shared_preferences` (settings, favorite locations).
-- **Notifications**: `flutter_local_notifications` + `timezone`.
-- **Networking**: `http`.
+| Layer | Detail |
+|---|---|
+| **Framework** | Flutter (cross-platform — iOS, Android) |
+| **Language** | Dart |
+| **Maps** | `flutter_map` + OpenStreetMap |
+| **Location** | `geolocator` |
+| **Notifications** | `flutter_local_notifications` |
+| **Airspace data** | OpenAIP API |
+| **Architecture** | domain / data / features split |
+
+## Features
+
+- **Weather tab** — current conditions and forecast at pilot's location.
+- **Wind-by-altitude tab** — wind speed and direction at multiple altitude layers.
+- **Airspace tab** — map with regulatory zones, controlled airspace, and restrictions (OpenAIP).
+- **K-index tab** — geomagnetic activity level and interference risk rating.
+- **Pre-flight checklist** — structured checklist before every flight.
 
 ## Project Structure
 
 ```
-lib/
-  domain/      Entities, business rules, i18n, units — platform-agnostic core
-  data/        Data sources: weather, location, kp_index, regulatory, mock
-  features/    UI per feature: conditions, forecast, wind, map, alerts, settings, splash
-  app/         App-level widgets/shell
-docs/          MVP specs and planning documents (one per feature/decision)
-competencia/   Competitive reference screenshots
+AeroCheck/
+└── app/
+    ├── lib/
+    │   ├── domain/      Entities and repository interfaces
+    │   ├── data/        API clients and repository implementations
+    │   └── features/    UI screens (weather, wind, airspace, kindex, checklist)
+    ├── pubspec.yaml     Dependencies
+    └── docs/            30+ spec documents and planning notes
 ```
 
-## Development
+## Setup
+
+**Requirements:** Flutter SDK 3.x, Dart 3.x.
 
 ```bash
+git clone https://github.com/aleoviedo071298/AeroCheck.git
+cd AeroCheck/app
 flutter pub get
-flutter test
-flutter analyze
 flutter run
 ```
 
-## Planning & Specs
+---
 
-- [Multiplatform launch plan](./plan_app_dron_multiplataforma.md)
-- [MVP decision rules](./docs/mvp_decision_rules.md)
-- [Flutter MVP prototype spec](./docs/spec_flutter_mvp_prototype.md)
-- [Weather provider MVP spec](./docs/spec_weather_provider_mvp.md)
-- Individual feature specs (city search, favorites, map layers, K-index, units, i18n, etc.) live in [`docs/`](./docs).
+**Alejandro Oviedo** · [LinkedIn](https://www.linkedin.com/in/aleoviedo071298/) · [GitHub](https://github.com/aleoviedo071298)
