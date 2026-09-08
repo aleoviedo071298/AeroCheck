@@ -31,3 +31,6 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+# graphify knowledge-graph outputs (generated)
+graphify-out/

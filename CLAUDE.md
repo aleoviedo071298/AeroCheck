@@ -2,6 +2,14 @@
 
 Use this file as the working instruction set when continuing AeroCheck in Claude.
 
+## Wiki Knowledge Base
+Path: C:\Users\Alejandro\Desktop\GitHub\Herramientas\claude-obsidian
+
+Cuando necesites contexto que no está en el código:
+1. Leer wiki/hot.md primero
+2. Si no alcanza, leer wiki/index.md
+3. Si necesitás dominio específico, leer wiki/<dominio>/_index.md
+
 ## Project Context
 
 AeroCheck is a Flutter MVP for Android and iOS that helps drone pilots plan flights using:
